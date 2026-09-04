@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { project } from "@/config/project";
@@ -11,6 +12,7 @@ import webDavUploadEngine, {
 type ConstraintKey = keyof TransferConstraints;
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { data: snapshot, error } = useEngineSnapshot();
   const [saving, setSaving] = useState<ConstraintKey>();
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -32,6 +34,29 @@ export default function SettingsScreen() {
     { key: "batteryNotLow", label: "Wait when battery is low" },
     { key: "requiresCharging", label: "Upload only while charging" },
   ];
+
+  const signOut = () => {
+    Alert.alert(
+      "Sign out and remove local data?",
+      "This removes the account, sources, queue, and local history. Local files and files already uploaded to Nextcloud stay untouched.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign out",
+          style: "destructive",
+          onPress: () => {
+            void webDavUploadEngine.signOut().then((result) => {
+              if (!result.ok) {
+                setErrorMessage(result.error.message);
+                return;
+              }
+              router.navigate("/");
+            });
+          },
+        },
+      ],
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
@@ -75,6 +100,14 @@ export default function SettingsScreen() {
             <Text className="text-base text-muted-light dark:text-muted-dark">
               {snapshot.account.displayName} · {snapshot.account.serverUrl}
             </Text>
+            <Pressable
+              accessibilityLabel="Sign out and remove local data"
+              accessibilityRole="button"
+              className="p-4"
+              onPress={signOut}
+            >
+              <Text className="text-base text-red-700 dark:text-red-300">Sign out</Text>
+            </Pressable>
           </View>
         ) : null}
         <View className="gap-4 border border-muted-light p-4 dark:border-muted-dark">

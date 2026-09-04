@@ -67,6 +67,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   pollLoginFlowAsync(attemptId: string): Promise<unknown>;
   cancelLoginFlowAsync(attemptId: string): Promise<void>;
   verifyStoredAccountAsync(): Promise<unknown>;
+  signOutAsync(): Promise<void>;
   listRemoteFoldersAsync(pathSegments: string[]): Promise<unknown>;
   createRemoteFolderAsync(parentPathSegments: string[], name: string): Promise<unknown>;
   pickDocumentTreeAsync(initialUri: string | null): Promise<unknown>;
@@ -209,6 +210,7 @@ export const webDavUploadEngine = {
       () => nativeModule.verifyStoredAccountAsync(),
       (value): AccountSummary => accountSummarySchema.parse(value),
     ),
+  signOut: () => runCommand(() => nativeModule.signOutAsync()),
   listRemoteFolders: (pathSegments: string[]) => {
     const path = remotePathSegmentsSchema.parse(pathSegments);
     return runValueCommand(

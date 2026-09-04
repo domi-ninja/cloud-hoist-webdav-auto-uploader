@@ -1,5 +1,7 @@
 package ninja.domi.webdavautoupload.engine
 
+import android.content.Intent
+import android.net.Uri
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
@@ -164,6 +166,31 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("verifyStoredAccountAsync") {
       accountManager.verifyStoredAccount().toMap()
+    }
+
+    AsyncFunction("signOutAsync") {
+      workScheduler.pause()
+      workScheduler.cancelAll()
+      val resolver = appContext.reactContext?.contentResolver ?: throw AccountStorageException()
+      val persistedUris = resolver.persistedUriPermissions
+        .filter { it.isReadPermission }
+        .map { it.uri.toString() }
+        .toSet()
+      val sourceUris = engineDatabase.engineDao().allSources()
+        .filter { it.kind == "saf" && it.localUri in persistedUris }
+        .map { it.localUri }
+        .toSet()
+      accountRepository.clear()
+      sourceUris.forEach { sourceUri ->
+        runCatching {
+          resolver.releasePersistableUriPermission(
+            Uri.parse(sourceUri),
+            Intent.FLAG_GRANT_READ_URI_PERMISSION,
+          )
+        }
+      }
+      enginePreferences.clear()
+      engine.invalidate()
     }
 
     AsyncFunction("listRemoteFoldersAsync") { pathSegments: List<String> ->

@@ -94,6 +94,10 @@ class EngineWorkScheduler(
     requestQueueDrain()
   }
 
+  fun cancelAll() {
+    workManager.cancelAllWorkByTag(ENGINE_WORK_TAG).result.get()
+  }
+
   private fun queueDrainRequest(settings: TransferConstraints) =
     OneTimeWorkRequestBuilder<QueueDrainWorker>()
       .setConstraints(

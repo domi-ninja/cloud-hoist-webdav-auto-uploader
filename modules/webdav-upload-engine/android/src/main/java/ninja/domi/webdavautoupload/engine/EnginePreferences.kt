@@ -92,6 +92,10 @@ class EnginePreferences(context: Context) {
       .apply()
   }
 
+  fun clear() {
+    preferences.edit().clear().commit()
+  }
+
   private companion object {
     const val PREFERENCES_NAME = "webdav_engine_preferences"
     const val KEY_PAUSED_AT = "pausedAt"
