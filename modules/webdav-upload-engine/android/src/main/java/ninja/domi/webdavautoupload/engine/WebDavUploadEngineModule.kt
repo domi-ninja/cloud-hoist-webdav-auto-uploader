@@ -80,7 +80,7 @@ class WebDavUploadEngineModule : Module() {
     Events("onSnapshotInvalidated")
 
     OnCreate {
-      workScheduler.ensureScheduled()
+      if (accountRepository.currentAccount() != null) workScheduler.ensureScheduled()
     }
 
     RegisterActivityContracts {
