@@ -7,10 +7,12 @@ import webDavUploadEngine, {
   type EngineSnapshot,
 } from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
+import { SourceSetup } from "@/features/sources/SourceSetup";
 
 export default function HomeScreen() {
   const [snapshot, setSnapshot] = useState<EngineSnapshot>();
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [addingSource, setAddingSource] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -46,6 +48,22 @@ export default function HomeScreen() {
     }
   };
 
+  const scanNow = async () => {
+    const result = await webDavUploadEngine.scanNow();
+    if (!result.ok) setErrorMessage(result.error.message);
+  };
+
+  const toggleSource = async (sourceId: string) => {
+    if (!snapshot) return;
+    const source = snapshot.sources.find((item) => item.id === sourceId);
+    if (!source) return;
+    const result = await webDavUploadEngine.addOrUpdateSource({
+      ...source,
+      enabled: !source.enabled,
+    });
+    if (!result.ok) setErrorMessage(result.error.message);
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
       <ScrollView
@@ -58,7 +76,7 @@ export default function HomeScreen() {
             {project.displayName}
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            Automatic uploads for {project.supportedServer} are being built here.
+            Automatic uploads for {project.supportedServer}.
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
             {snapshot
@@ -71,20 +89,83 @@ export default function HomeScreen() {
             </Text>
           ) : null}
           {snapshot ? <AccountConnection account={snapshot.account} /> : null}
+          {snapshot?.account.status === "connected" &&
+          (snapshot.sources.length === 0 || addingSource) ? (
+            <SourceSetup
+              onCancel={snapshot.sources.length ? () => setAddingSource(false) : undefined}
+              onComplete={() => {
+                setAddingSource(false);
+                void refresh();
+              }}
+            />
+          ) : null}
+          {snapshot?.sources.length ? (
+            <View className="gap-4">
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                Sources
+              </Text>
+              <Text className="text-base text-muted-light dark:text-muted-dark">
+                {snapshot.queue.queued} queued · {snapshot.queue.uploading} uploading ·{" "}
+                {snapshot.queue.failed} blocked · {snapshot.queue.uploaded} uploaded
+              </Text>
+              {snapshot.sources.map((source) => (
+                <View className="gap-4 border border-accent p-4" key={source.id}>
+                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                    {source.name}
+                  </Text>
+                  <Text className="text-base text-muted-light dark:text-muted-dark">
+                    {source.enabled ? "Watching" : "Disabled"} · {source.remotePath}
+                  </Text>
+                  <Pressable
+                    accessibilityLabel={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
+                    accessibilityRole="button"
+                    className="border border-accent p-4"
+                    onPress={() => void toggleSource(source.id)}
+                  >
+                    <Text className="text-base text-ink-light dark:text-ink-dark">
+                      {source.enabled ? "Disable" : "Enable"}
+                    </Text>
+                  </Pressable>
+                </View>
+              ))}
+              {!addingSource ? (
+                <Pressable
+                  accessibilityLabel="Add upload source"
+                  accessibilityRole="button"
+                  className="border border-accent p-4"
+                  onPress={() => setAddingSource(true)}
+                >
+                  <Text className="text-base text-ink-light dark:text-ink-dark">
+                    Add source
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          className="border border-accent p-4"
-          disabled={!snapshot}
-          onPress={() => void togglePaused()}
-        >
-          <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-            {snapshot?.engine.state === "paused"
-              ? "Resume fixture engine"
-              : "Pause fixture engine"}
-          </Text>
-        </Pressable>
+        {snapshot?.account.status === "connected" ? (
+          <View className="gap-4">
+            <Pressable
+              accessibilityRole="button"
+              className="border border-accent p-4"
+              onPress={() => void scanNow()}
+            >
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                Scan now
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              className="border border-accent p-4"
+              onPress={() => void togglePaused()}
+            >
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                {snapshot.engine.state === "paused" ? "Resume uploads" : "Pause uploads"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );

@@ -4,11 +4,7 @@ import { Linking, Pressable, Text, TextInput, View } from "react-native";
 import webDavUploadEngine, {
   type AccountHealth,
   type EngineError,
-  type SourcePreview,
-  type SourceSelection,
 } from "../../../modules/webdav-upload-engine";
-import { LocalSourcePicker } from "../sources/LocalSourcePicker";
-import { RemoteFolderPicker } from "../sources/RemoteFolderPicker";
 
 type AccountConnectionProps = {
   account: AccountHealth;
@@ -26,11 +22,6 @@ export function AccountConnection({ account }: AccountConnectionProps) {
   const [loginAttemptId, setLoginAttemptId] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
-  const [selectedRemotePath, setSelectedRemotePath] = useState<string[]>();
-  const [selectedSource, setSelectedSource] = useState<{
-    selection: SourceSelection;
-    preview: SourcePreview;
-  }>();
 
   const pollLogin = useCallback(async () => {
     if (!loginAttemptId) {
@@ -117,43 +108,27 @@ export function AccountConnection({ account }: AccountConnectionProps) {
 
   if (account.status === "connected") {
     return (
-      <View className="gap-4">
-        <View className="gap-4 border border-accent p-4">
-          <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-            {account.displayName}
-          </Text>
-          <Text className="text-base text-muted-light dark:text-muted-dark">
-            {account.serverUrl} · DAV user {account.davUserId}
-          </Text>
-          <Pressable
-            accessibilityLabel="Verify stored account"
-            accessibilityRole="button"
-            className="border border-accent p-4"
-            disabled={busy}
-            onPress={() => void verifyStoredAccount()}
-          >
-            <Text className="text-base text-ink-light dark:text-ink-dark">
-              Verify stored account
-            </Text>
-          </Pressable>
-          {message ? (
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              {message}
-            </Text>
-          ) : null}
-        </View>
-        <LocalSourcePicker
-          onSelect={(selection, preview) => {
-            setSelectedSource({ selection, preview });
-            setSelectedRemotePath(undefined);
-          }}
-        />
-        {selectedSource ? (
-          <RemoteFolderPicker onSelect={setSelectedRemotePath} />
-        ) : null}
-        {selectedRemotePath ? (
+      <View className="gap-4 border border-accent p-4">
+        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+          {account.displayName}
+        </Text>
+        <Text className="text-base text-muted-light dark:text-muted-dark">
+          {account.serverUrl} · DAV user {account.davUserId}
+        </Text>
+        <Pressable
+          accessibilityLabel="Verify stored account"
+          accessibilityRole="button"
+          className="border border-accent p-4"
+          disabled={busy}
+          onPress={() => void verifyStoredAccount()}
+        >
           <Text className="text-base text-ink-light dark:text-ink-dark">
-            Selected: /{selectedRemotePath.join("/")}
+            Verify stored account
+          </Text>
+        </Pressable>
+        {message ? (
+          <Text className="text-base text-muted-light dark:text-muted-dark">
+            {message}
           </Text>
         ) : null}
       </View>
