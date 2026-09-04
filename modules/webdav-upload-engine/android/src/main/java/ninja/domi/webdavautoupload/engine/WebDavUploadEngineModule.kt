@@ -103,6 +103,13 @@ class WebDavUploadEngineModule : Module() {
       engine.unresolvedFailures()
     }
 
+    AsyncFunction("getDiagnosticReportAsync") {
+      DiagnosticReportBuilder(engineDatabase.engineDao()).build(
+        accountRepository.currentAccount(),
+        enginePreferences.status(),
+      )
+    }
+
     AsyncFunction("pauseAsync") {
       workScheduler.pause()
       engine.invalidate()

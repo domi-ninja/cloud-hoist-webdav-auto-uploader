@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Share, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { project } from "@/config/project";
@@ -58,6 +58,16 @@ export default function SettingsScreen() {
     );
   };
 
+  const shareDiagnostics = async () => {
+    setErrorMessage(undefined);
+    const report = await webDavUploadEngine.getDiagnosticReport();
+    if (!report.ok) {
+      setErrorMessage(report.error.message);
+      return;
+    }
+    await Share.share({ message: report.value, title: "WebDAV Auto Upload diagnostics" });
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
       <ScrollView className="flex-1" contentContainerClassName="gap-4 p-4">
@@ -110,6 +120,25 @@ export default function SettingsScreen() {
             </Pressable>
           </View>
         ) : null}
+        <View className="gap-4 border border-muted-light p-4 dark:border-muted-dark">
+          <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+            Diagnostics
+          </Text>
+          <Text className="text-base text-muted-light dark:text-muted-dark">
+            Includes app and Android versions, queue counts, transfer rules, and blocker codes.
+            Credentials, server addresses, paths, and filenames are excluded.
+          </Text>
+          <Pressable
+            accessibilityLabel="Share private diagnostic report"
+            accessibilityRole="button"
+            className="border border-accent p-4"
+            onPress={() => void shareDiagnostics()}
+          >
+            <Text className="text-base text-ink-light dark:text-ink-dark">
+              Share diagnostics
+            </Text>
+          </Pressable>
+        </View>
         <View className="gap-4 border border-muted-light p-4 dark:border-muted-dark">
           <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
             About

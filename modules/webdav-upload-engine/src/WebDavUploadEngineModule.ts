@@ -54,6 +54,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   getSourcesAsync(): Promise<unknown>;
   getRecentActivityAsync(): Promise<unknown>;
   getUnresolvedFailuresAsync(): Promise<unknown>;
+  getDiagnosticReportAsync(): Promise<unknown>;
   pauseAsync(): Promise<void>;
   resumeAsync(): Promise<void>;
   scanNowAsync(): Promise<void>;
@@ -169,6 +170,12 @@ export const webDavUploadEngine = {
       .array()
       .parse(await nativeModule.getUnresolvedFailuresAsync());
   },
+
+  getDiagnosticReport: () =>
+    runValueCommand(
+      () => nativeModule.getDiagnosticReportAsync(),
+      (value): string => z.string().min(1).parse(value),
+    ),
 
   pause: () => runCommand(() => nativeModule.pauseAsync()),
   resume: () => runCommand(() => nativeModule.resumeAsync()),
