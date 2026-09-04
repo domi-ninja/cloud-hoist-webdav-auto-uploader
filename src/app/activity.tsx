@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
@@ -39,6 +39,25 @@ export default function ActivityScreen() {
   const retryFailed = async () => {
     const result = await webDavUploadEngine.retryFailed();
     if (!result.ok) setErrorMessage(result.error.message);
+  };
+
+  const clearCompleted = () => {
+    Alert.alert(
+      "Clear completed history?",
+      "Queued, uploading, and failed transfers will stay. Uploaded files are not deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: () => {
+            void webDavUploadEngine.clearCompletedHistory().then((result) => {
+              if (!result.ok) setErrorMessage(result.error.message);
+            });
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -139,6 +158,18 @@ export default function ActivityScreen() {
           <Text className="text-base text-muted-light dark:text-muted-dark">
             No queued transfers.
           </Text>
+        ) : null}
+        {snapshot.data?.queue.uploaded ? (
+          <Pressable
+            accessibilityLabel="Clear completed upload history"
+            accessibilityRole="button"
+            className="p-4"
+            onPress={clearCompleted}
+          >
+            <Text className="text-base text-red-700 dark:text-red-300">
+              Clear completed history
+            </Text>
+          </Pressable>
         ) : null}
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Recent

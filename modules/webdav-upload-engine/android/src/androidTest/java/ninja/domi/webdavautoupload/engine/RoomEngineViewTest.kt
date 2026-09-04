@@ -86,6 +86,22 @@ class RoomEngineViewTest {
     assertEquals(listOf(2, 3, 4), invalidations)
   }
 
+  @Test
+  fun clearHistoryDeletesOnlyCompletedJobs() {
+    enqueue("completed", JobState.COMPLETED, 10, 20, completedAt = 30)
+    enqueue("queued", JobState.QUEUED, 20, 20)
+    enqueue("blocked", JobState.BLOCKED, 30, 20, error = "quota")
+    val invalidations = mutableListOf<Int>()
+    val view = RoomEngineView(dao, invalidations::add)
+
+    assertEquals(1, view.clearCompletedHistory())
+
+    assertNull(dao.job("completed"))
+    assertEquals(JobState.QUEUED, dao.job("queued")?.state)
+    assertEquals(JobState.BLOCKED, dao.job("blocked")?.state)
+    assertEquals(listOf(2), invalidations)
+  }
+
   private fun enqueue(
     id: String,
     state: String,

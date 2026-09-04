@@ -124,6 +124,10 @@ class RoomEngineView(
     invalidate()
   }
 
+  fun clearCompletedHistory(): Int = dao.deleteCompletedBefore(Long.MAX_VALUE).also {
+    invalidate()
+  }
+
   private fun blockers(
     account: Map<String, Any?>,
     jobs: List<UploadJobView>,

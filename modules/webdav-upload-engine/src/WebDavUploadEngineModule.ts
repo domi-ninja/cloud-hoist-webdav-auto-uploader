@@ -58,6 +58,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   resumeAsync(): Promise<void>;
   scanNowAsync(): Promise<void>;
   retryFailedAsync(): Promise<void>;
+  clearCompletedHistoryAsync(): Promise<void>;
   setTransferConstraintsAsync(input: TransferConstraints): Promise<void>;
   addOrUpdateSourceAsync(source: SourceInput): Promise<void>;
   removeSourceAsync(sourceId: string): Promise<void>;
@@ -173,6 +174,8 @@ export const webDavUploadEngine = {
   resume: () => runCommand(() => nativeModule.resumeAsync()),
   scanNow: () => runCommand(() => nativeModule.scanNowAsync()),
   retryFailed: () => runCommand(() => nativeModule.retryFailedAsync()),
+  clearCompletedHistory: () =>
+    runCommand(() => nativeModule.clearCompletedHistoryAsync()),
   setTransferConstraints: (input: TransferConstraints) => {
     const constraints = transferConstraintsSchema.parse(input);
     return runCommand(() => nativeModule.setTransferConstraintsAsync(constraints));

@@ -123,6 +123,10 @@ class WebDavUploadEngineModule : Module() {
       workScheduler.requestQueueDrain()
     }
 
+    AsyncFunction("clearCompletedHistoryAsync") {
+      engine.clearCompletedHistory()
+    }
+
     AsyncFunction("setTransferConstraintsAsync") { input: TransferConstraintsRecord ->
       workScheduler.updateDrainConstraints(input.toConstraints())
       engine.invalidate()
