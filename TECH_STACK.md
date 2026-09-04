@@ -1,19 +1,28 @@
-# Technology stack
+# WebDAV Auto Upload technology stack
 
-This project is an Android-first, open-source React Native app for reliable automatic uploads to Nextcloud.
+WebDAV Auto Upload is an Android-first, open-source React Native app for reliable automatic uploads to Nextcloud.
+
+## Project identity
+
+- **Display name:** WebDAV Auto Upload
+- **Expo slug and public repository:** `webdav-auto-upload`
+- **Android package:** `ninja.domi.webdavautoupload`
+- **Local directory:** `domi-nextcloud-auto-upload` remains unchanged
 
 ## Locked choices
 
 - **App:** React Native with Expo and TypeScript in strict mode
+- **License:** GPL-3.0-or-later
 - **Package manager:** pnpm
 - **Styling:** NativeWind 4 with Tailwind CSS 3
 - **Navigation:** Expo Router
 - **Server state:** TanStack Query where request caching and synchronization are useful
-- **Local persistence:** Expo SQLite for durable upload jobs and app state
+- **Local persistence:** Android Room over SQLite for the durable upload engine; lightweight React Native preferences for UI-only state
 - **Secrets:** Expo SecureStore for credentials and tokens
 - **Android development:** Android Studio emulator with an Expo development build
 - **Native project management:** Expo prebuild / Continuous Native Generation
 - **Delivery:** EAS-compatible builds, without requiring EAS-hosted services
+- **Server support:** Nextcloud in v0.1; no generic WebDAV compatibility claim without interoperability tests
 
 Package versions will be pinned together during bootstrap using the current Expo-compatible versions and committed in `pnpm-lock.yaml`.
 
@@ -21,7 +30,9 @@ Package versions will be pinned together during bootstrap using the current Expo
 
 Expo Go is not a runtime target. Dependable background uploads may require Android WorkManager, foreground services, boot handling, and custom Expo modules or config plugins. The project may add that native Android code without abandoning Expo for the rest of the app.
 
-The app is local-first and has no application backend. It talks directly to user-configured Nextcloud servers using their supported remote APIs. Credentials stay on the device.
+The background engine is a Kotlin Expo module. Kotlin owns file discovery, the Room database, scheduling, transfers, and recovery. React Native owns setup, configuration, and status screens through a typed module API.
+
+The app is local-first and has no application backend. It talks directly to user-configured Nextcloud servers using their supported remote APIs. Credentials stay on the device. The first release targets Nextcloud rather than claiming compatibility with every WebDAV server.
 
 ## Defaults
 
