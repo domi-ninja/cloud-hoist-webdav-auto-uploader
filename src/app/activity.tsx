@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Alert, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
@@ -13,6 +13,7 @@ import {
 } from "@/lib/engine-query";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 import { useNow } from "@/lib/use-now";
+import { ActionButton, Panel, Separator } from "@/components/ui";
 
 function transferState(
   state:
@@ -61,6 +62,9 @@ export default function ActivityScreen() {
   const [retrying, setRetrying] = useState(false);
   const [clearing, setClearing] = useState(false);
   const now = useNow();
+  const activeJobs =
+    snapshot.data?.recentJobs.filter((job) => job.state.status !== "uploaded") ?? [];
+  const activityItems = activity.data?.pages.flatMap((page) => page.items) ?? [];
 
   const retryFailed = async () => {
     setRetrying(true);
@@ -139,25 +143,25 @@ export default function ActivityScreen() {
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
               Blockers
             </Text>
-            {snapshot.data.blockers.map((blocker, index) => (
-              <View className="gap-4 border border-accent p-4" key={`${blocker.kind}-${index}`}>
-                <Text className="text-base text-ink-light dark:text-ink-dark">
-                  {blockerText(blocker, now)}
-                </Text>
-                {blocker.kind === "account" || blocker.kind === "permission" ? (
-                  <Pressable
-                    accessibilityLabel="Repair blocker in Sources"
-                    accessibilityRole="button"
-                    className="border border-accent p-4 disabled:opacity-50"
-                    onPress={() => router.navigate("/")}
-                  >
+            <Panel>
+              {snapshot.data.blockers.map((blocker, index) => (
+                <Fragment key={`${blocker.kind}-${index}`}>
+                  {index ? <Separator /> : null}
+                  <View className="gap-4">
                     <Text className="text-base text-ink-light dark:text-ink-dark">
-                      Repair in Sources
+                      {blockerText(blocker, now)}
                     </Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            ))}
+                    {blocker.kind === "account" || blocker.kind === "permission" ? (
+                      <ActionButton
+                        label="Repair in Sources"
+                        onPress={() => router.navigate("/")}
+                        tone="primary"
+                      />
+                    ) : null}
+                  </View>
+                </Fragment>
+              ))}
+            </Panel>
           </View>
         ) : null}
         {failures.data?.length ? (
@@ -165,103 +169,98 @@ export default function ActivityScreen() {
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
               Needs attention
             </Text>
-            {failures.data.map((failure) => (
-              <View className="gap-4 border border-accent p-4" key={failure.id}>
-                <Text className="text-base text-ink-light dark:text-ink-dark">
-                  {failure.message}
-                </Text>
-                <Text className="text-base text-muted-light dark:text-muted-dark">
-                  {failure.retryable ? "Will retry" : "Action required"} ·{" "}
-                  {formatRelativeTime(failure.occurredAt, now)}
-                </Text>
-              </View>
-            ))}
-            <Pressable
-              accessibilityLabel="Retry failed uploads"
-              accessibilityRole="button"
-              className="border border-accent p-4 disabled:opacity-50"
+            <Panel>
+              {failures.data.map((failure, index) => (
+                <Fragment key={failure.id}>
+                  {index ? <Separator /> : null}
+                  <View className="gap-4">
+                    <Text className="text-base text-ink-light dark:text-ink-dark">
+                      {failure.message}
+                    </Text>
+                    <Text className="text-base text-muted-light dark:text-muted-dark">
+                      {failure.retryable ? "Will retry" : "Action required"} ·{" "}
+                      {formatRelativeTime(failure.occurredAt, now)}
+                    </Text>
+                  </View>
+                </Fragment>
+              ))}
+            </Panel>
+            <ActionButton
               disabled={retrying}
+              label={retrying ? "Retrying…" : "Retry failed"}
               onPress={() => void retryFailed()}
-            >
-              <Text className="text-base text-ink-light dark:text-ink-dark">
-                {retrying ? "Retrying…" : "Retry failed"}
-              </Text>
-            </Pressable>
+              tone="primary"
+            />
           </View>
         ) : null}
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Transfers
         </Text>
-        {snapshot.data?.recentJobs.length ? (
-          snapshot.data.recentJobs.map((job) => (
-            <View
-              className="gap-4 border border-muted-light p-4 dark:border-muted-dark"
-              key={job.id}
-            >
-              <Text
-                accessibilityLabel={job.fileName}
-                className="text-base text-ink-light dark:text-ink-dark"
-                numberOfLines={2}
-              >
-                {job.fileName}
-              </Text>
-              <Text className="text-base text-muted-light dark:text-muted-dark">
-                {transferState(job.state, now)} · {formatBytes(job.byteCount)}
-              </Text>
-            </View>
-          ))
+        {activeJobs.length ? (
+          <Panel>
+            {activeJobs.map((job, index) => (
+              <Fragment key={job.id}>
+                {index ? <Separator /> : null}
+                <View className="gap-4">
+                  <Text
+                    accessibilityLabel={job.fileName}
+                    className="text-base text-ink-light dark:text-ink-dark"
+                    numberOfLines={2}
+                  >
+                    {job.fileName}
+                  </Text>
+                  <Text className="text-base text-muted-light dark:text-muted-dark">
+                    {transferState(job.state, now)} · {formatBytes(job.byteCount)}
+                  </Text>
+                </View>
+              </Fragment>
+            ))}
+          </Panel>
         ) : !snapshot.isLoading ? (
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            No transfers in the queue.
+            No active transfers.
           </Text>
-        ) : null}
-        {snapshot.data?.queue.uploaded ? (
-          <Pressable
-            accessibilityLabel="Clear completed upload history"
-            accessibilityRole="button"
-            className="p-4 disabled:opacity-50"
-            disabled={clearing}
-            onPress={clearCompleted}
-          >
-            <Text className="text-base text-red-700 dark:text-red-300">
-              {clearing ? "Clearing…" : "Clear completed history"}
-            </Text>
-          </Pressable>
         ) : null}
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Recent activity
         </Text>
-        {activity.data?.pages.some((page) => page.items.length) ? (
-          activity.data.pages.flatMap((page) => page.items).map((entry) => (
-            <View
-              className="gap-4 border border-muted-light p-4 dark:border-muted-dark"
-              key={entry.id}
-            >
-              <Text className="text-base text-ink-light dark:text-ink-dark">
-                {entry.message}
-              </Text>
-              <Text className="text-base text-muted-light dark:text-muted-dark">
-                {formatRelativeTime(entry.occurredAt, now)}
-              </Text>
-            </View>
-          ))
+        {activityItems.length ? (
+          <Panel>
+            {activityItems.map((entry, index) => (
+              <Fragment key={entry.id}>
+                {index ? <Separator /> : null}
+                <View className="gap-4">
+                  <Text className="text-base text-ink-light dark:text-ink-dark">
+                    {entry.message}
+                  </Text>
+                  <Text className="text-base text-muted-light dark:text-muted-dark">
+                    {formatRelativeTime(entry.occurredAt, now)}
+                  </Text>
+                </View>
+              </Fragment>
+            ))}
+          </Panel>
         ) : !activity.isLoading ? (
           <Text className="text-base text-muted-light dark:text-muted-dark">
             No uploads yet.
           </Text>
         ) : null}
         {activity.hasNextPage ? (
-          <Pressable
-            accessibilityLabel="Load older upload activity"
-            accessibilityRole="button"
-            className="border border-accent p-4 disabled:opacity-50"
+          <ActionButton
             disabled={activity.isFetchingNextPage}
+            label={activity.isFetchingNextPage ? "Loading…" : "Load older"}
             onPress={() => void activity.fetchNextPage()}
-          >
-            <Text className="text-base text-ink-light dark:text-ink-dark">
-              {activity.isFetchingNextPage ? "Loading…" : "Load older"}
-            </Text>
-          </Pressable>
+            tone="secondary"
+          />
+        ) : null}
+        {snapshot.data?.queue.uploaded ? (
+          <ActionButton
+            accessibilityLabel="Clear completed upload history"
+            disabled={clearing}
+            label={clearing ? "Clearing…" : "Clear completed history"}
+            onPress={clearCompleted}
+            tone="danger"
+          />
         ) : null}
       </ScrollView>
     </SafeAreaView>

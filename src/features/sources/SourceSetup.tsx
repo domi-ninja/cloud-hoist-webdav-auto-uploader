@@ -8,6 +8,7 @@ import webDavUploadEngine, {
 } from "../../../modules/webdav-upload-engine";
 import { LocalSourcePicker } from "./LocalSourcePicker";
 import { RemoteFolderPicker } from "./RemoteFolderPicker";
+import { ActionButton, Panel, Separator } from "@/components/ui";
 
 type SourceSetupProps = {
   onComplete: () => void;
@@ -27,6 +28,14 @@ function selectionName(selection: SourceSelection) {
 
 function displayPath(pathSegments: string[]) {
   return pathSegments.length ? `/${pathSegments.join("/")}` : "/";
+}
+
+function ChoiceMark({ selected }: { selected: boolean }) {
+  return (
+    <View className="h-6 w-6 items-center justify-center rounded-full border border-muted-light dark:border-muted-dark">
+      {selected ? <View className="h-3 w-3 rounded-full bg-accent" /> : null}
+    </View>
+  );
 }
 
 export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
@@ -49,16 +58,10 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
           }}
         />
         {onCancel ? (
-          <Pressable
-            accessibilityLabel="Cancel source setup"
-            accessibilityRole="button"
-            className="p-4"
+          <ActionButton
+            label="Cancel"
             onPress={onCancel}
-          >
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              Cancel
-            </Text>
-          </Pressable>
+          />
         ) : null}
       </View>
     );
@@ -68,28 +71,18 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
     return (
       <View className="gap-4">
         <RemoteFolderPicker onSelect={setRemotePath} />
-        <Pressable
-          accessibilityLabel="Back to local source"
-          accessibilityRole="button"
-          className="p-4"
+        <ActionButton
+          label="Back"
           onPress={() => {
             setSelection(undefined);
             setPreview(undefined);
           }}
-        >
-          <Text className="text-base text-accent">Back</Text>
-        </Pressable>
+        />
         {onCancel ? (
-          <Pressable
-            accessibilityLabel="Cancel source setup"
-            accessibilityRole="button"
-            className="p-4"
+          <ActionButton
+            label="Cancel"
             onPress={onCancel}
-          >
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              Cancel
-            </Text>
-          </Pressable>
+          />
         ) : null}
       </View>
     );
@@ -114,7 +107,7 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
   };
 
   return (
-    <View className="gap-4 border border-accent p-4">
+    <Panel>
       <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
         Review source
       </Text>
@@ -141,20 +134,23 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
           accessibilityLabel="Upload new files only"
           accessibilityRole="radio"
           accessibilityState={{ checked: !includeExisting }}
-          className={`border p-4 ${!includeExisting ? "border-accent" : "border-muted-light dark:border-muted-dark"}`}
+          className="flex-row items-center gap-4 p-4"
           onPress={() => setIncludeExisting(false)}
         >
+          <ChoiceMark selected={!includeExisting} />
           <Text className="text-base text-ink-light dark:text-ink-dark">
             New files only (recommended)
           </Text>
         </Pressable>
+        <Separator />
         <Pressable
           accessibilityLabel="Upload existing files too"
           accessibilityRole="radio"
           accessibilityState={{ checked: includeExisting }}
-          className={`border p-4 ${includeExisting ? "border-accent" : "border-muted-light dark:border-muted-dark"}`}
+          className="flex-row items-center gap-4 p-4"
           onPress={() => setIncludeExisting(true)}
         >
+          <ChoiceMark selected={includeExisting} />
           <Text className="text-base text-ink-light dark:text-ink-dark">
             Include existing files
           </Text>
@@ -165,39 +161,26 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
           {error.message}
         </Text>
       ) : null}
-      <Pressable
+      <ActionButton
         accessibilityLabel="Save upload source"
-        accessibilityRole="button"
-        className="bg-accent p-4 disabled:opacity-50"
         disabled={busy || !name.trim()}
+        label={busy ? "Saving…" : "Start auto upload"}
         onPress={() => void save()}
-      >
-        <Text className="text-base font-semibold text-canvas-dark">
-          {busy ? "Saving…" : "Start auto upload"}
-        </Text>
-      </Pressable>
-      <Pressable
+        tone="primary"
+      />
+      <ActionButton
         accessibilityLabel="Back to remote destination"
-        accessibilityRole="button"
-        className="p-4 disabled:opacity-50"
         disabled={busy}
+        label="Back"
         onPress={() => setRemotePath(undefined)}
-      >
-        <Text className="text-base text-accent">Back</Text>
-      </Pressable>
+      />
       {onCancel ? (
-        <Pressable
-          accessibilityLabel="Cancel source setup"
-          accessibilityRole="button"
-          className="p-4 disabled:opacity-50"
+        <ActionButton
           disabled={busy}
+          label="Cancel"
           onPress={onCancel}
-        >
-          <Text className="text-base text-muted-light dark:text-muted-dark">
-            Cancel
-          </Text>
-        </Pressable>
+        />
       ) : null}
-    </View>
+    </Panel>
   );
 }

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { Alert, ScrollView, Share, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { project } from "@/config/project";
@@ -10,6 +10,7 @@ import { useNow } from "@/lib/use-now";
 import webDavUploadEngine, {
   type TransferConstraints,
 } from "../../modules/webdav-upload-engine";
+import { ActionButton, Panel, Separator } from "@/components/ui";
 
 type ConstraintKey = keyof TransferConstraints;
 
@@ -103,30 +104,42 @@ export default function SettingsScreen() {
           </Text>
         ) : null}
         {snapshot
-          ? options.map((option) => {
-              const checked = snapshot.scheduler.constraints[option.key];
-              return (
-                <Pressable
-                  accessibilityLabel={option.label}
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked, disabled: saving !== undefined }}
-                  className="flex-row items-center justify-between gap-4 border border-accent p-4 disabled:opacity-50"
-                  disabled={saving !== undefined}
-                  key={option.key}
-                  onPress={() => void toggle(option.key)}
-                >
-                  <Text className="shrink text-base text-ink-light dark:text-ink-dark">
-                    {option.label}
+          ? (
+              <Panel>
+                {options.map((option, index) => {
+                  const checked = snapshot.scheduler.constraints[option.key];
+                  return (
+                    <Fragment key={option.key}>
+                      {index ? <Separator /> : null}
+                      <View className="flex-row items-center justify-between gap-4">
+                        <Text className="shrink text-base text-ink-light dark:text-ink-dark">
+                          {option.label}
+                        </Text>
+                        <Switch
+                          accessibilityLabel={option.label}
+                          disabled={saving !== undefined}
+                          onValueChange={() => void toggle(option.key)}
+                          thumbColor="#f4f4f0"
+                          trackColor={{ false: "#62665d", true: "#4f7d45" }}
+                          value={checked}
+                        />
+                      </View>
+                    </Fragment>
+                  );
+                })}
+                {saving ? (
+                  <Text
+                    accessibilityLiveRegion="polite"
+                    className="text-base text-muted-light dark:text-muted-dark"
+                  >
+                    Saving transfer rules…
                   </Text>
-                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                    {saving === option.key ? "Saving…" : checked ? "On" : "Off"}
-                  </Text>
-                </Pressable>
-              );
-            })
+                ) : null}
+              </Panel>
+            )
           : null}
         {snapshot?.account.status === "connected" ? (
-          <View className="gap-4 border border-muted-light p-4 dark:border-muted-dark">
+          <Panel>
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
               Account
             </Text>
@@ -136,17 +149,15 @@ export default function SettingsScreen() {
             <Text className="text-base text-muted-light dark:text-muted-dark">
               Checked {formatRelativeTime(snapshot.account.checkedAt, now)}
             </Text>
-            <Pressable
+            <ActionButton
               accessibilityLabel="Sign out and remove local data"
-              accessibilityRole="button"
-              className="p-4"
+              label="Sign out and remove local data"
               onPress={signOut}
-            >
-              <Text className="text-base text-red-700 dark:text-red-300">Sign out</Text>
-            </Pressable>
-          </View>
+              tone="danger"
+            />
+          </Panel>
         ) : null}
-        <View className="gap-4 border border-muted-light p-4 dark:border-muted-dark">
+        <Panel>
           <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
             Diagnostics
           </Text>
@@ -154,19 +165,15 @@ export default function SettingsScreen() {
             Share app and Android versions, queue counts, transfer rules, and recent engine
             codes. Account, file, and folder details are excluded.
           </Text>
-          <Pressable
-            accessibilityLabel="Share private diagnostic report"
-            accessibilityRole="button"
-            className="border border-accent p-4 disabled:opacity-50"
+          <ActionButton
+            accessibilityLabel="Share diagnostic report"
             disabled={sharing}
+            label={sharing ? "Opening share sheet…" : "Share diagnostics"}
             onPress={() => void shareDiagnostics()}
-          >
-            <Text className="text-base text-ink-light dark:text-ink-dark">
-              {sharing ? "Opening share sheet…" : "Share diagnostics"}
-            </Text>
-          </Pressable>
-        </View>
-        <View className="gap-4 border border-muted-light p-4 dark:border-muted-dark">
+            tone="primary"
+          />
+        </Panel>
+        <Panel>
           <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
             About
           </Text>
@@ -176,7 +183,7 @@ export default function SettingsScreen() {
           <Text className="text-base text-muted-light dark:text-muted-dark">
             {project.compatibilityNotice}
           </Text>
-        </View>
+        </Panel>
       </ScrollView>
     </SafeAreaView>
   );

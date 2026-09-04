@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import { Text, TextInput, View } from "react-native";
 
 import webDavUploadEngine, {
   type EngineError,
   type RemoteFolder,
 } from "../../../modules/webdav-upload-engine";
+import { ActionButton, Panel, Separator } from "@/components/ui";
 
 type RemoteFolderPickerProps = {
   onSelect: (pathSegments: string[]) => void;
@@ -75,7 +76,7 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
   };
 
   return (
-    <View className="gap-4 border border-accent p-4">
+    <Panel>
       <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
         Choose upload destination
       </Text>
@@ -83,14 +84,10 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
         {displayPath(pathSegments)}
       </Text>
       {pathSegments.length ? (
-        <Pressable
-          accessibilityLabel="Go to parent remote folder"
-          accessibilityRole="button"
-          className="p-4"
+        <ActionButton
+          label="Up one folder"
           onPress={() => openPath(pathSegments.slice(0, -1))}
-        >
-          <Text className="text-base text-accent">Up one folder</Text>
-        </Pressable>
+        />
       ) : null}
 
       {error ? (
@@ -101,15 +98,12 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
           >
             {error.message}
           </Text>
-          <Pressable
-            accessibilityLabel="Retry remote folders"
-            accessibilityRole="button"
-            className="border border-accent p-4 disabled:opacity-50"
+          <ActionButton
             disabled={loading}
+            label="Retry"
             onPress={() => void loadFolders()}
-          >
-            <Text className="text-base text-ink-light dark:text-ink-dark">Retry</Text>
-          </Pressable>
+            tone="primary"
+          />
         </View>
       ) : loading ? (
         <Text
@@ -121,19 +115,16 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
       ) : (
         <View className="gap-4">
           {folders.length ? (
-            folders.map((folder) => (
-              <Pressable
-                accessibilityLabel={`Open ${folder.name}`}
-                accessibilityRole="button"
-                className="border border-accent p-4 disabled:opacity-50"
-                disabled={creating}
-                key={folder.pathSegments.join("\0")}
-                onPress={() => openPath(folder.pathSegments)}
-              >
-                <Text className="text-base text-ink-light dark:text-ink-dark">
-                  {folder.name}/
-                </Text>
-              </Pressable>
+            folders.map((folder, index) => (
+              <Fragment key={folder.pathSegments.join("\0")}>
+                {index ? <Separator /> : null}
+                <ActionButton
+                  accessibilityLabel={`Open ${folder.name}`}
+                  disabled={creating}
+                  label={`${folder.name}/`}
+                  onPress={() => openPath(folder.pathSegments)}
+                />
+              </Fragment>
             ))
           ) : (
             <Text className="text-base text-muted-light dark:text-muted-dark">
@@ -154,29 +145,20 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
         returnKeyType="done"
         value={newFolderName}
       />
-      <Pressable
-        accessibilityLabel="Create remote folder"
-        accessibilityRole="button"
-        className="border border-accent p-4 disabled:opacity-50"
+      <ActionButton
         disabled={creating}
+        label={creating ? "Creating…" : "Create folder"}
         onPress={() => void createFolder()}
-      >
-        <Text className="text-base text-ink-light dark:text-ink-dark">
-          {creating ? "Creating…" : "Create folder"}
-        </Text>
-      </Pressable>
+        tone="secondary"
+      />
 
-      <Pressable
+      <ActionButton
         accessibilityLabel="Use current remote folder"
-        accessibilityRole="button"
-        className="bg-accent p-4 disabled:opacity-50"
         disabled={creating || loading}
+        label="Use this folder"
         onPress={() => onSelect(pathSegments)}
-      >
-        <Text className="text-base font-semibold text-canvas-dark">
-          Use this folder
-        </Text>
-      </Pressable>
-    </View>
+        tone="primary"
+      />
+    </Panel>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import webDavUploadEngine, {
   type EngineError,
@@ -7,6 +7,7 @@ import webDavUploadEngine, {
   type SourceSelection,
 } from "../../../modules/webdav-upload-engine";
 import { formatBytes } from "@/lib/format";
+import { ActionButton, Panel, Separator } from "@/components/ui";
 
 type LocalSourcePickerProps = {
   onSelect: (selection: SourceSelection, preview: SourcePreview) => void;
@@ -106,7 +107,7 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
   };
 
   return (
-    <View className="gap-4 border border-accent p-4">
+    <Panel>
       <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
         Choose what to upload
       </Text>
@@ -114,37 +115,27 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
         Pick a media collection or any readable Android folder.
       </Text>
 
-      <Pressable
+      <Separator />
+      <ActionButton
         accessibilityLabel="Choose Camera source"
-        accessibilityRole="button"
-        className="border border-accent p-4 disabled:opacity-50"
         disabled={busy}
+        label="Camera"
         onPress={() => void chooseMedia({ type: "camera" })}
-      >
-        <Text className="text-base text-ink-light dark:text-ink-dark">Camera</Text>
-      </Pressable>
-      <Pressable
+      />
+      <Separator />
+      <ActionButton
         accessibilityLabel="Choose Screenshots source"
-        accessibilityRole="button"
-        className="border border-accent p-4 disabled:opacity-50"
         disabled={busy}
+        label="Screenshots"
         onPress={() => void chooseMedia({ type: "screenshots" })}
-      >
-        <Text className="text-base text-ink-light dark:text-ink-dark">
-          Screenshots
-        </Text>
-      </Pressable>
-      <Pressable
+      />
+      <Separator />
+      <ActionButton
         accessibilityLabel="Choose local folder source"
-        accessibilityRole="button"
-        className="border border-accent p-4 disabled:opacity-50"
         disabled={busy}
+        label="Choose folder"
         onPress={() => void chooseFolder()}
-      >
-        <Text className="text-base text-ink-light dark:text-ink-dark">
-          Choose folder
-        </Text>
-      </Pressable>
+      />
 
       {pendingMedia && !preview ? (
         <View className="gap-4">
@@ -152,17 +143,12 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
             Allow access to the photos and videos you want watched. Limited access
             works, but only selected items can be discovered.
           </Text>
-          <Pressable
-            accessibilityLabel="Allow photo and video access"
-            accessibilityRole="button"
-            className="bg-accent p-4 disabled:opacity-50"
+          <ActionButton
             disabled={busy}
+            label="Review access"
             onPress={() => void allowMedia()}
-          >
-            <Text className="text-base font-semibold text-canvas-dark">
-              Review access
-            </Text>
-          </Pressable>
+            tone="primary"
+          />
         </View>
       ) : null}
 
@@ -193,18 +179,14 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
               Android granted limited access. Only the selected media will upload.
             </Text>
           ) : null}
-          <Pressable
+          <ActionButton
             accessibilityLabel={`Use ${sourceLabel(selection)} source`}
-            accessibilityRole="button"
-            className="bg-accent p-4 disabled:opacity-50"
+            label="Continue"
             onPress={() => onSelect(selection, preview)}
-          >
-            <Text className="text-base font-semibold text-canvas-dark">
-              Continue
-            </Text>
-          </Pressable>
+            tone="primary"
+          />
         </View>
       ) : null}
-    </View>
+    </Panel>
   );
 }
