@@ -10,6 +10,7 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -18,9 +19,7 @@ class LiveAccountAcceptanceTest {
   @Test
   fun freshInstallReachesManualAccountActions() {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
-    val launchUrl = decodedArgument(
-      InstrumentationRegistry.getArguments().getString("launchUrlB64"),
-    )
+    val launchUrl = launchUrlArgument()
     launchApp(instrumentation.context, launchUrl)
     val device = UiDevice.getInstance(instrumentation)
     dismissDeveloperMenuOnboarding(device)
@@ -51,9 +50,7 @@ class LiveAccountAcceptanceTest {
   @Test
   fun connectedAccountRendersAfterProcessDeath() {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
-    val launchUrl = decodedArgument(
-      InstrumentationRegistry.getArguments().getString("launchUrlB64"),
-    )
+    val launchUrl = launchUrlArgument()
     launchApp(instrumentation.context, launchUrl)
     val device = UiDevice.getInstance(instrumentation)
     dismissDeveloperMenuOnboarding(device)
@@ -68,6 +65,12 @@ class LiveAccountAcceptanceTest {
     } catch (_: IllegalArgumentException) {
       throw IllegalArgumentException("An acceptance-test value is malformed.")
     }
+  }
+
+  private fun launchUrlArgument(): String {
+    val value = InstrumentationRegistry.getArguments().getString("launchUrlB64")
+    assumeTrue("The live account runner did not supply a launch URL.", !value.isNullOrBlank())
+    return decodedArgument(value)
   }
 
   private fun launchApp(context: Context, launchUrl: String) {
