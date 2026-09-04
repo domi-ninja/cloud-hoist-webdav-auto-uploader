@@ -151,7 +151,7 @@ export default function HomeScreen() {
               }}
             />
           ) : null}
-          {snapshot?.sources.length ? (
+          {snapshot?.sources.length && !addingSource ? (
             <View className="gap-4">
               <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                 Sources
@@ -170,7 +170,7 @@ export default function HomeScreen() {
           ) : null}
         </View>
 
-        {snapshot?.account.status === "connected" ? (
+        {snapshot?.account.status === "connected" && !addingSource ? (
           <View className="gap-4">
             <ActionButton
               disabled={scanning}

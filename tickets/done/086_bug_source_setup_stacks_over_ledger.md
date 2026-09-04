@@ -1,6 +1,6 @@
 # 086 Bug: source setup stacks over the ledger
 
-Status: in progress
+Status: done
 
 Found while verifying: 083
 
