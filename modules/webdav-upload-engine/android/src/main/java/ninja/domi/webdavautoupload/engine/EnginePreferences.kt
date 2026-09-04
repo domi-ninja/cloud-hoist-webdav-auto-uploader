@@ -4,12 +4,12 @@ import android.content.Context
 import java.time.Instant
 
 data class SchedulerStatus(
-  val pausedAt: String?,
-  val lastScanRequestedAt: String?,
-  val lastScanCompletedAt: String?,
-  val workerState: String,
-  val workerScope: String?,
-  val constraints: TransferConstraints,
+  val pausedAt: String? = null,
+  val lastScanRequestedAt: String? = null,
+  val lastScanCompletedAt: String? = null,
+  val workerState: String = "idle",
+  val workerScope: String? = null,
+  val constraints: TransferConstraints = TransferConstraints(),
 ) {
   fun toMap() = mapOf(
     "pausedAt" to pausedAt,

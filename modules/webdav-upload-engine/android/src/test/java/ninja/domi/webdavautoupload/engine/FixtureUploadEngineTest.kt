@@ -19,6 +19,7 @@ class FixtureUploadEngineTest {
         "recentJobs",
         "blockers",
         "worker",
+        "scheduler",
       ),
       engine.snapshot().keys,
     )

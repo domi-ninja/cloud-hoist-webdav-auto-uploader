@@ -55,6 +55,10 @@ class WebDavUploadEngineModule : Module() {
     val context = appContext.reactContext ?: throw AccountStorageException()
     EngineWorkScheduler(context)
   }
+  private val enginePreferences by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    EnginePreferences(context)
+  }
 
   override fun definition() = ModuleDefinition {
     Name("WebDavUploadEngine")
@@ -70,7 +74,7 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("getSnapshotAsync") {
-      engine.snapshot(accountManager.accountHealth())
+      engine.snapshot(accountManager.accountHealth(), enginePreferences.status())
     }
 
     AsyncFunction("getSourcesAsync") {

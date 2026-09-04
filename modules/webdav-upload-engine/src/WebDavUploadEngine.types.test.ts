@@ -11,6 +11,7 @@ import {
   loginFlowStartSchema,
   remoteFolderSchema,
   remotePathSegmentsSchema,
+  schedulerStatusSchema,
   workerActivitySchema,
 } from "./WebDavUploadEngine.types";
 
@@ -74,6 +75,24 @@ describe("native engine contract", () => {
     { state: "waiting", reason: "Wi-Fi required" },
   ])("decodes worker activity %#", (value) => {
     expect(workerActivitySchema.parse(value)).toEqual(value);
+  });
+
+  it("decodes honest scheduler state without a predicted next run", () => {
+    const status = {
+      pausedAt: null,
+      lastScanRequestedAt: now,
+      lastScanCompletedAt: now,
+      workerState: "idle",
+      workerScope: null,
+      constraints: {
+        unmeteredOnly: true,
+        batteryNotLow: true,
+        requiresCharging: false,
+      },
+    };
+
+    expect(schedulerStatusSchema.parse(status)).toEqual(status);
+    expect(status).not.toHaveProperty("nextRunAt");
   });
 
   it("rejects a snapshot with a missing required native field", () => {

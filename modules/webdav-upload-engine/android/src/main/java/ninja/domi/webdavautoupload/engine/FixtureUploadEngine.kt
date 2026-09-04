@@ -56,13 +56,14 @@ internal class FixtureUploadEngine(
   @Synchronized
   fun snapshot(
     account: Map<String, Any?> = mapOf("status" to "not_configured"),
+    scheduler: SchedulerStatus = SchedulerStatus(),
   ): Map<String, Any?> = mapOf(
     "revision" to revision,
     "account" to account,
-    "engine" to if (pausedAt == null) {
+    "engine" to if (scheduler.pausedAt == null) {
       mapOf("state" to "running")
     } else {
-      mapOf("state" to "paused", "pausedAt" to pausedAt)
+      mapOf("state" to "paused", "pausedAt" to scheduler.pausedAt)
     },
     "sources" to sources(),
     "queue" to mapOf(
@@ -79,7 +80,20 @@ internal class FixtureUploadEngine(
         "message" to "Connect a Nextcloud account to begin uploading.",
       ),
     ),
-    "worker" to mapOf("state" to "idle"),
+    "worker" to if (
+      scheduler.workerState == "scanning" &&
+      scheduler.workerScope != null &&
+      scheduler.lastScanRequestedAt != null
+    ) {
+      mapOf(
+        "state" to "scanning",
+        "sourceId" to scheduler.workerScope,
+        "startedAt" to scheduler.lastScanRequestedAt,
+      )
+    } else {
+      mapOf("state" to "idle")
+    },
+    "scheduler" to scheduler.toMap(),
   )
 
   @Synchronized

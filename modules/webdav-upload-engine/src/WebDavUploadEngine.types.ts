@@ -109,6 +109,21 @@ export const workerActivitySchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("waiting"), reason: z.string().min(1) }),
 ]);
 
+export const transferConstraintsSchema = z.object({
+  unmeteredOnly: z.boolean(),
+  batteryNotLow: z.boolean(),
+  requiresCharging: z.boolean(),
+});
+
+export const schedulerStatusSchema = z.object({
+  pausedAt: z.string().datetime().nullable(),
+  lastScanRequestedAt: z.string().datetime().nullable(),
+  lastScanCompletedAt: z.string().datetime().nullable(),
+  workerState: z.enum(["idle", "scanning"]),
+  workerScope: z.enum(["media", "all"]).nullable(),
+  constraints: transferConstraintsSchema,
+});
+
 export const activityEntrySchema = z.object({
   id: z.string().min(1),
   type: z.enum(["scan", "upload", "pause", "resume", "source_changed"]),
@@ -134,6 +149,7 @@ export const engineSnapshotSchema = z.object({
   recentJobs: z.array(uploadJobSchema),
   blockers: z.array(blockerSchema),
   worker: workerActivitySchema,
+  scheduler: schedulerStatusSchema,
 });
 
 export const sourceInputSchema = z.object({
@@ -239,6 +255,8 @@ export type QueueCounts = z.infer<typeof queueCountsSchema>;
 export type UploadJob = z.infer<typeof uploadJobSchema>;
 export type Blocker = z.infer<typeof blockerSchema>;
 export type WorkerActivity = z.infer<typeof workerActivitySchema>;
+export type TransferConstraints = z.infer<typeof transferConstraintsSchema>;
+export type SchedulerStatus = z.infer<typeof schedulerStatusSchema>;
 export type ActivityEntry = z.infer<typeof activityEntrySchema>;
 export type UnresolvedFailure = z.infer<typeof unresolvedFailureSchema>;
 export type EngineSnapshot = z.infer<typeof engineSnapshotSchema>;
