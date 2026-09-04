@@ -73,6 +73,22 @@ class WebDavUploadEngineModule : Module() {
     val context = appContext.reactContext ?: throw AccountStorageException()
     EnginePreferences(context)
   }
+  private val signOutCleanup by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    SignOutCleanup(
+      context = context,
+      dao = engineDatabase.engineDao(),
+      accountRepository = accountRepository,
+      enginePreferences = enginePreferences,
+      cancelWork = workScheduler::cancelAll,
+      releaseReadPermission = { sourceUri ->
+        context.contentResolver.releasePersistableUriPermission(
+          Uri.parse(sourceUri),
+          Intent.FLAG_GRANT_READ_URI_PERMISSION,
+        )
+      },
+    )
+  }
 
   override fun definition() = ModuleDefinition {
     Name("WebDavUploadEngine")
@@ -80,6 +96,7 @@ class WebDavUploadEngineModule : Module() {
     Events("onSnapshotInvalidated")
 
     OnCreate {
+      signOutCleanup.finishInterruptedSignOut()
       if (accountRepository.currentAccount() != null) workScheduler.ensureScheduled()
     }
 
@@ -181,26 +198,7 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("signOutAsync") {
       workScheduler.pause()
-      workScheduler.cancelAll()
-      val resolver = appContext.reactContext?.contentResolver ?: throw AccountStorageException()
-      val persistedUris = resolver.persistedUriPermissions
-        .filter { it.isReadPermission }
-        .map { it.uri.toString() }
-        .toSet()
-      val sourceUris = engineDatabase.engineDao().allSources()
-        .filter { it.kind == "saf" && it.localUri in persistedUris }
-        .map { it.localUri }
-        .toSet()
-      accountRepository.clear()
-      sourceUris.forEach { sourceUri ->
-        runCatching {
-          resolver.releasePersistableUriPermission(
-            Uri.parse(sourceUri),
-            Intent.FLAG_GRANT_READ_URI_PERMISSION,
-          )
-        }
-      }
-      enginePreferences.clear()
+      signOutCleanup.signOut()
       engine.invalidate()
     }
 
