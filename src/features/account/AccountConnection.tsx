@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Image, Linking, Pressable, Text, TextInput, View } from "react-native";
+import { useRouter } from "expo-router";
+import { Image, Linking, Modal, Pressable, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
   type AccountHealth,
@@ -10,6 +12,9 @@ import {
   nextcloudInstanceLabel,
 } from "@/features/account/instance-icon";
 import { useStoredAccountVerification } from "@/lib/engine-query";
+import { formatRelativeTime } from "@/lib/format";
+import { useNow } from "@/lib/use-now";
+import { ActionButton, Panel, Separator } from "@/components/ui";
 
 type AccountConnectionProps = {
   account: AccountHealth;
@@ -28,7 +33,7 @@ function InstanceIcon({ serverUrl }: { serverUrl: string }) {
         accessibilityLabel="Nextcloud instance icon"
         accessibilityRole="image"
         accessible
-        className="h-16 w-16 items-center justify-center border border-accent"
+        className="h-16 w-16 items-center justify-center bg-canvas-light dark:bg-canvas-dark"
       >
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           NC
@@ -40,7 +45,7 @@ function InstanceIcon({ serverUrl }: { serverUrl: string }) {
   return (
     <Image
       accessibilityLabel="Nextcloud instance icon"
-      className="h-16 w-16 border border-accent"
+      className="h-16 w-16 bg-canvas-light dark:bg-canvas-dark"
       onError={() => setFailed(true)}
       resizeMode="contain"
       source={{ uri: nextcloudInstanceIconUrl(serverUrl) }}
@@ -49,6 +54,9 @@ function InstanceIcon({ serverUrl }: { serverUrl: string }) {
 }
 
 export function AccountConnection({ account }: AccountConnectionProps) {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const now = useNow();
   const [serverUrl, setServerUrl] = useState("");
   const [username, setUsername] = useState("");
   const [appPassword, setAppPassword] = useState("");
@@ -56,6 +64,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
   const [loginAttemptId, setLoginAttemptId] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
+  const [menuOpen, setMenuOpen] = useState(false);
   const accountVerification = useStoredAccountVerification(account);
 
   const pollLogin = useCallback(async () => {
@@ -136,47 +145,91 @@ export function AccountConnection({ account }: AccountConnectionProps) {
 
   if (account.status === "connected") {
     return (
-      <View className="w-40 items-end gap-4">
-        <InstanceIcon key={account.serverUrl} serverUrl={account.serverUrl} />
-        <Text
-          className="text-right text-base font-semibold text-ink-light dark:text-ink-dark"
-          numberOfLines={1}
+      <>
+        <Pressable
+          accessibilityLabel="Open account menu"
+          accessibilityRole="button"
+          accessibilityState={{ expanded: menuOpen }}
+          className="items-center justify-center p-4"
+          onPress={() => setMenuOpen((open) => !open)}
         >
-          {account.displayName}
-        </Text>
-        <Text
-          className="text-right text-base text-muted-light dark:text-muted-dark"
-          numberOfLines={2}
+          <View className="gap-1" pointerEvents="none">
+            <View className="h-0.5 w-6 bg-ink-light dark:bg-ink-dark" />
+            <View className="h-0.5 w-6 bg-ink-light dark:bg-ink-dark" />
+            <View className="h-0.5 w-6 bg-ink-light dark:bg-ink-dark" />
+          </View>
+        </Pressable>
+        <Modal
+          animationType="fade"
+          onRequestClose={() => setMenuOpen(false)}
+          statusBarTranslucent
+          transparent
+          visible={menuOpen}
         >
-          {nextcloudInstanceLabel(account.serverUrl)}
-        </Text>
-        {accountVerification.isFetching ? (
-          <Text className="text-right text-base text-muted-light dark:text-muted-dark">
-            Checking account…
-          </Text>
-        ) : accountVerification.error ? (
-          <>
-            <Text className="text-right text-base text-red-700 dark:text-red-300">
-              {accountVerification.error.message}
-            </Text>
+          <View accessibilityViewIsModal className="flex-1">
             <Pressable
-              accessibilityLabel="Retry account check"
-              accessibilityRole="button"
-              className="border border-accent p-4 disabled:opacity-50"
-              onPress={() => void accountVerification.refetch()}
+              accessibilityLabel="Close account menu"
+              className="absolute inset-0 bg-black/40"
+              onPress={() => setMenuOpen(false)}
+            />
+            <View
+              className="absolute w-80 gap-4 bg-panel-light p-4 dark:bg-panel-dark"
+              style={{ right: 16, top: insets.top + 16 }}
             >
-              <Text className="text-base text-ink-light dark:text-ink-dark">
-                Retry account check
-              </Text>
-            </Pressable>
-          </>
-        ) : null}
-      </View>
+              <View className="flex-row items-center gap-4">
+                <InstanceIcon key={account.serverUrl} serverUrl={account.serverUrl} />
+                <View className="shrink gap-4">
+                  <Text
+                    className="text-base font-semibold text-ink-light dark:text-ink-dark"
+                    numberOfLines={1}
+                  >
+                    {account.displayName}
+                  </Text>
+                  <Text
+                    className="text-base text-muted-light dark:text-muted-dark"
+                    numberOfLines={2}
+                  >
+                    {nextcloudInstanceLabel(account.serverUrl)}
+                  </Text>
+                </View>
+              </View>
+              <Separator />
+              {accountVerification.isFetching ? (
+                <Text className="text-base text-muted-light dark:text-muted-dark">
+                  Checking account…
+                </Text>
+              ) : accountVerification.error ? (
+                <>
+                  <Text className="text-base text-red-700 dark:text-red-300">
+                    {accountVerification.error.message}
+                  </Text>
+                  <ActionButton
+                    label="Retry account check"
+                    onPress={() => void accountVerification.refetch()}
+                    tone="primary"
+                  />
+                </>
+              ) : (
+                <Text className="text-base text-muted-light dark:text-muted-dark">
+                  Checked {formatRelativeTime(account.checkedAt, now)}
+                </Text>
+              )}
+              <ActionButton
+                label="Account settings"
+                onPress={() => {
+                  setMenuOpen(false);
+                  router.navigate("/settings");
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
+      </>
     );
   }
 
   return (
-    <View className="gap-4 border border-accent p-4">
+    <Panel>
       <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
         Connect Nextcloud
       </Text>
@@ -233,60 +286,38 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           <Text className="text-base text-muted-light dark:text-muted-dark">
             Use a Nextcloud app password, never your main account password.
           </Text>
-          <Pressable
-            accessibilityLabel="Connect with app password"
-            accessibilityRole="button"
-            className="border border-accent p-4 disabled:opacity-50"
+          <ActionButton
             disabled={busy}
+            label="Connect with app password"
             onPress={() => void connectManual()}
-          >
-            <Text className="text-base text-ink-light dark:text-ink-dark">
-              Connect with app password
-            </Text>
-          </Pressable>
+            tone="primary"
+          />
         </>
       ) : loginAttemptId ? (
         <>
           <Text className="text-base text-muted-light dark:text-muted-dark">
             Finish signing in in your browser. This screen will update automatically.
           </Text>
-          <Pressable
-            accessibilityLabel="Cancel browser login"
-            accessibilityRole="button"
-            className="border border-accent p-4 disabled:opacity-50"
+          <ActionButton
+            label="Cancel browser login"
             onPress={() => void cancelBrowserLogin()}
-          >
-            <Text className="text-base text-ink-light dark:text-ink-dark">
-              Cancel browser login
-            </Text>
-          </Pressable>
+          />
         </>
       ) : (
         <>
-          <Pressable
-            accessibilityLabel="Continue in browser"
-            accessibilityRole="button"
-            className="border border-accent p-4 disabled:opacity-50"
+          <ActionButton
             disabled={busy}
+            label="Continue in browser"
             onPress={() => void startBrowserLogin()}
-          >
-            <Text className="text-base text-ink-light dark:text-ink-dark">
-              Continue in browser
-            </Text>
-          </Pressable>
-          <Pressable
-            accessibilityLabel="Use app credentials instead"
-            accessibilityRole="button"
-            className="p-4 disabled:opacity-50"
+            tone="primary"
+          />
+          <ActionButton
             disabled={busy}
+            label="Use app credentials instead"
             onPress={() => setShowManual(true)}
-          >
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              Use app credentials instead
-            </Text>
-          </Pressable>
+          />
         </>
       )}
-    </View>
+    </Panel>
   );
 }

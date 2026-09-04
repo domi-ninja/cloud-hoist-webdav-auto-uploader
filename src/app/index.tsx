@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { project } from "@/config/project";
 import webDavUploadEngine, {
@@ -12,6 +12,7 @@ import { SourceSetup } from "@/features/sources/SourceSetup";
 import { useEngineSnapshot } from "@/lib/engine-query";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 import { useNow } from "@/lib/use-now";
+import { ActionButton, Panel } from "@/components/ui";
 
 function engineStatus(snapshot: EngineSnapshot, now: number) {
   if (snapshot.account.status !== "connected") return "Connect an account to begin";
@@ -107,19 +108,28 @@ export default function HomeScreen() {
         }
       >
         <View className="gap-4">
-          <View className="flex-row items-start justify-between gap-4">
-            <View className="shrink gap-4">
-              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                {project.displayName}
-              </Text>
-              <Text className="text-base text-muted-light dark:text-muted-dark">
-                {snapshot ? engineStatus(snapshot, now) : "Loading…"}
-              </Text>
-            </View>
+          <View className="flex-row items-center justify-between gap-4">
+            <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
+              {project.displayName}
+            </Text>
             {snapshot?.account.status === "connected" ? (
               <AccountConnection account={snapshot.account} />
             ) : null}
           </View>
+          {snapshot ? (
+            <Panel>
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                {engineStatus(snapshot, now)}
+              </Text>
+              <Text className="text-base text-muted-light dark:text-muted-dark">
+                {queueSummary(snapshot)}
+              </Text>
+            </Panel>
+          ) : (
+            <Text className="text-base text-muted-light dark:text-muted-dark">
+              Loading…
+            </Text>
+          )}
           {errorMessage || snapshotError ? (
             <Text
               accessibilityLiveRegion="polite"
@@ -146,23 +156,16 @@ export default function HomeScreen() {
               <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                 Sources
               </Text>
-              <Text className="text-base text-muted-light dark:text-muted-dark">
-                {queueSummary(snapshot)}
-              </Text>
               {snapshot.sources.map((source) => (
                 <SourceCard key={source.id} now={now} snapshot={snapshot} source={source} />
               ))}
               {!addingSource ? (
-                <Pressable
+                <ActionButton
                   accessibilityLabel="Add upload source"
-                  accessibilityRole="button"
-                  className="border border-accent p-4 disabled:opacity-50"
+                  label="Add source"
                   onPress={() => setAddingSource(true)}
-                >
-                  <Text className="text-base text-ink-light dark:text-ink-dark">
-                    Add source
-                  </Text>
-                </Pressable>
+                  tone="secondary"
+                />
               ) : null}
             </View>
           ) : null}
@@ -170,30 +173,22 @@ export default function HomeScreen() {
 
         {snapshot?.account.status === "connected" ? (
           <View className="gap-4">
-            <Pressable
-              accessibilityLabel="Scan now"
-              accessibilityRole="button"
-              className="border border-accent p-4 disabled:opacity-50"
+            <ActionButton
               disabled={scanning}
+              label={scanning ? "Scanning…" : "Scan now"}
               onPress={() => void scanNow()}
-            >
-              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                {scanning ? "Scanning…" : "Scan now"}
-              </Text>
-            </Pressable>
-            <Pressable
+              tone="primary"
+            />
+            <ActionButton
               accessibilityLabel={
                 snapshot.engine.state === "paused" ? "Resume uploads" : "Pause uploads"
               }
-              accessibilityRole="button"
-              className="border border-accent p-4 disabled:opacity-50"
               disabled={scanning}
+              label={
+                snapshot.engine.state === "paused" ? "Resume uploads" : "Pause uploads"
+              }
               onPress={() => void togglePaused()}
-            >
-              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                {snapshot.engine.state === "paused" ? "Resume uploads" : "Pause uploads"}
-              </Text>
-            </Pressable>
+            />
           </View>
         ) : null}
       </ScrollView>
