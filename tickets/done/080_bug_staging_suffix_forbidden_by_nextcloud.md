@@ -1,6 +1,6 @@
 # 080 Staging suffix is forbidden by Nextcloud
 
-Status: in progress
+Status: complete
 
 Found while working on: 078
 
