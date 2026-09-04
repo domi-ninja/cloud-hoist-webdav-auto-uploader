@@ -37,6 +37,7 @@ class AndroidMediaStoreDiscovery(
         val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
         val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
         val modifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
+        val createdColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_ADDED)
         val mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE)
         val pathColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.RELATIVE_PATH)
         val bucketColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
@@ -56,6 +57,7 @@ class AndroidMediaStoreDiscovery(
             mimeType = cursor.getString(mimeColumn),
             relativePath = cursor.getString(pathColumn),
             bucketDisplayName = cursor.getString(bucketColumn),
+            createdAtEpochSeconds = cursor.nullableLong(createdColumn),
           )
           item.forPreset(preset)?.let(::add)
         }
@@ -75,6 +77,7 @@ class AndroidMediaStoreDiscovery(
       MediaStore.MediaColumns.DISPLAY_NAME,
       MediaStore.MediaColumns.SIZE,
       MediaStore.MediaColumns.DATE_MODIFIED,
+      MediaStore.MediaColumns.DATE_ADDED,
       MediaStore.MediaColumns.MIME_TYPE,
       MediaStore.MediaColumns.RELATIVE_PATH,
       MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,

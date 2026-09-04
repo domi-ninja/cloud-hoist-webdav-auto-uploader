@@ -46,6 +46,8 @@ class QueueDrainRunnerTest {
     assertEquals(1, first.completedJobs)
     assertTrue(first.retryWorker)
     assertEquals("older.jpg", uploaded.single().fileName)
+    assertEquals("image/jpeg", uploaded.single().mimeType)
+    assertEquals(99L, uploaded.single().createdAtEpochSeconds)
     assertEquals(JobState.COMPLETED, dao.job("older")?.state)
     assertEquals(JobState.QUEUED, dao.job("newer")?.state)
 
@@ -157,6 +159,8 @@ class QueueDrainRunnerTest {
         byteCount = 12,
         modifiedAt = 123,
         discoveredAt = 1,
+        mimeType = "image/jpeg",
+        createdAt = 99,
       ),
       UploadJobEntity(
         id = jobId,

@@ -53,9 +53,9 @@ class QueueDrainRunner(
             remotePathSegments = job.remotePathSegments,
             fileName = job.remoteFileName,
             byteCount = revision.byteCount,
-            mimeType = mimeType(revision.localUri),
+            mimeType = revision.mimeType ?: mimeType(revision.localUri),
             modifiedAtEpochSeconds = revision.modifiedAt,
-            createdAtEpochSeconds = null,
+            createdAtEpochSeconds = revision.createdAt,
           ),
         )
         val finishedAt = now()

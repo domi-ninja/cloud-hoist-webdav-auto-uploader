@@ -22,6 +22,7 @@ data class MediaStoreItem(
   val mimeType: String?,
   val relativePath: String?,
   val bucketDisplayName: String?,
+  val createdAtEpochSeconds: Long? = null,
 )
 
 data class DiscoveredFile(
@@ -32,6 +33,7 @@ data class DiscoveredFile(
   val byteCount: Long,
   val modifiedAtEpochSeconds: Long,
   val mimeType: String?,
+  val createdAtEpochSeconds: Long? = null,
 )
 
 data class SourcePreview(
@@ -97,6 +99,7 @@ fun MediaStoreItem.forPreset(preset: MediaPreset): DiscoveredFile? {
     byteCount = byteCount,
     modifiedAtEpochSeconds = modifiedAtEpochSeconds ?: 0,
     mimeType = mimeType,
+    createdAtEpochSeconds = createdAtEpochSeconds,
   )
 }
 

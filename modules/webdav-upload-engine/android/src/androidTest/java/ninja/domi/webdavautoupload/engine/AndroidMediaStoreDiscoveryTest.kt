@@ -24,7 +24,8 @@ class AndroidMediaStoreDiscoveryTest {
 
   @Test
   fun discoversCameraAndScreenshotsFromMediaStoreWithoutReadingBodies() {
-    insertImage("Camera", "camera-fixture-${System.nanoTime()}.jpg", 7)
+    val cameraName = "camera-fixture-${System.nanoTime()}.jpg"
+    insertImage("Camera", cameraName, 7)
     insertImage("Screenshots", "screenshot-fixture-${System.nanoTime()}.png", 11)
     insertImage("Pictures", "other-fixture-${System.nanoTime()}.jpg", 13)
     val discovery = AndroidMediaStoreDiscovery(
@@ -35,7 +36,10 @@ class AndroidMediaStoreDiscoveryTest {
     val camera = discovery.discover(MediaPreset.CAMERA)
     val screenshots = discovery.discover(MediaPreset.SCREENSHOTS)
 
-    assertTrue(camera.files.any { it.fileName.startsWith("camera-fixture-") && it.byteCount == 7L })
+    val cameraFixture = camera.files.single { it.fileName == cameraName }
+    assertEquals(7L, cameraFixture.byteCount)
+    assertEquals("image/jpeg", cameraFixture.mimeType)
+    assertTrue(cameraFixture.createdAtEpochSeconds != null)
     assertTrue(
       screenshots.files.any {
         it.fileName.startsWith("screenshot-fixture-") && it.byteCount == 11L

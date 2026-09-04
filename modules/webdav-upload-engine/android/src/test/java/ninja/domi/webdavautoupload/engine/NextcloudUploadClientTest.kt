@@ -43,6 +43,7 @@ class NextcloudUploadClientTest {
     assertTrue(move.destination.orEmpty().endsWith("/photo%20%231.jpg"))
     assertEquals("T", move.overwrite)
     assertEquals("1700000000", put.modifiedAt)
+    assertEquals("1600000000", put.createdAt)
     assertTrue(result.modificationTimeAccepted)
     assertTrue(result.creationTimeAccepted)
   }
@@ -120,6 +121,7 @@ class NextcloudUploadClientTest {
       destination = request.header("Destination"),
       overwrite = request.header("Overwrite"),
       modifiedAt = request.header("X-OC-Mtime"),
+      createdAt = request.header("X-OC-CTime"),
     )
   }
 
@@ -143,6 +145,7 @@ class NextcloudUploadClientTest {
     val destination: String?,
     val overwrite: String?,
     val modifiedAt: String?,
+    val createdAt: String?,
   )
 
   private companion object {

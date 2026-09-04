@@ -287,6 +287,41 @@ class EngineDaoTest {
   }
 
   @Test
+  fun migrationThreeToFourAddsNullableContentMetadata() {
+    val name = "engine-migration-three-four.db"
+    migrationHelper.createDatabase(name, 3).apply {
+      execSQL(
+        "INSERT INTO accounts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("account-1", "https://cloud.test", "login", "dav", "Domi", 1, "34", 1, null, "key", null),
+      )
+      execSQL(
+        "INSERT INTO sources VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("source-1", "account-1", "Camera", "media_store", "content://media", "[]", 1, 1, null, null),
+      )
+      execSQL(
+        "INSERT INTO local_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("revision-1", "source-1", "provider", "content://photo", "photo.jpg", 10, 1, 1),
+      )
+      close()
+    }
+
+    migrationHelper.runMigrationsAndValidate(
+      name,
+      4,
+      true,
+      EngineRoomDatabase.MIGRATION_3_4,
+    ).use { migrated ->
+      migrated.query(
+        "SELECT mimeType, createdAt FROM local_revisions WHERE id = 'revision-1'",
+      ).use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertTrue(cursor.isNull(0))
+        assertTrue(cursor.isNull(1))
+      }
+    }
+  }
+
+  @Test
   fun blockerAttemptAndChunkCheckpointRemainAttachedToTheJob() {
     dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
     dao.claimNext(2, "worker")

@@ -72,6 +72,8 @@ data class LocalRevisionEntity(
   val byteCount: Long,
   val modifiedAt: Long,
   val discoveredAt: Long,
+  val mimeType: String? = null,
+  val createdAt: Long? = null,
 )
 
 @Entity(

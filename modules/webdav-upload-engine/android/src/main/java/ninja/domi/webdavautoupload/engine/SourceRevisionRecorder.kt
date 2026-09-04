@@ -57,6 +57,8 @@ class SourceRevisionRecorder(
       byteCount = file.byteCount,
       modifiedAt = file.modifiedAtEpochSeconds,
       discoveredAt = discoveredAt,
+      mimeType = file.mimeType,
+      createdAt = file.createdAtEpochSeconds,
     )
     val job = if (queue) {
       UploadJobEntity(

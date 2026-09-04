@@ -278,7 +278,7 @@ interface EngineDao {
     UploadAttemptEntity::class,
     ChunkCheckpointEntity::class,
   ],
-  version = 3,
+  version = 4,
   exportSchema = true,
 )
 @TypeConverters(EngineTypeConverters::class)
@@ -294,7 +294,7 @@ abstract class EngineRoomDatabase : RoomDatabase() {
         context.applicationContext,
         EngineRoomDatabase::class.java,
         "webdav-upload-engine.db",
-      ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
+      ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { instance = it }
     }
 
     val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -385,6 +385,13 @@ abstract class EngineRoomDatabase : RoomDatabase() {
     val MIGRATION_2_3 = object : Migration(2, 3) {
       override fun migrate(database: SupportSQLiteDatabase) {
         database.execSQL("ALTER TABLE accounts ADD COLUMN blockerCode TEXT")
+      }
+    }
+
+    val MIGRATION_3_4 = object : Migration(3, 4) {
+      override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE local_revisions ADD COLUMN mimeType TEXT")
+        database.execSQL("ALTER TABLE local_revisions ADD COLUMN createdAt INTEGER")
       }
     }
   }
