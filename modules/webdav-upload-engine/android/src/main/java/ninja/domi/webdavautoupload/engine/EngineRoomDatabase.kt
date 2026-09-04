@@ -237,11 +237,16 @@ abstract class EngineRoomDatabase : RoomDatabase() {
   abstract fun engineDao(): EngineDao
 
   companion object {
-    fun open(context: Context): EngineRoomDatabase = Room.databaseBuilder(
-      context.applicationContext,
-      EngineRoomDatabase::class.java,
-      "webdav-upload-engine.db",
-    ).addMigrations(MIGRATION_1_2).build()
+    @Volatile
+    private var instance: EngineRoomDatabase? = null
+
+    fun open(context: Context): EngineRoomDatabase = instance ?: synchronized(this) {
+      instance ?: Room.databaseBuilder(
+        context.applicationContext,
+        EngineRoomDatabase::class.java,
+        "webdav-upload-engine.db",
+      ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+    }
 
     val MIGRATION_1_2 = object : Migration(1, 2) {
       override fun migrate(database: SupportSQLiteDatabase) {
