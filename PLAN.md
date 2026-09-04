@@ -353,7 +353,7 @@ None. The design tree is empty.
 
 Foundation:
 
-1. [Bootstrap the Expo Android app](tickets/001_bootstrap_expo_android.md)
+1. [Bootstrap the Expo Android app](tickets/done/001_bootstrap_expo_android.md)
 2. [Create the typed native engine module](tickets/002_create_typed_native_engine_module.md)
 
 Server upload path:

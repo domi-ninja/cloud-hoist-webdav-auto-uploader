@@ -1,6 +1,10 @@
 # 001 Bootstrap the Expo Android app
 
-Status: in progress
+Status: completed
+
+## Resolution
+
+Expo SDK 57, React Native 0.86.3, strict TypeScript, Expo Router, NativeWind 4, pnpm, and the Android-only development client are bootstrapped. A frozen install and all static checks pass. The documented command cold-starts the API 36 `medium_phone` emulator, builds and installs `ninja.domi.webdavautoupload`, and leaves the visibly styled first route alive in the foreground.
 
 Depends on: none
 
