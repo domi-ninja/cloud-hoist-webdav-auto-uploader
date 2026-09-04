@@ -90,6 +90,15 @@ class EngineWorkSchedulerTest {
     assertTrue(activeWork(EngineWorkScheduler.QUEUE_DRAIN_WORK).isEmpty())
   }
 
+  @Test
+  fun simultaneousManualScanRequestsStayUnique() {
+    scheduler.requestFullScan()
+    scheduler.requestFullScan()
+
+    assertEquals(1, activeWork(EngineWorkScheduler.FULL_SCAN_WORK).size)
+    assertTrue(preferences.status().lastScanRequestedAt != null)
+  }
+
   private fun activeWork(name: String): List<WorkInfo> =
     workManager.getWorkInfosForUniqueWork(name).get().filterNot { it.state.isFinished }
 }

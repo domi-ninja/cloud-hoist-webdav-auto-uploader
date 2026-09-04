@@ -61,6 +61,17 @@ class EngineWorkScheduler(
     )
   }
 
+  fun requestFullScan() {
+    preferences.scanRequested()
+    workManager.enqueueUniqueWork(
+      FULL_SCAN_WORK,
+      ExistingWorkPolicy.KEEP,
+      OneTimeWorkRequestBuilder<ReconciliationWorker>()
+        .addTag(ENGINE_WORK_TAG)
+        .build(),
+    )
+  }
+
   fun updateDrainConstraints(constraints: TransferConstraints) {
     preferences.setConstraints(constraints)
     val current = workManager.getWorkInfosForUniqueWork(QUEUE_DRAIN_WORK).get()
@@ -109,6 +120,7 @@ class EngineWorkScheduler(
     const val ENGINE_WORK_TAG = "webdav-auto-upload"
     const val MEDIA_OBSERVER_WORK = "media-observer"
     const val RECONCILIATION_WORK = "source-reconciliation"
+    const val FULL_SCAN_WORK = "source-reconciliation-now"
     const val QUEUE_DRAIN_WORK = "queue-drain"
     const val MEDIA_DEBOUNCE_SECONDS = 10L
     const val MEDIA_MAX_DELAY_SECONDS = 30L

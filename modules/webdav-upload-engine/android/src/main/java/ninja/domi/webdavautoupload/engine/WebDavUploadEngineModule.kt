@@ -101,6 +101,7 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("scanNowAsync") {
       engine.scanNow()
+      workScheduler.requestFullScan()
     }
 
     AsyncFunction("retryFailedAsync") {

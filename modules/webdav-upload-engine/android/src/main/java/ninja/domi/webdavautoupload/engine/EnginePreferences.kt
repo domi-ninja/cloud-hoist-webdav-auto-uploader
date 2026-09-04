@@ -73,6 +73,10 @@ class EnginePreferences(context: Context) {
       .apply()
   }
 
+  fun scanRequested(now: Instant = Instant.now()) {
+    preferences.edit().putString(KEY_SCAN_REQUESTED_AT, now.toString()).apply()
+  }
+
   fun scanCompleted(now: Instant = Instant.now()) {
     preferences.edit()
       .putString(KEY_SCAN_COMPLETED_AT, now.toString())
