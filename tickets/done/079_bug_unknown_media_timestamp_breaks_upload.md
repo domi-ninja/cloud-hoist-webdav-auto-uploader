@@ -1,6 +1,6 @@
 # 079 Unknown media timestamp breaks upload
 
-Status: in progress
+Status: complete
 
 Found while working on: 078
 
