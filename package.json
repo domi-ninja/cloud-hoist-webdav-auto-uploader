@@ -4,6 +4,7 @@
   "license": "GPL-3.0-or-later",
   "main": "expo-router/entry",
   "dependencies": {
+    "@tanstack/react-query": "^5.102.8",
     "expo": "~57.0.20",
     "expo-build-properties": "~57.0.17",
     "expo-constants": "~57.0.17",

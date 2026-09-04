@@ -1,37 +1,17 @@
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { project } from "@/config/project";
-import webDavUploadEngine, {
-  type EngineSnapshot,
-} from "../../modules/webdav-upload-engine";
+import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
 import { SourceSetup } from "@/features/sources/SourceSetup";
+import { useEngineSnapshot } from "@/lib/engine-query";
 
 export default function HomeScreen() {
-  const [snapshot, setSnapshot] = useState<EngineSnapshot>();
+  const { data: snapshot, error: snapshotError, refetch } = useEngineSnapshot();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [addingSource, setAddingSource] = useState(false);
-
-  const refresh = useCallback(async () => {
-    try {
-      setSnapshot(await webDavUploadEngine.getSnapshot());
-      setErrorMessage(undefined);
-    } catch {
-      setErrorMessage("Native engine contract failed.");
-    }
-  }, []);
-
-  useEffect(() => {
-    const subscription = webDavUploadEngine.addSnapshotInvalidatedListener(() => {
-      void refresh();
-    });
-    // This starts an async native read; state changes only after the promise settles.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void refresh();
-    return () => subscription.remove();
-  }, [refresh]);
 
   const togglePaused = async () => {
     if (!snapshot) {
@@ -83,9 +63,9 @@ export default function HomeScreen() {
               ? `Native engine: ${snapshot.engine.state} · revision ${snapshot.revision}`
               : "Loading native engine…"}
           </Text>
-          {errorMessage ? (
+          {errorMessage || snapshotError ? (
             <Text className="text-base text-red-700 dark:text-red-300">
-              {errorMessage}
+              {errorMessage ?? "Native engine contract failed."}
             </Text>
           ) : null}
           {snapshot ? <AccountConnection account={snapshot.account} /> : null}
@@ -95,7 +75,7 @@ export default function HomeScreen() {
               onCancel={snapshot.sources.length ? () => setAddingSource(false) : undefined}
               onComplete={() => {
                 setAddingSource(false);
-                void refresh();
+                void refetch();
               }}
             />
           ) : null}
