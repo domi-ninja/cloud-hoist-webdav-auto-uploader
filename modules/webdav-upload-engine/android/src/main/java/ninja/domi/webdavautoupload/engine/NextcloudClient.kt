@@ -10,6 +10,7 @@ import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
 import okhttp3.Credentials
 import okhttp3.FormBody
+import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -23,12 +24,10 @@ interface AccountNetworkClient {
 }
 
 class NextcloudClient(
-  private val httpClient: OkHttpClient = OkHttpClient.Builder()
-    .followRedirects(false)
-    .followSslRedirects(false)
-    .callTimeout(20, TimeUnit.SECONDS)
-    .build(),
+  private val httpClient: OkHttpClient = defaultHttpClient(),
 ) : AccountNetworkClient {
+  internal constructor(dns: Dns) : this(defaultHttpClient().newBuilder().dns(dns).build())
+
   override fun startLoginFlow(serverUrl: String): LoginFlowRequest {
     val request = baseRequest("$serverUrl/index.php/login/v2")
       .post(ByteArray(0).toRequestBody())
@@ -138,4 +137,12 @@ class NextcloudClient(
 
   private fun Throwable.hasCertificateCause(): Boolean =
     generateSequence(this) { it.cause }.any { it is CertificateException }
+
+  private companion object {
+    fun defaultHttpClient() = OkHttpClient.Builder()
+      .followRedirects(false)
+      .followSslRedirects(false)
+      .callTimeout(20, TimeUnit.SECONDS)
+      .build()
+  }
 }

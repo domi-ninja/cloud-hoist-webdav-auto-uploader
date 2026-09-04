@@ -60,6 +60,18 @@ pinned SDK/JDK environment, and runs the Kotlin engine module tests.
 
 `test-creds.tct` is ignored and reserved for live acceptance tests. Never commit, bundle, print, or copy it into ordinary test output.
 
+With the configured emulator running, the debug-only account acceptance path can
+consume that file without printing its values:
+
+```sh
+pnpm test:account:live
+```
+
+The harness clears only WebDAV Auto Upload's emulator app data, drives the manual
+app-password form, force-stops the app, relaunches it, and verifies that Kotlin
+can authenticate again from Android Keystore-backed storage. The test harness is
+packaged separately from the application APK.
+
 ## License
 
 WebDAV Auto Upload is licensed under GPL-3.0-or-later. Third-party packages and retained scaffold assets remain under their respective licenses.

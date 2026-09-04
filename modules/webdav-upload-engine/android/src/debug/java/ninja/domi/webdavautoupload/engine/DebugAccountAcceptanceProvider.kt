@@ -7,6 +7,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
 import expo.modules.kotlin.exception.CodedException
+import java.net.InetAddress
+import java.net.URI
+import okhttp3.Dns
 
 /** Debug-APK-only entry point for opaque host-driven live account checks. */
 class DebugAccountAcceptanceProvider : ContentProvider() {
@@ -15,7 +18,7 @@ class DebugAccountAcceptanceProvider : ContentProvider() {
   override fun call(method: String, arg: String?, extras: Bundle?): Bundle = try {
     when (method) {
       "connect" -> connect(requireNotNull(extras))
-      "verify" -> verify()
+      "verify" -> verify(requireNotNull(extras))
       else -> result("error", "ERR_ACCEPTANCE_UNKNOWN_METHOD")
     }
   } catch (error: CodedException) {
@@ -26,23 +29,40 @@ class DebugAccountAcceptanceProvider : ContentProvider() {
 
   private fun connect(extras: Bundle): Bundle {
     val repository = AndroidAccountRepository(requireNotNull(context))
+    val serverUrl = decode(extras, "serverUrlB64")
     repository.clear()
-    manager(repository).connectManual(
-      serverUrl = decode(extras, "serverUrlB64"),
+    manager(repository, serverUrl, decode(extras, "serverAddressB64")).connectManual(
+      serverUrl = serverUrl,
       username = decode(extras, "usernameB64"),
       appPassword = decode(extras, "appPasswordB64"),
     )
     return result("ok")
   }
 
-  private fun verify(): Bundle {
-    manager(AndroidAccountRepository(requireNotNull(context))).verifyStoredAccount()
+  private fun verify(extras: Bundle): Bundle {
+    manager(
+      AndroidAccountRepository(requireNotNull(context)),
+      decode(extras, "serverUrlB64"),
+      decode(extras, "serverAddressB64"),
+    ).verifyStoredAccount()
     return result("ok")
   }
 
-  private fun manager(repository: AccountRepository) = AccountManager(
+  private fun manager(
+    repository: AccountRepository,
+    serverUrl: String,
+    serverAddress: String,
+  ) = AccountManager(
     repository = repository,
-    networkClient = NextcloudClient(),
+    networkClient = NextcloudClient(object : Dns {
+      override fun lookup(hostname: String): List<InetAddress> =
+        if (hostname.equals(URI(serverUrl).host, ignoreCase = true)) {
+          listOf(InetAddress.getByName(serverAddress))
+        } else {
+          Dns.SYSTEM.lookup(hostname)
+        }
+      }
+    ),
     onAccountChanged = {},
   )
 
