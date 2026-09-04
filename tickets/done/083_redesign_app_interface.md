@@ -1,6 +1,6 @@
 # 083 Redesign the app interface
 
-Status: in progress
+Status: done
 
 Depends on: 012, 081, 082
 
