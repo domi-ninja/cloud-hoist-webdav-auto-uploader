@@ -1,6 +1,6 @@
 # 050 Bug: test document provider rejects fixture queries
 
-Status: in progress
+Status: done
 
 ## Found while
 
@@ -12,11 +12,11 @@ The content resolver throws `SecurityException` before the test-only documents p
 
 ## Cause
 
-The test manifest applies the system-only `android.permission.MANAGE_DOCUMENTS` permission to the fixture provider. That permission is appropriate for a system picker-facing production provider, but this provider exists only inside the instrumentation APK and must be queryable by the test process.
+Android requires every `DocumentsProvider` subclass to declare the system-only `android.permission.MANAGE_DOCUMENTS` permission. Keeping the permission rejects the test caller. Removing it crashes the instrumentation process while Android installs the provider.
 
 ## Fix
 
-- Remove the system permission guard from the instrumentation-only provider.
+- Use a plain instrumentation-only `ContentProvider` that implements the document query URI shape without requiring a system permission.
 - Keep the provider out of main and release manifests.
 - Rerun the document-tree emulator test.
 

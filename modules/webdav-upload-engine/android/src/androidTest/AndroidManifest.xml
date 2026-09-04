@@ -1,0 +1,9 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <provider
+      android:name="ninja.domi.webdavautoupload.engine.FixtureDocumentsProvider"
+      android:authorities="ninja.domi.webdavautoupload.engine.fixture-documents"
+      android:exported="true"
+      android:grantUriPermissions="true" />
+  </application>
+</manifest>
