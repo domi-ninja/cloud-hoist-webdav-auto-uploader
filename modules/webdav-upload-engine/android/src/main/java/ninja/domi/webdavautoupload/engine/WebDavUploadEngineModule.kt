@@ -7,6 +7,14 @@ class WebDavUploadEngineModule : Module() {
   private val engine = FixtureUploadEngine { revision ->
     sendEvent("onSnapshotInvalidated", mapOf("revision" to revision))
   }
+  private val accountManager by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    AccountManager(
+      repository = AndroidAccountRepository(context),
+      networkClient = NextcloudClient(),
+      onAccountChanged = engine::accountChanged,
+    )
+  }
 
   override fun definition() = ModuleDefinition {
     Name("WebDavUploadEngine")
@@ -14,7 +22,7 @@ class WebDavUploadEngineModule : Module() {
     Events("onSnapshotInvalidated")
 
     AsyncFunction("getSnapshotAsync") {
-      engine.snapshot()
+      engine.snapshot(accountManager.accountHealth())
     }
 
     AsyncFunction("getSourcesAsync") {
@@ -55,6 +63,30 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("resetSourceHistoryAsync") { sourceId: String ->
       engine.resetSourceHistory(sourceId)
+    }
+
+    AsyncFunction("connectManualAsync") { input: ManualAccountInputRecord ->
+      accountManager.connectManual(
+        serverUrl = input.serverUrl,
+        username = input.username,
+        appPassword = input.appPassword,
+      ).toMap()
+    }
+
+    AsyncFunction("startLoginFlowAsync") { serverUrl: String ->
+      accountManager.startLoginFlow(serverUrl).toMap()
+    }
+
+    AsyncFunction("pollLoginFlowAsync") { attemptId: String ->
+      accountManager.pollLoginFlow(attemptId).toMap()
+    }
+
+    AsyncFunction("cancelLoginFlowAsync") { attemptId: String ->
+      accountManager.cancelLoginFlow(attemptId)
+    }
+
+    AsyncFunction("verifyStoredAccountAsync") {
+      accountManager.verifyStoredAccount().toMap()
     }
   }
 }

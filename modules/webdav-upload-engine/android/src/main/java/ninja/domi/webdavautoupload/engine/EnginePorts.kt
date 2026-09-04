@@ -1,8 +1,24 @@
 package ninja.domi.webdavautoupload.engine
 
 data class StoredAccount(
+  val id: String,
   val serverUrl: String,
-  val username: String,
+  val loginName: String,
+  val davUserId: String,
+  val displayName: String,
+  val checkedAt: String,
+  val capabilities: AccountCapabilities,
+)
+
+data class AccountCapabilities(
+  val serverVersion: String,
+  val chunkingSupported: Boolean,
+  val maxChunkSize: Long?,
+)
+
+data class StoredAccountCredential(
+  val account: StoredAccount,
+  val appPassword: String,
 )
 
 data class DavUploadRequest(
@@ -23,7 +39,9 @@ data class WorkRequest(
 )
 
 interface AccountRepository {
-  suspend fun currentAccount(): StoredAccount?
+  fun currentAccount(): StoredAccount?
+  fun credential(): StoredAccountCredential?
+  fun save(credential: StoredAccountCredential)
 }
 
 interface DavClient {

@@ -1,13 +1,24 @@
 import { z } from "zod";
 
+export const accountCapabilitiesSchema = z.object({
+  serverVersion: z.string().min(1),
+  chunkingSupported: z.boolean(),
+  maxChunkSize: z.number().int().positive().nullable(),
+});
+
+export const accountSummarySchema = z.object({
+  id: z.string().uuid(),
+  serverUrl: z.string().url().startsWith("https://"),
+  username: z.string().min(1),
+  davUserId: z.string().min(1),
+  displayName: z.string().min(1),
+  checkedAt: z.string().datetime(),
+  capabilities: accountCapabilitiesSchema,
+});
+
 export const accountHealthSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("not_configured") }),
-  z.object({
-    status: z.literal("connected"),
-    serverUrl: z.string().url(),
-    username: z.string().min(1),
-    checkedAt: z.string().datetime(),
-  }),
+  accountSummarySchema.extend({ status: z.literal("connected") }),
   z.object({
     status: z.literal("error"),
     code: z.enum(["unauthorized", "unreachable", "server_error"]),
@@ -138,6 +149,28 @@ export const snapshotInvalidatedSchema = z.object({
   revision: z.number().int().positive(),
 });
 
+export const manualAccountInputSchema = z.object({
+  serverUrl: z.string().trim().min(1),
+  username: z.string().trim().min(1),
+  appPassword: z.string().min(1),
+});
+
+export const loginFlowStartSchema = z.object({
+  attemptId: z.string().uuid(),
+  loginUrl: z.string().url().startsWith("https://"),
+  expiresAt: z.string().datetime(),
+});
+
+export const loginFlowPollSchema = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("pending") }),
+  z.object({
+    status: z.literal("connected"),
+    account: accountSummarySchema,
+  }),
+]);
+
+export type AccountCapabilities = z.infer<typeof accountCapabilitiesSchema>;
+export type AccountSummary = z.infer<typeof accountSummarySchema>;
 export type AccountHealth = z.infer<typeof accountHealthSchema>;
 export type EngineState = z.infer<typeof engineStateSchema>;
 export type SourceSummary = z.infer<typeof sourceSummarySchema>;
@@ -150,6 +183,9 @@ export type UnresolvedFailure = z.infer<typeof unresolvedFailureSchema>;
 export type EngineSnapshot = z.infer<typeof engineSnapshotSchema>;
 export type SourceInput = z.infer<typeof sourceInputSchema>;
 export type SnapshotInvalidated = z.infer<typeof snapshotInvalidatedSchema>;
+export type ManualAccountInput = z.infer<typeof manualAccountInputSchema>;
+export type LoginFlowStart = z.infer<typeof loginFlowStartSchema>;
+export type LoginFlowPoll = z.infer<typeof loginFlowPollSchema>;
 
 export type WebDavUploadEngineModuleEvents = {
   onSnapshotInvalidated: (payload: SnapshotInvalidated) => void;
@@ -158,6 +194,23 @@ export type WebDavUploadEngineModuleEvents = {
 export type EngineError =
   | { code: "source_not_found"; message: string }
   | { code: "invalid_input"; message: string }
+  | { code: "invalid_server_url"; message: string }
+  | { code: "insecure_server_url"; message: string }
+  | { code: "invalid_credentials"; message: string }
+  | { code: "maintenance"; message: string }
+  | { code: "unsupported_response"; message: string }
+  | { code: "unexpected_redirect"; message: string }
+  | { code: "certificate"; message: string }
+  | { code: "network"; message: string }
+  | { code: "server"; message: string }
+  | { code: "login_expired"; message: string }
+  | { code: "login_cancelled"; message: string }
+  | { code: "account_already_configured"; message: string }
+  | { code: "account_not_configured"; message: string }
+  | { code: "account_storage"; message: string }
   | { code: "native_failure"; message: string };
 
 export type EngineCommandResult = { ok: true } | { ok: false; error: EngineError };
+export type EngineValueResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; error: EngineError };

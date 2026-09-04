@@ -19,6 +19,8 @@ WebDAV Auto Upload is an Android-first, open-source React Native app for reliabl
 - **Server state:** TanStack Query where request caching and synchronization are useful
 - **Local persistence:** Android Room over SQLite for the durable upload engine; lightweight React Native preferences for UI-only state
 - **Secrets:** Kotlin-owned encrypted credential storage backed by Android Keystore, accessible to headless workers but never returned to React Native after storage
+- **Nextcloud HTTP:** OkHttp 4.12.0 in the Kotlin engine, with redirects disabled for authenticated API calls
+- **Authentication:** Nextcloud Login Flow v2 plus a manual app-password fallback; OCS resolves the DAV user ID and server capabilities
 - **Android development:** Android Studio emulator with an Expo development build
 - **Native project management:** Expo prebuild / Continuous Native Generation
 - **Delivery:** EAS-compatible builds, without requiring EAS-hosted services
@@ -44,4 +46,4 @@ The app is local-first and has no application backend. It talks directly to user
 
 ## Deliberately undecided
 
-The Nextcloud authentication flow, upload protocol, Android scheduling strategy, media discovery mechanism, and minimum supported Android version will be selected during product and technical planning.
+Transfer chunk sizing, Android scheduling details, and media discovery internals will be selected in their implementation tickets.

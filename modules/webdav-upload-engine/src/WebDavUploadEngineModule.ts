@@ -3,15 +3,24 @@ import { z } from "zod";
 
 import {
   activityEntrySchema,
+  accountSummarySchema,
   engineSnapshotSchema,
+  loginFlowPollSchema,
+  loginFlowStartSchema,
+  manualAccountInputSchema,
   snapshotInvalidatedSchema,
   sourceInputSchema,
   sourceSummarySchema,
   unresolvedFailureSchema,
   type ActivityEntry,
+  type AccountSummary,
   type EngineCommandResult,
   type EngineError,
   type EngineSnapshot,
+  type EngineValueResult,
+  type LoginFlowPoll,
+  type LoginFlowStart,
+  type ManualAccountInput,
   type SourceInput,
   type SourceSummary,
   type UnresolvedFailure,
@@ -30,6 +39,11 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   addOrUpdateSourceAsync(source: SourceInput): Promise<void>;
   removeSourceAsync(sourceId: string): Promise<void>;
   resetSourceHistoryAsync(sourceId: string): Promise<void>;
+  connectManualAsync(input: ManualAccountInput): Promise<unknown>;
+  startLoginFlowAsync(serverUrl: string): Promise<unknown>;
+  pollLoginFlowAsync(attemptId: string): Promise<unknown>;
+  cancelLoginFlowAsync(attemptId: string): Promise<void>;
+  verifyStoredAccountAsync(): Promise<unknown>;
 }
 
 const nativeModule =
@@ -46,12 +60,27 @@ function normalizeError(error: unknown): EngineError {
     return { code: "native_failure", message: "The native engine command failed." };
   }
 
-  if (parsed.data.code === "ERR_ENGINE_SOURCE_NOT_FOUND") {
-    return { code: "source_not_found", message: parsed.data.message };
-  }
-
-  if (parsed.data.code === "ERR_ENGINE_INVALID_INPUT") {
-    return { code: "invalid_input", message: parsed.data.message };
+  const knownCodes = {
+    ERR_ENGINE_SOURCE_NOT_FOUND: "source_not_found",
+    ERR_ENGINE_INVALID_INPUT: "invalid_input",
+    ERR_ACCOUNT_INVALID_SERVER_URL: "invalid_server_url",
+    ERR_ACCOUNT_INSECURE_SERVER_URL: "insecure_server_url",
+    ERR_ACCOUNT_INVALID_CREDENTIALS: "invalid_credentials",
+    ERR_ACCOUNT_MAINTENANCE: "maintenance",
+    ERR_ACCOUNT_UNSUPPORTED_RESPONSE: "unsupported_response",
+    ERR_ACCOUNT_UNEXPECTED_REDIRECT: "unexpected_redirect",
+    ERR_ACCOUNT_CERTIFICATE: "certificate",
+    ERR_ACCOUNT_NETWORK: "network",
+    ERR_ACCOUNT_SERVER: "server",
+    ERR_ACCOUNT_LOGIN_EXPIRED: "login_expired",
+    ERR_ACCOUNT_LOGIN_CANCELLED: "login_cancelled",
+    ERR_ACCOUNT_ALREADY_CONFIGURED: "account_already_configured",
+    ERR_ACCOUNT_NOT_CONFIGURED: "account_not_configured",
+    ERR_ACCOUNT_STORAGE: "account_storage",
+  } as const satisfies Record<string, EngineError["code"]>;
+  const code = knownCodes[parsed.data.code as keyof typeof knownCodes];
+  if (code) {
+    return { code, message: parsed.data.message };
   }
 
   return { code: "native_failure", message: parsed.data.message };
@@ -61,6 +90,17 @@ async function runCommand(command: () => Promise<void>): Promise<EngineCommandRe
   try {
     await command();
     return { ok: true };
+  } catch (error) {
+    return { ok: false, error: normalizeError(error) };
+  }
+}
+
+async function runValueCommand<T>(
+  command: () => Promise<unknown>,
+  decode: (value: unknown) => T,
+): Promise<EngineValueResult<T>> {
+  try {
+    return { ok: true, value: decode(await command()) };
   } catch (error) {
     return { ok: false, error: normalizeError(error) };
   }
@@ -97,6 +137,31 @@ export const webDavUploadEngine = {
     runCommand(() => nativeModule.removeSourceAsync(sourceId)),
   resetSourceHistory: (sourceId: string) =>
     runCommand(() => nativeModule.resetSourceHistoryAsync(sourceId)),
+
+  connectManual: (input: ManualAccountInput) => {
+    const parsedInput = manualAccountInputSchema.parse(input);
+    return runValueCommand(
+      () => nativeModule.connectManualAsync(parsedInput),
+      (value): AccountSummary => accountSummarySchema.parse(value),
+    );
+  },
+  startLoginFlow: (serverUrl: string) =>
+    runValueCommand(
+      () => nativeModule.startLoginFlowAsync(serverUrl),
+      (value): LoginFlowStart => loginFlowStartSchema.parse(value),
+    ),
+  pollLoginFlow: (attemptId: string) =>
+    runValueCommand(
+      () => nativeModule.pollLoginFlowAsync(attemptId),
+      (value): LoginFlowPoll => loginFlowPollSchema.parse(value),
+    ),
+  cancelLoginFlow: (attemptId: string) =>
+    runCommand(() => nativeModule.cancelLoginFlowAsync(attemptId)),
+  verifyStoredAccount: () =>
+    runValueCommand(
+      () => nativeModule.verifyStoredAccountAsync(),
+      (value): AccountSummary => accountSummarySchema.parse(value),
+    ),
 
   addSnapshotInvalidatedListener(
     listener: (revision: number) => void,

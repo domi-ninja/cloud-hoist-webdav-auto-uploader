@@ -2,23 +2,37 @@ import { describe, expect, it } from "@jest/globals";
 
 import {
   accountHealthSchema,
+  accountSummarySchema,
   blockerSchema,
   engineSnapshotSchema,
   engineStateSchema,
   jobStateSchema,
+  loginFlowPollSchema,
+  loginFlowStartSchema,
   workerActivitySchema,
 } from "./WebDavUploadEngine.types";
 
 const now = "2026-09-04T12:00:00.000Z";
+const account = {
+  id: "3fd9c8c2-7d27-4c63-a672-4fb8793582fa",
+  serverUrl: "https://cloud.example.test",
+  username: "domi@example.test",
+  davUserId: "domi",
+  displayName: "Domi",
+  checkedAt: now,
+  capabilities: {
+    serverVersion: "34.0.0",
+    chunkingSupported: true,
+    maxChunkSize: 10485760,
+  },
+};
 
 describe("native engine contract", () => {
   it.each([
     { status: "not_configured" },
     {
       status: "connected",
-      serverUrl: "https://cloud.example.test",
-      username: "domi",
-      checkedAt: now,
+      ...account,
     },
     { status: "error", code: "unreachable", message: "Cannot reach server." },
   ])("decodes account health %#", (value) => {
@@ -76,5 +90,35 @@ describe("native engine contract", () => {
 
   it("rejects unknown discriminator values", () => {
     expect(() => blockerSchema.parse({ kind: "mystery" })).toThrow();
+  });
+
+  it("decodes account and browser-login results without secret fields", () => {
+    expect(accountSummarySchema.parse(account)).toEqual(account);
+    expect(
+      loginFlowStartSchema.parse({
+        attemptId: "71e3a374-8cb9-4cae-bdb4-508e8ca473b9",
+        loginUrl: "https://cloud.example.test/login/v2/flow/opaque",
+        expiresAt: now,
+      }),
+    ).not.toHaveProperty("appPassword");
+    expect(loginFlowPollSchema.parse({ status: "pending" })).toEqual({
+      status: "pending",
+    });
+    expect(
+      loginFlowPollSchema.parse({ status: "connected", account }),
+    ).not.toHaveProperty("account.appPassword");
+  });
+
+  it("rejects insecure account and browser-login URLs", () => {
+    expect(() =>
+      accountSummarySchema.parse({ ...account, serverUrl: "http://cloud.test" }),
+    ).toThrow();
+    expect(() =>
+      loginFlowStartSchema.parse({
+        attemptId: "71e3a374-8cb9-4cae-bdb4-508e8ca473b9",
+        loginUrl: "http://cloud.test/login",
+        expiresAt: now,
+      }),
+    ).toThrow();
   });
 });

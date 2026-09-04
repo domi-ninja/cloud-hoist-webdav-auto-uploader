@@ -1,6 +1,6 @@
 # 003 Connect and validate one Nextcloud account
 
-Status: ready
+Status: in progress
 
 Depends on: 002
 

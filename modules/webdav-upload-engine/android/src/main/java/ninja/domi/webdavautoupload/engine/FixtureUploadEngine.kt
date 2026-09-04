@@ -54,9 +54,11 @@ internal class FixtureUploadEngine(
   private val activityRecords = mutableListOf<Map<String, Any?>>()
 
   @Synchronized
-  fun snapshot(): Map<String, Any?> = mapOf(
+  fun snapshot(
+    account: Map<String, Any?> = mapOf("status" to "not_configured"),
+  ): Map<String, Any?> = mapOf(
     "revision" to revision,
-    "account" to mapOf("status" to "not_configured"),
+    "account" to account,
     "engine" to if (pausedAt == null) {
       mapOf("state" to "running")
     } else {
@@ -115,6 +117,11 @@ internal class FixtureUploadEngine(
 
   @Synchronized
   fun retryFailed() {
+    invalidate()
+  }
+
+  @Synchronized
+  fun accountChanged() {
     invalidate()
   }
 
