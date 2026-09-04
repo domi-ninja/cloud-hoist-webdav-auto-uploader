@@ -284,6 +284,69 @@ class EngineDaoTest {
     )
   }
 
+  @Test
+  fun newFilesOnlyBaselinesExistingRevisionsThenQueuesChanges() {
+    var nextId = 0
+    val recorder = SourceRevisionRecorder(
+      dao,
+      newId = { "generated-${nextId++}" },
+      now = { 10_000 },
+    )
+    val initial = discoveredFile("provider-1", "photo.jpg", size = 10, modified = 100)
+
+    val baseline = recorder.record(source(), listOf(initial), queueNewRevisions = false)
+    val unchanged = recorder.record(source(), listOf(initial), queueNewRevisions = true)
+    val modified = recorder.record(
+      source(),
+      listOf(initial.copy(byteCount = 11)),
+      queueNewRevisions = true,
+    )
+
+    assertEquals(1, baseline.revisionsAdded)
+    assertEquals(0, baseline.jobsAdded)
+    assertEquals(0, unchanged.revisionsAdded)
+    assertEquals(0, unchanged.jobsAdded)
+    assertEquals(1, modified.revisionsAdded)
+    assertEquals(1, modified.jobsAdded)
+    assertEquals(2, dao.revisionCount())
+    assertEquals(1, dao.jobCount())
+  }
+
+  @Test
+  fun includeExistingQueuesOldestFirstAndKeepsSelectedTreeFolders() {
+    var nextId = 0
+    val recorder = SourceRevisionRecorder(
+      dao,
+      newId = { "generated-${nextId++}" },
+      now = { 10_000 },
+    )
+    val newer = discoveredFile(
+      providerId = "newer",
+      name = "same.jpg",
+      size = 20,
+      modified = 200,
+      relativePath = listOf("Trips", "2026"),
+    )
+    val older = discoveredFile(
+      providerId = "older",
+      name = "same.jpg",
+      size = 10,
+      modified = 100,
+      relativePath = listOf("Archive"),
+    )
+
+    val result = recorder.record(source(), listOf(newer, older), queueNewRevisions = true)
+    val first = dao.claimNext(300_000, "worker")
+
+    assertEquals(SourcePreview(2, 30L), result.preview)
+    assertEquals(2, result.jobsAdded)
+    assertEquals("same.jpg", first?.remoteFileName)
+    assertEquals(
+      listOf("Auto Upload", "Camera", "Archive"),
+      first?.remotePathSegments,
+    )
+  }
+
   private fun account() = AccountEntity(
     id = "account-1",
     serverUrl = "https://cloud.example.test",
@@ -342,5 +405,21 @@ class EngineDaoTest {
     claimToken = null,
     blockerCode = null,
     lastErrorCode = null,
+  )
+
+  private fun discoveredFile(
+    providerId: String,
+    name: String,
+    size: Long,
+    modified: Long,
+    relativePath: List<String> = emptyList(),
+  ) = DiscoveredFile(
+    providerId = providerId,
+    localUri = "content://fixture/$providerId",
+    fileName = name,
+    relativePathSegments = relativePath,
+    byteCount = size,
+    modifiedAtEpochSeconds = modified,
+    mimeType = "image/jpeg",
   )
 }

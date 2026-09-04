@@ -26,6 +26,16 @@ object JobState {
   const val CANCELLED = "cancelled"
 }
 
+data class PendingDiscoveryWrite(
+  val revision: LocalRevisionEntity,
+  val job: UploadJobEntity?,
+)
+
+data class DiscoveryWriteCounts(
+  val revisionsAdded: Int,
+  val jobsAdded: Int,
+)
+
 class EngineTypeConverters {
   @TypeConverter
   fun encodeStringList(values: List<String>): String = JSONArray(values).toString()
@@ -174,6 +184,25 @@ interface EngineDao {
   @Transaction
   fun wipe() {
     deleteAllAccounts()
+  }
+
+  @Transaction
+  fun recordDiscovery(
+    source: SourceEntity,
+    writes: List<PendingDiscoveryWrite>,
+  ): DiscoveryWriteCounts {
+    upsertSource(source)
+    var revisionsAdded = 0
+    var jobsAdded = 0
+    for (write in writes) {
+      if (insertRevision(write.revision) == -1L) continue
+      revisionsAdded += 1
+      write.job?.let {
+        insertJob(it)
+        jobsAdded += 1
+      }
+    }
+    return DiscoveryWriteCounts(revisionsAdded, jobsAdded)
   }
 }
 
