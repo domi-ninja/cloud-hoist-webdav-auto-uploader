@@ -1,6 +1,6 @@
 # 084 Bug: source card buries global controls
 
-Status: in progress
+Status: done
 
 Found while verifying: 083
 

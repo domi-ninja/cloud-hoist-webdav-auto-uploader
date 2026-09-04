@@ -10,7 +10,7 @@ type ActionButtonProps = Omit<PressableProps, "children"> & {
 
 const buttonClasses: Record<ActionTone, string> = {
   primary: "bg-accent p-4 disabled:opacity-50",
-  secondary: "bg-ink-light p-4 disabled:opacity-50 dark:bg-ink-dark",
+  secondary: "bg-muted-light p-4 disabled:opacity-50 dark:bg-muted-dark",
   quiet: "p-4 disabled:opacity-50",
   danger: "p-4 disabled:opacity-50",
 };

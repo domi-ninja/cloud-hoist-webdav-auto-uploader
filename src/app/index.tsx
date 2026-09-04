@@ -164,7 +164,6 @@ export default function HomeScreen() {
                   accessibilityLabel="Add upload source"
                   label="Add source"
                   onPress={() => setAddingSource(true)}
-                  tone="secondary"
                 />
               ) : null}
             </View>

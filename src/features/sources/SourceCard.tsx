@@ -47,6 +47,7 @@ function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary, now: numb
 
 export function SourceCard({ snapshot, source, now }: SourceCardProps) {
   const [editingDestination, setEditingDestination] = useState(false);
+  const [showMaintenance, setShowMaintenance] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
   const permissionBlocker = snapshot.blockers.find(
@@ -222,24 +223,30 @@ export function SourceCard({ snapshot, source, now }: SourceCardProps) {
         />
       </View>
       <Separator />
-      <Text className="text-base text-muted-light dark:text-muted-dark">
-        Source maintenance
-      </Text>
-      <View className="gap-4">
-        <ActionButton
-          accessibilityLabel={`Reset upload history for ${source.name}`}
-          disabled={busy}
-          label="Reset upload history"
-          onPress={resetHistory}
-        />
-        <ActionButton
-          accessibilityLabel={`Remove ${source.name}`}
-          disabled={busy}
-          label="Remove source"
-          onPress={remove}
-          tone="danger"
-        />
-      </View>
+      <ActionButton
+        accessibilityLabel={`${showMaintenance ? "Hide" : "Show"} options for ${source.name}`}
+        accessibilityState={{ expanded: showMaintenance }}
+        disabled={busy}
+        label={showMaintenance ? "Hide source options" : "Source options"}
+        onPress={() => setShowMaintenance((shown) => !shown)}
+      />
+      {showMaintenance ? (
+        <View className="gap-4">
+          <ActionButton
+            accessibilityLabel={`Reset upload history for ${source.name}`}
+            disabled={busy}
+            label="Reset upload history"
+            onPress={resetHistory}
+          />
+          <ActionButton
+            accessibilityLabel={`Remove ${source.name}`}
+            disabled={busy}
+            label="Remove source"
+            onPress={remove}
+            tone="danger"
+          />
+        </View>
+      ) : null}
     </Panel>
   );
 }
