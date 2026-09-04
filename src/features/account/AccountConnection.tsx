@@ -5,7 +5,10 @@ import webDavUploadEngine, {
   type AccountHealth,
   type EngineError,
 } from "../../../modules/webdav-upload-engine";
-import { nextcloudInstanceIconUrl } from "@/features/account/instance-icon";
+import {
+  nextcloudInstanceIconUrl,
+  nextcloudInstanceLabel,
+} from "@/features/account/instance-icon";
 import { useStoredAccountVerification } from "@/lib/engine-query";
 
 type AccountConnectionProps = {
@@ -145,7 +148,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           className="text-right text-base text-muted-light dark:text-muted-dark"
           numberOfLines={2}
         >
-          {account.serverUrl}
+          {nextcloudInstanceLabel(account.serverUrl)}
         </Text>
         {accountVerification.isFetching ? (
           <Text className="text-right text-base text-muted-light dark:text-muted-dark">
@@ -159,7 +162,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
             <Pressable
               accessibilityLabel="Retry account check"
               accessibilityRole="button"
-              className="border border-accent p-4"
+              className="border border-accent p-4 disabled:opacity-50"
               onPress={() => void accountVerification.refetch()}
             >
               <Text className="text-base text-ink-light dark:text-ink-dark">
@@ -178,12 +181,18 @@ export function AccountConnection({ account }: AccountConnectionProps) {
         Connect Nextcloud
       </Text>
       {busy ? (
-        <Text className="text-base text-muted-light dark:text-muted-dark">
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-base text-muted-light dark:text-muted-dark"
+        >
           Checking account…
         </Text>
       ) : null}
       {message ? (
-        <Text className="text-base text-red-700 dark:text-red-300">
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-base text-red-700 dark:text-red-300"
+        >
           {message}
         </Text>
       ) : null}
@@ -191,6 +200,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
         autoCapitalize="none"
         autoCorrect={false}
         className="border border-accent p-4 text-base text-ink-light dark:text-ink-dark"
+        editable={!busy}
         onChangeText={setServerUrl}
         placeholder="https://cloud.example.com"
         placeholderTextColor="#737373"
@@ -203,6 +213,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
             autoCapitalize="none"
             autoCorrect={false}
             className="border border-accent p-4 text-base text-ink-light dark:text-ink-dark"
+            editable={!busy}
             onChangeText={setUsername}
             placeholder="Username"
             placeholderTextColor="#737373"
@@ -212,6 +223,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
             autoCapitalize="none"
             autoCorrect={false}
             className="border border-accent p-4 text-base text-ink-light dark:text-ink-dark"
+            editable={!busy}
             onChangeText={setAppPassword}
             placeholder="App password"
             placeholderTextColor="#737373"
@@ -224,7 +236,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           <Pressable
             accessibilityLabel="Connect with app password"
             accessibilityRole="button"
-            className="border border-accent p-4"
+            className="border border-accent p-4 disabled:opacity-50"
             disabled={busy}
             onPress={() => void connectManual()}
           >
@@ -241,7 +253,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           <Pressable
             accessibilityLabel="Cancel browser login"
             accessibilityRole="button"
-            className="border border-accent p-4"
+            className="border border-accent p-4 disabled:opacity-50"
             onPress={() => void cancelBrowserLogin()}
           >
             <Text className="text-base text-ink-light dark:text-ink-dark">
@@ -254,7 +266,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           <Pressable
             accessibilityLabel="Continue in browser"
             accessibilityRole="button"
-            className="border border-accent p-4"
+            className="border border-accent p-4 disabled:opacity-50"
             disabled={busy}
             onPress={() => void startBrowserLogin()}
           >
@@ -265,7 +277,8 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           <Pressable
             accessibilityLabel="Use app credentials instead"
             accessibilityRole="button"
-            className="p-4"
+            className="p-4 disabled:opacity-50"
+            disabled={busy}
             onPress={() => setShowManual(true)}
           >
             <Text className="text-base text-muted-light dark:text-muted-dark">

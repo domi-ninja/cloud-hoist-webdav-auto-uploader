@@ -5,6 +5,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { project } from "@/config/project";
 import { useEngineSnapshot } from "@/lib/engine-query";
+import { formatRelativeTime } from "@/lib/format";
+import { useNow } from "@/lib/use-now";
 import webDavUploadEngine, {
   type TransferConstraints,
 } from "../../modules/webdav-upload-engine";
@@ -15,7 +17,9 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { data: snapshot, error } = useEngineSnapshot();
   const [saving, setSaving] = useState<ConstraintKey>();
+  const [sharing, setSharing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const now = useNow();
 
   const toggle = async (key: ConstraintKey) => {
     if (!snapshot) return;
@@ -59,13 +63,21 @@ export default function SettingsScreen() {
   };
 
   const shareDiagnostics = async () => {
+    setSharing(true);
     setErrorMessage(undefined);
-    const report = await webDavUploadEngine.getDiagnosticReport();
-    if (!report.ok) {
-      setErrorMessage(report.error.message);
-      return;
+    try {
+      const report = await webDavUploadEngine.getDiagnosticReport();
+      if (!report.ok) {
+        setErrorMessage(report.error.message);
+        return;
+      }
+      await Share.share({
+        message: report.value,
+        title: "WebDAV Auto Upload diagnostics",
+      });
+    } finally {
+      setSharing(false);
     }
-    await Share.share({ message: report.value, title: "WebDAV Auto Upload diagnostics" });
   };
 
   return (
@@ -75,13 +87,21 @@ export default function SettingsScreen() {
           Settings
         </Text>
         {error || errorMessage ? (
-          <Text className="text-base text-red-700 dark:text-red-300">
+          <Text
+            accessibilityLiveRegion="polite"
+            className="text-base text-red-700 dark:text-red-300"
+          >
             {errorMessage ?? "Settings could not be loaded."}
           </Text>
         ) : null}
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Transfer rules
         </Text>
+        {!snapshot && !error ? (
+          <Text className="text-base text-muted-light dark:text-muted-dark">
+            Loading settings…
+          </Text>
+        ) : null}
         {snapshot
           ? options.map((option) => {
               const checked = snapshot.scheduler.constraints[option.key];
@@ -90,13 +110,16 @@ export default function SettingsScreen() {
                   accessibilityLabel={option.label}
                   accessibilityRole="switch"
                   accessibilityState={{ checked, disabled: saving !== undefined }}
-                  className="border border-accent p-4"
+                  className="flex-row items-center justify-between gap-4 border border-accent p-4 disabled:opacity-50"
                   disabled={saving !== undefined}
                   key={option.key}
                   onPress={() => void toggle(option.key)}
                 >
-                  <Text className="text-base text-ink-light dark:text-ink-dark">
-                    {checked ? "On" : "Off"} · {option.label}
+                  <Text className="shrink text-base text-ink-light dark:text-ink-dark">
+                    {option.label}
+                  </Text>
+                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                    {saving === option.key ? "Saving…" : checked ? "On" : "Off"}
                   </Text>
                 </Pressable>
               );
@@ -109,6 +132,9 @@ export default function SettingsScreen() {
             </Text>
             <Text className="text-base text-muted-light dark:text-muted-dark">
               {snapshot.account.displayName} · {snapshot.account.serverUrl}
+            </Text>
+            <Text className="text-base text-muted-light dark:text-muted-dark">
+              Checked {formatRelativeTime(snapshot.account.checkedAt, now)}
             </Text>
             <Pressable
               accessibilityLabel="Sign out and remove local data"
@@ -125,18 +151,18 @@ export default function SettingsScreen() {
             Diagnostics
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            Includes app and Android versions, queue counts, transfer rules, blocker codes,
-            and up to seven days of engine event codes. Credentials, server addresses, paths,
-            and filenames are excluded.
+            Share app and Android versions, queue counts, transfer rules, and recent engine
+            codes. Account, file, and folder details are excluded.
           </Text>
           <Pressable
             accessibilityLabel="Share private diagnostic report"
             accessibilityRole="button"
-            className="border border-accent p-4"
+            className="border border-accent p-4 disabled:opacity-50"
+            disabled={sharing}
             onPress={() => void shareDiagnostics()}
           >
             <Text className="text-base text-ink-light dark:text-ink-dark">
-              Share diagnostics
+              {sharing ? "Opening share sheet…" : "Share diagnostics"}
             </Text>
           </Pressable>
         </View>
@@ -149,10 +175,6 @@ export default function SettingsScreen() {
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
             {project.compatibilityNotice}
-          </Text>
-          <Text className="text-base text-muted-light dark:text-muted-dark">
-            The app source is licensed under {project.license}. Third-party packages retain
-            their own licenses.
           </Text>
         </View>
       </ScrollView>

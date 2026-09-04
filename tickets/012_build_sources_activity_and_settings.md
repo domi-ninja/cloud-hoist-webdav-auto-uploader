@@ -24,6 +24,8 @@ The three-tab interface exposes source health, upload history, global controls, 
 - Use the system light or dark setting and font scaling. Keep spacing and type scale deliberately small and consistent.
 - Show scan, upload, failure, and activity timestamps as live relative time instead of locale-formatted dates.
 - Preserve useful screens across cold-start notification and deep-link navigation.
+- Remove internal engine counters from user-facing status, keep source actions compact, and make loading, errors, disabled controls, and navigation state obvious.
+- Use readable queue, transfer, and storage sizes; refresh Activity with a pull gesture; and present transfer rules as clear switch rows.
 
 ## Acceptance criteria
 

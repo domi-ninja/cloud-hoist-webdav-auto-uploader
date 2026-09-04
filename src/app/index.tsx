@@ -3,12 +3,47 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { project } from "@/config/project";
-import webDavUploadEngine from "../../modules/webdav-upload-engine";
+import webDavUploadEngine, {
+  type EngineSnapshot,
+} from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
 import { SourceCard } from "@/features/sources/SourceCard";
 import { SourceSetup } from "@/features/sources/SourceSetup";
 import { useEngineSnapshot } from "@/lib/engine-query";
+import { formatBytes, formatRelativeTime } from "@/lib/format";
 import { useNow } from "@/lib/use-now";
+
+function engineStatus(snapshot: EngineSnapshot, now: number) {
+  if (snapshot.account.status !== "connected") return "Connect an account to begin";
+  if (snapshot.worker.state === "scanning") return "Scanning for new files";
+  if (snapshot.worker.state === "uploading") {
+    return `Uploading ${formatBytes(snapshot.worker.bytesSent)} of ${formatBytes(snapshot.worker.totalBytes)}`;
+  }
+  if (snapshot.engine.state === "blocked") {
+    const count = snapshot.engine.blockerCount;
+    return `${count} ${count === 1 ? "issue needs" : "issues need"} attention`;
+  }
+  if (snapshot.engine.state === "paused") {
+    return `Uploads paused ${formatRelativeTime(snapshot.engine.pausedAt, now)}`;
+  }
+  if (snapshot.scheduler.lastScanCompletedAt) {
+    return `Last scan ${formatRelativeTime(snapshot.scheduler.lastScanCompletedAt, now)}`;
+  }
+  return "Ready to upload";
+}
+
+function queueSummary(snapshot: EngineSnapshot) {
+  const states = [
+    [snapshot.queue.queued, "queued"],
+    [snapshot.queue.uploading, "uploading"],
+    [snapshot.queue.failed, "blocked"],
+    [snapshot.queue.uploaded, "uploaded"],
+  ] as const;
+  const active = states.filter(([count]) => count > 0);
+  return active.length
+    ? active.map(([count, label]) => `${count} ${label}`).join(" · ")
+    : "No uploads yet";
+}
 
 export default function HomeScreen() {
   const { data: snapshot, error: snapshotError, refetch } = useEngineSnapshot();
@@ -78,12 +113,7 @@ export default function HomeScreen() {
                 {project.displayName}
               </Text>
               <Text className="text-base text-muted-light dark:text-muted-dark">
-                Automatic uploads for {project.supportedServer}.
-              </Text>
-              <Text className="text-base text-muted-light dark:text-muted-dark">
-                {snapshot
-                  ? `Native engine: ${snapshot.engine.state} · revision ${snapshot.revision}`
-                  : "Loading native engine…"}
+                {snapshot ? engineStatus(snapshot, now) : "Loading…"}
               </Text>
             </View>
             {snapshot?.account.status === "connected" ? (
@@ -91,7 +121,10 @@ export default function HomeScreen() {
             ) : null}
           </View>
           {errorMessage || snapshotError ? (
-            <Text className="text-base text-red-700 dark:text-red-300">
+            <Text
+              accessibilityLiveRegion="polite"
+              className="text-base text-red-700 dark:text-red-300"
+            >
               {errorMessage ?? "Native engine contract failed."}
             </Text>
           ) : null}
@@ -114,8 +147,7 @@ export default function HomeScreen() {
                 Sources
               </Text>
               <Text className="text-base text-muted-light dark:text-muted-dark">
-                {snapshot.queue.queued} queued · {snapshot.queue.uploading} uploading ·{" "}
-                {snapshot.queue.failed} blocked · {snapshot.queue.uploaded} uploaded
+                {queueSummary(snapshot)}
               </Text>
               {snapshot.sources.map((source) => (
                 <SourceCard key={source.id} now={now} snapshot={snapshot} source={source} />
@@ -124,7 +156,7 @@ export default function HomeScreen() {
                 <Pressable
                   accessibilityLabel="Add upload source"
                   accessibilityRole="button"
-                  className="border border-accent p-4"
+                  className="border border-accent p-4 disabled:opacity-50"
                   onPress={() => setAddingSource(true)}
                 >
                   <Text className="text-base text-ink-light dark:text-ink-dark">
@@ -141,7 +173,7 @@ export default function HomeScreen() {
             <Pressable
               accessibilityLabel="Scan now"
               accessibilityRole="button"
-              className="border border-accent p-4"
+              className="border border-accent p-4 disabled:opacity-50"
               disabled={scanning}
               onPress={() => void scanNow()}
             >
@@ -150,8 +182,12 @@ export default function HomeScreen() {
               </Text>
             </Pressable>
             <Pressable
+              accessibilityLabel={
+                snapshot.engine.state === "paused" ? "Resume uploads" : "Pause uploads"
+              }
               accessibilityRole="button"
-              className="border border-accent p-4"
+              className="border border-accent p-4 disabled:opacity-50"
+              disabled={scanning}
               onPress={() => void togglePaused()}
             >
               <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">

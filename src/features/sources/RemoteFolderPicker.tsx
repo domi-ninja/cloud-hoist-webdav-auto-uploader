@@ -82,23 +82,40 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {displayPath(pathSegments)}
       </Text>
+      {pathSegments.length ? (
+        <Pressable
+          accessibilityLabel="Go to parent remote folder"
+          accessibilityRole="button"
+          className="p-4"
+          onPress={() => openPath(pathSegments.slice(0, -1))}
+        >
+          <Text className="text-base text-accent">Up one folder</Text>
+        </Pressable>
+      ) : null}
 
       {error ? (
         <View className="gap-4">
-          <Text className="text-base text-red-700 dark:text-red-300">
+          <Text
+            accessibilityLiveRegion="polite"
+            className="text-base text-red-700 dark:text-red-300"
+          >
             {error.message}
           </Text>
           <Pressable
             accessibilityLabel="Retry remote folders"
             accessibilityRole="button"
-            className="border border-accent p-4"
+            className="border border-accent p-4 disabled:opacity-50"
+            disabled={loading}
             onPress={() => void loadFolders()}
           >
             <Text className="text-base text-ink-light dark:text-ink-dark">Retry</Text>
           </Pressable>
         </View>
       ) : loading ? (
-        <Text className="text-base text-muted-light dark:text-muted-dark">
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-base text-muted-light dark:text-muted-dark"
+        >
           Loading folders…
         </Text>
       ) : (
@@ -108,7 +125,8 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
               <Pressable
                 accessibilityLabel={`Open ${folder.name}`}
                 accessibilityRole="button"
-                className="border border-accent p-4"
+                className="border border-accent p-4 disabled:opacity-50"
+                disabled={creating}
                 key={folder.pathSegments.join("\0")}
                 onPress={() => openPath(folder.pathSegments)}
               >
@@ -139,7 +157,7 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
       <Pressable
         accessibilityLabel="Create remote folder"
         accessibilityRole="button"
-        className="border border-accent p-4"
+        className="border border-accent p-4 disabled:opacity-50"
         disabled={creating}
         onPress={() => void createFolder()}
       >
@@ -148,20 +166,11 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
         </Text>
       </Pressable>
 
-      {pathSegments.length ? (
-        <Pressable
-          accessibilityLabel="Go to parent remote folder"
-          accessibilityRole="button"
-          className="p-4"
-          onPress={() => openPath(pathSegments.slice(0, -1))}
-        >
-          <Text className="text-base text-accent">Back</Text>
-        </Pressable>
-      ) : null}
       <Pressable
         accessibilityLabel="Use current remote folder"
         accessibilityRole="button"
-        className="bg-accent p-4"
+        className="bg-accent p-4 disabled:opacity-50"
+        disabled={creating || loading}
         onPress={() => onSelect(pathSegments)}
       >
         <Text className="text-base font-semibold text-canvas-dark">

@@ -168,16 +168,24 @@ export function SourceCard({ snapshot, source, now }: SourceCardProps) {
         {source.name}
       </Text>
       <Text className="text-base text-muted-light dark:text-muted-dark">
-        {sourceStatus(snapshot, source, now)} · {source.remotePath}
+        {sourceStatus(snapshot, source, now)}
+      </Text>
+      <Text className="text-base text-muted-light dark:text-muted-dark">
+        Upload to {source.remotePath}
       </Text>
       {error ? (
-        <Text className="text-base text-red-700 dark:text-red-300">{error.message}</Text>
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-base text-red-700 dark:text-red-300"
+        >
+          {error.message}
+        </Text>
       ) : null}
       {permissionBlocker ? (
         <Pressable
           accessibilityLabel={`Restore permission for ${source.name}`}
           accessibilityRole="button"
-          className="bg-accent p-4"
+          className="bg-accent p-4 disabled:opacity-50"
           disabled={busy}
           onPress={() => void restorePermission()}
         >
@@ -186,48 +194,58 @@ export function SourceCard({ snapshot, source, now }: SourceCardProps) {
           </Text>
         </Pressable>
       ) : null}
-      <Pressable
-        accessibilityLabel={`Scan ${source.name}`}
-        accessibilityRole="button"
-        className="border border-accent p-4"
-        disabled={busy || !source.enabled}
-        onPress={() => void run(() => webDavUploadEngine.scanSource(source.id))}
-      >
-        <Text className="text-base text-ink-light dark:text-ink-dark">Scan now</Text>
-      </Pressable>
-      <Pressable
-        accessibilityLabel={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
-        accessibilityRole="button"
-        className="border border-accent p-4"
-        disabled={busy}
-        onPress={() => void updateSource({ enabled: !source.enabled })}
-      >
-        <Text className="text-base text-ink-light dark:text-ink-dark">
-          {source.enabled ? "Disable" : "Enable"}
+      {busy ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-base text-muted-light dark:text-muted-dark"
+        >
+          Working…
         </Text>
-      </Pressable>
-      <Pressable
-        accessibilityLabel={`Edit destination for ${source.name}`}
-        accessibilityRole="button"
-        className="border border-accent p-4"
-        disabled={busy}
-        onPress={() => setEditingDestination(true)}
-      >
-        <Text className="text-base text-ink-light dark:text-ink-dark">Edit destination</Text>
-      </Pressable>
-      <Pressable
-        accessibilityLabel={`Reset upload history for ${source.name}`}
-        accessibilityRole="button"
-        className="border border-accent p-4"
-        disabled={busy}
-        onPress={resetHistory}
-      >
-        <Text className="text-base text-ink-light dark:text-ink-dark">Reset history</Text>
-      </Pressable>
+      ) : null}
+      <View className="flex-row flex-wrap gap-4">
+        <Pressable
+          accessibilityLabel={`Scan ${source.name}`}
+          accessibilityRole="button"
+          className="min-w-40 grow border border-accent p-4 disabled:opacity-50"
+          disabled={busy || !source.enabled}
+          onPress={() => void run(() => webDavUploadEngine.scanSource(source.id))}
+        >
+          <Text className="text-base text-ink-light dark:text-ink-dark">Scan source</Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
+          accessibilityRole="button"
+          className="min-w-40 grow border border-accent p-4 disabled:opacity-50"
+          disabled={busy}
+          onPress={() => void updateSource({ enabled: !source.enabled })}
+        >
+          <Text className="text-base text-ink-light dark:text-ink-dark">
+            {source.enabled ? "Disable" : "Enable"}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel={`Edit destination for ${source.name}`}
+          accessibilityRole="button"
+          className="min-w-40 grow border border-accent p-4 disabled:opacity-50"
+          disabled={busy}
+          onPress={() => setEditingDestination(true)}
+        >
+          <Text className="text-base text-ink-light dark:text-ink-dark">Destination</Text>
+        </Pressable>
+        <Pressable
+          accessibilityLabel={`Reset upload history for ${source.name}`}
+          accessibilityRole="button"
+          className="min-w-40 grow border border-accent p-4 disabled:opacity-50"
+          disabled={busy}
+          onPress={resetHistory}
+        >
+          <Text className="text-base text-ink-light dark:text-ink-dark">Reset history</Text>
+        </Pressable>
+      </View>
       <Pressable
         accessibilityLabel={`Remove ${source.name}`}
         accessibilityRole="button"
-        className="p-4"
+        className="p-4 disabled:opacity-50"
         disabled={busy}
         onPress={remove}
       >

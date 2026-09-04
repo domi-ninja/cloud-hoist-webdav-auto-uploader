@@ -111,14 +111,13 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
         Choose what to upload
       </Text>
       <Text className="text-base text-muted-light dark:text-muted-dark">
-        Camera and Screenshots follow Android&apos;s selected photo access. A folder
-        can contain any readable file type.
+        Pick a media collection or any readable Android folder.
       </Text>
 
       <Pressable
         accessibilityLabel="Choose Camera source"
         accessibilityRole="button"
-        className="border border-accent p-4"
+        className="border border-accent p-4 disabled:opacity-50"
         disabled={busy}
         onPress={() => void chooseMedia({ type: "camera" })}
       >
@@ -127,7 +126,7 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
       <Pressable
         accessibilityLabel="Choose Screenshots source"
         accessibilityRole="button"
-        className="border border-accent p-4"
+        className="border border-accent p-4 disabled:opacity-50"
         disabled={busy}
         onPress={() => void chooseMedia({ type: "screenshots" })}
       >
@@ -138,7 +137,7 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
       <Pressable
         accessibilityLabel="Choose local folder source"
         accessibilityRole="button"
-        className="border border-accent p-4"
+        className="border border-accent p-4 disabled:opacity-50"
         disabled={busy}
         onPress={() => void chooseFolder()}
       >
@@ -156,7 +155,7 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
           <Pressable
             accessibilityLabel="Allow photo and video access"
             accessibilityRole="button"
-            className="bg-accent p-4"
+            className="bg-accent p-4 disabled:opacity-50"
             disabled={busy}
             onPress={() => void allowMedia()}
           >
@@ -168,12 +167,18 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
       ) : null}
 
       {busy ? (
-        <Text className="text-base text-muted-light dark:text-muted-dark">
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-base text-muted-light dark:text-muted-dark"
+        >
           Checking files…
         </Text>
       ) : null}
       {error ? (
-        <Text className="text-base text-red-700 dark:text-red-300">
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-base text-red-700 dark:text-red-300"
+        >
           {error.message}
         </Text>
       ) : null}
@@ -191,7 +196,7 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
           <Pressable
             accessibilityLabel={`Use ${sourceLabel(selection)} source`}
             accessibilityRole="button"
-            className="bg-accent p-4"
+            className="bg-accent p-4 disabled:opacity-50"
             onPress={() => onSelect(selection, preview)}
           >
             <Text className="text-base font-semibold text-canvas-dark">
