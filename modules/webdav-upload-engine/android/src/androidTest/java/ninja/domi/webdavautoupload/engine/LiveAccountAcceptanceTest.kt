@@ -16,6 +16,39 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LiveAccountAcceptanceTest {
   @Test
+  fun freshInstallReachesManualAccountActions() {
+    val instrumentation = InstrumentationRegistry.getInstrumentation()
+    val launchUrl = decodedArgument(
+      InstrumentationRegistry.getArguments().getString("launchUrlB64"),
+    )
+    launchApp(instrumentation.context, launchUrl)
+    val device = UiDevice.getInstance(instrumentation)
+    dismissDeveloperMenuOnboarding(device)
+
+    assertTrue(device.wait(Until.hasObject(By.desc("Continue in browser")), UI_TIMEOUT))
+    device.findObject(By.desc("Use app credentials instead")).click()
+    device.swipe(
+      device.displayWidth / 2,
+      device.displayHeight * 3 / 4,
+      device.displayWidth / 2,
+      device.displayHeight / 4,
+      12,
+    )
+    val connect = device.wait(
+      Until.findObject(By.desc("Connect with app password")),
+      UI_TIMEOUT,
+    )
+    assertTrue(connect != null)
+    connect.click()
+    val validation = device.wait(
+      Until.findObject(By.text("Server URL, username, and app password are required.")),
+      UI_TIMEOUT,
+    )
+    assertTrue(validation != null)
+    assertTrue(validation.visibleBounds.top < connect.visibleBounds.top)
+  }
+
+  @Test
   fun connectedAccountRendersAfterProcessDeath() {
     val instrumentation = InstrumentationRegistry.getInstrumentation()
     val launchUrl = decodedArgument(

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { project } from "@/config/project";
 import webDavUploadEngine, {
@@ -48,7 +48,11 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
-      <View className="flex-1 justify-between gap-4 p-4">
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="flex-grow justify-between gap-4 p-4"
+        keyboardShouldPersistTaps="handled"
+      >
         <View className="gap-4">
           <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
             {project.displayName}
@@ -81,7 +85,7 @@ export default function HomeScreen() {
               : "Pause fixture engine"}
           </Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

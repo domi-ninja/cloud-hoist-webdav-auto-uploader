@@ -116,6 +116,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           {account.serverUrl} · DAV user {account.davUserId}
         </Text>
         <Pressable
+          accessibilityLabel="Verify stored account"
           accessibilityRole="button"
           className="border border-accent p-4"
           disabled={busy}
@@ -139,6 +140,16 @@ export function AccountConnection({ account }: AccountConnectionProps) {
       <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
         Connect Nextcloud
       </Text>
+      {busy ? (
+        <Text className="text-base text-muted-light dark:text-muted-dark">
+          Checking account…
+        </Text>
+      ) : null}
+      {message ? (
+        <Text className="text-base text-red-700 dark:text-red-300">
+          {message}
+        </Text>
+      ) : null}
       <TextInput
         autoCapitalize="none"
         autoCorrect={false}
@@ -174,6 +185,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
             Use a Nextcloud app password, never your main account password.
           </Text>
           <Pressable
+            accessibilityLabel="Connect with app password"
             accessibilityRole="button"
             className="border border-accent p-4"
             disabled={busy}
@@ -190,6 +202,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
             Finish signing in in your browser. This screen will update automatically.
           </Text>
           <Pressable
+            accessibilityLabel="Cancel browser login"
             accessibilityRole="button"
             className="border border-accent p-4"
             onPress={() => void cancelBrowserLogin()}
@@ -202,6 +215,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
       ) : (
         <>
           <Pressable
+            accessibilityLabel="Continue in browser"
             accessibilityRole="button"
             className="border border-accent p-4"
             disabled={busy}
@@ -212,6 +226,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
             </Text>
           </Pressable>
           <Pressable
+            accessibilityLabel="Use app credentials instead"
             accessibilityRole="button"
             className="p-4"
             onPress={() => setShowManual(true)}
@@ -222,12 +237,6 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           </Pressable>
         </>
       )}
-
-      {message ? (
-        <Text className="text-base text-red-700 dark:text-red-300">
-          {message}
-        </Text>
-      ) : null}
     </View>
   );
 }
