@@ -51,10 +51,15 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm test:native
+pnpm test:deep-links
 ```
 
 `test:native` generates the ignored Android project when necessary, loads the
 pinned SDK/JDK environment, and runs the Kotlin engine module tests.
+
+`test:deep-links` builds and installs a release APK with its JavaScript bundle
+embedded, then verifies the Sources and Activity routes from a stopped process.
+This avoids Expo's development-client launcher intercepting the cold-start links.
 
 ## Local credentials
 
