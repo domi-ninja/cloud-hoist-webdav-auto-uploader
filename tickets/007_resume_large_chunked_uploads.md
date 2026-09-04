@@ -1,6 +1,6 @@
 # 007 Resume large chunked uploads
 
-Status: blocked by 006
+Status: in progress
 
 Depends on: 003, 005, 006
 
@@ -36,6 +36,7 @@ Large uploads use Nextcloud chunked-upload v2 when available. Completed chunks a
 - Use an integration fixture large enough to span several chunks.
 - Interrupt the network and kill the app at deterministic chunk boundaries.
 - Compare the final remote hash and verify temporary sessions are cleaned up or tracked for later cleanup.
+- Protocol contract checked against the current Nextcloud 34 chunked-upload v2 documentation on 2026-09-04.
 
 ## Not in this ticket
 
