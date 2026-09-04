@@ -10,9 +10,6 @@ import expo.modules.kotlin.exception.Exceptions
 class WebDavUploadEngineModule : Module() {
   private lateinit var documentTreePicker:
     AppContextActivityResultLauncher<DocumentTreePickerInput, DocumentTreePickerResult>
-  private val engine = FixtureUploadEngine { revision ->
-    sendEvent("onSnapshotInvalidated", mapOf("revision" to revision))
-  }
   private val accountRepository by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
     AndroidAccountRepository(context, engineDatabase.engineDao())
@@ -21,11 +18,19 @@ class WebDavUploadEngineModule : Module() {
     val context = appContext.reactContext ?: throw AccountStorageException()
     EngineRoomDatabase.open(context)
   }
+  private val engine by lazy {
+    RoomEngineView(
+      dao = engineDatabase.engineDao(),
+      onInvalidated = { revision ->
+        sendEvent("onSnapshotInvalidated", mapOf("revision" to revision))
+      },
+    )
+  }
   private val accountManager by lazy {
     AccountManager(
       repository = accountRepository,
       networkClient = NextcloudClient(),
-      onAccountChanged = engine::accountChanged,
+      onAccountChanged = engine::invalidate,
     )
   }
   private val remoteFolderManager by lazy {
@@ -90,31 +95,35 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("pauseAsync") {
-      engine.pause()
       workScheduler.pause()
+      engine.invalidate()
     }
 
     AsyncFunction("resumeAsync") {
-      engine.resume()
       workScheduler.resume()
+      engine.invalidate()
     }
 
     AsyncFunction("scanNowAsync") {
-      engine.scanNow()
       workScheduler.requestFullScan()
+      engine.invalidate()
     }
 
     AsyncFunction("retryFailedAsync") {
       engine.retryFailed()
+      workScheduler.requestQueueDrain()
     }
 
     AsyncFunction("setTransferConstraintsAsync") { input: TransferConstraintsRecord ->
       workScheduler.updateDrainConstraints(input.toConstraints())
-      engine.schedulerChanged()
+      engine.invalidate()
     }
 
     AsyncFunction("addOrUpdateSourceAsync") { source: SourceInputRecord ->
-      engine.addOrUpdateSource(source)
+      val account = accountRepository.currentAccount() ?: throw AccountNotConfiguredException()
+      engine.addOrUpdateSource(source, account.id)
+      workScheduler.ensureScheduled()
+      workScheduler.requestQueueDrain()
     }
 
     AsyncFunction("removeSourceAsync") { sourceId: String ->
@@ -123,6 +132,7 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("resetSourceHistoryAsync") { sourceId: String ->
       engine.resetSourceHistory(sourceId)
+      workScheduler.requestFullScan()
     }
 
     AsyncFunction("connectManualAsync") { input: ManualAccountInputRecord ->
@@ -174,6 +184,8 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("commitSourceAsync") { source: SourceCommitRecord ->
       sourceDiscoveryManager.commit(source.toCommit()).also { result ->
+        engine.invalidate()
+        workScheduler.ensureScheduled()
         if (result.jobsAdded > 0) workScheduler.requestQueueDrain()
       }.toMap()
     }
@@ -188,6 +200,7 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("scanSourceAsync") { sourceId: String ->
       sourceDiscoveryManager.scan(sourceId).also { result ->
+        engine.invalidate()
         if (result.jobsAdded > 0) workScheduler.requestQueueDrain()
       }.toMap()
     }

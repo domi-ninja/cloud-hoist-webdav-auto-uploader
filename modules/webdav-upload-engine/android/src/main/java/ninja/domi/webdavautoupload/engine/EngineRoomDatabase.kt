@@ -36,6 +36,21 @@ data class DiscoveryWriteCounts(
   val jobsAdded: Int,
 )
 
+data class UploadJobView(
+  val id: String,
+  val sourceId: String,
+  val remoteFileName: String,
+  val state: String,
+  val createdAt: Long,
+  val startedAt: Long?,
+  val completedAt: Long?,
+  val retryAt: Long?,
+  val lastErrorCode: String?,
+  val byteCount: Long,
+  val chunkSize: Long?,
+  val confirmedChunks: List<String>?,
+)
+
 class EngineTypeConverters {
   @TypeConverter
   fun encodeStringList(values: List<String>): String = JSONArray(values).toString()
@@ -84,6 +99,37 @@ interface EngineDao {
 
   @Query("SELECT * FROM sources WHERE id = :sourceId")
   fun source(sourceId: String): SourceEntity?
+
+  @Query("SELECT * FROM sources ORDER BY createdAt ASC, id ASC")
+  fun allSources(): List<SourceEntity>
+
+  @Query("SELECT * FROM accounts WHERE blockerCode IS NOT NULL ORDER BY id ASC")
+  fun blockedAccounts(): List<AccountEntity>
+
+  @Query("SELECT * FROM sources WHERE blockerCode IS NOT NULL ORDER BY createdAt ASC, id ASC")
+  fun blockedSources(): List<SourceEntity>
+
+  @Query("SELECT COUNT(*) FROM upload_jobs WHERE state IN (:states)")
+  fun jobCountInStates(states: List<String>): Int
+
+  @Query(
+    """
+    SELECT upload_jobs.id, upload_jobs.sourceId, upload_jobs.remoteFileName,
+      upload_jobs.state, upload_jobs.createdAt, upload_jobs.startedAt,
+      upload_jobs.completedAt, upload_jobs.retryAt, upload_jobs.lastErrorCode,
+      local_revisions.byteCount, chunk_checkpoints.chunkSize,
+      chunk_checkpoints.confirmedChunks
+    FROM upload_jobs
+    INNER JOIN local_revisions ON local_revisions.id = upload_jobs.revisionId
+    LEFT JOIN chunk_checkpoints ON chunk_checkpoints.jobId = upload_jobs.id
+    ORDER BY upload_jobs.createdAt DESC, upload_jobs.id DESC
+    LIMIT :limit
+    """,
+  )
+  fun recentJobViews(limit: Int = 100): List<UploadJobView>
+
+  @Query("SELECT * FROM upload_attempts ORDER BY startedAt DESC, id DESC LIMIT :limit")
+  fun recentAttempts(limit: Int = 100): List<UploadAttemptEntity>
 
   @Query(
     "SELECT * FROM sources WHERE enabled = 1 AND (:kind IS NULL OR kind = :kind) " +
@@ -204,6 +250,23 @@ interface EngineDao {
   @Query("DELETE FROM sources WHERE id = :sourceId")
   fun deleteSourceById(sourceId: String): Int
 
+  @Query("DELETE FROM local_revisions WHERE sourceId = :sourceId")
+  fun deleteRevisionsForSource(sourceId: String): Int
+
+  @Query("UPDATE sources SET lastScanAt = NULL, blockerCode = NULL WHERE id = :sourceId")
+  fun resetSourceScan(sourceId: String): Int
+
+  @Query(
+    """
+    UPDATE upload_jobs
+    SET state = 'queued', retryAt = NULL, blockerCode = NULL, lastErrorCode = NULL
+    WHERE (state = 'blocked' OR state = 'retry_wait')
+      AND accountId IN (SELECT id FROM accounts WHERE blockerCode IS NULL)
+      AND sourceId IN (SELECT id FROM sources WHERE enabled = 1 AND blockerCode IS NULL)
+    """,
+  )
+  fun retryEligibleFailures(): Int
+
   @Query("DELETE FROM accounts")
   fun deleteAllAccounts(): Int
 
@@ -246,6 +309,13 @@ interface EngineDao {
 
   @Transaction
   fun removeSource(sourceId: String): Boolean = deleteSourceById(sourceId) == 1
+
+  @Transaction
+  fun resetSourceHistory(sourceId: String): Boolean {
+    if (source(sourceId) == null) return false
+    deleteRevisionsForSource(sourceId)
+    return resetSourceScan(sourceId) == 1
+  }
 
   @Transaction
   fun wipe() {

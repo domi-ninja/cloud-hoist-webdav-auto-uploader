@@ -91,6 +91,12 @@ export const blockerSchema = z.discriminatedUnion("kind", [
     requiredBytes: z.number().int().nonnegative(),
     availableBytes: z.number().int().nonnegative(),
   }),
+  z.object({
+    kind: z.literal("job"),
+    jobId: z.string().min(1),
+    code: z.string().min(1),
+    message: z.string().min(1),
+  }),
 ]);
 
 export const workerActivitySchema = z.discriminatedUnion("state", [
