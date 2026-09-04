@@ -11,7 +11,10 @@ export default function RootLayout() {
         screenOptions={{
           headerShown: false,
           tabBarActiveTintColor: "#4f7d45",
-          tabBarLabelStyle: { fontSize: 14 },
+          tabBarInactiveTintColor: "#62665d",
+          tabBarIcon: () => null,
+          tabBarIconStyle: { display: "none" },
+          tabBarLabelStyle: { fontSize: 16 },
         }}
       >
         <Tabs.Screen name="index" options={{ title: "Sources" }} />
