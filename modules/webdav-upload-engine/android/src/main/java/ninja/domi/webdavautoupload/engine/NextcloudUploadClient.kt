@@ -75,8 +75,12 @@ class NextcloudUploadClient(
     val request = authenticatedRequest(credential, temporaryUrl.toString())
       .put(StreamRequestBody(contentSource, upload))
       .apply {
-        upload.modifiedAtEpochSeconds?.let { header("X-OC-Mtime", it.toString()) }
-        upload.createdAtEpochSeconds?.let { header("X-OC-CTime", it.toString()) }
+        upload.modifiedAtEpochSeconds.positiveTimestamp()?.let {
+          header("X-OC-Mtime", it.toString())
+        }
+        upload.createdAtEpochSeconds.positiveTimestamp()?.let {
+          header("X-OC-CTime", it.toString())
+        }
       }
       .build()
     return execute(request) { response ->
@@ -190,6 +194,8 @@ class NextcloudUploadClient(
     }
   }
 }
+
+internal fun Long?.positiveTimestamp() = this?.takeIf { it > 0 }
 
 fun retryAfterMillis(
   value: String?,

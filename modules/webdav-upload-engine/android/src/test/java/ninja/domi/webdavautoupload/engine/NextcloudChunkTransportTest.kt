@@ -76,6 +76,25 @@ class NextcloudChunkTransportTest {
   }
 
   @Test
+  fun omitsUnknownOrInvalidTimestampsDuringAssembly() {
+    val captured = mutableListOf<Captured>()
+    val transport = transport { request ->
+      captured += capture(request)
+      response(request, 204)
+    }
+
+    transport.finalize(
+      CREDENTIAL,
+      "upload-id",
+      UPLOAD.copy(modifiedAtEpochSeconds = 0, createdAtEpochSeconds = -1),
+    )
+
+    val assembly = captured.first()
+    assertNull(assembly.modifiedAt)
+    assertNull(assembly.createdAt)
+  }
+
+  @Test
   fun abortRemovesBothTheSessionAndAnAssembledStagingFile() {
     val deleted = mutableListOf<String>()
     val transport = transport { request ->
@@ -115,6 +134,8 @@ class NextcloudChunkTransportTest {
     destination = request.header("Destination"),
     totalLength = request.header("OC-Total-Length"),
     overwrite = request.header("Overwrite"),
+    modifiedAt = request.header("X-OC-Mtime"),
+    createdAt = request.header("X-OC-CTime"),
   )
 
   private fun response(
@@ -137,6 +158,8 @@ class NextcloudChunkTransportTest {
     val destination: String?,
     val totalLength: String?,
     val overwrite: String?,
+    val modifiedAt: String?,
+    val createdAt: String?,
   )
 
   private companion object {

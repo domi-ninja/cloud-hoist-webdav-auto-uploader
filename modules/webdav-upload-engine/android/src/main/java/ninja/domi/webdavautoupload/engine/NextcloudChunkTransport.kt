@@ -137,8 +137,12 @@ class NextcloudChunkTransport(
       .header("Overwrite", "T")
       .header("OC-Total-Length", request.byteCount.toString())
       .apply {
-        request.modifiedAtEpochSeconds?.let { header("X-OC-Mtime", it.toString()) }
-        request.createdAtEpochSeconds?.let { header("X-OC-CTime", it.toString()) }
+        request.modifiedAtEpochSeconds.positiveTimestamp()?.let {
+          header("X-OC-Mtime", it.toString())
+        }
+        request.createdAtEpochSeconds.positiveTimestamp()?.let {
+          header("X-OC-CTime", it.toString())
+        }
       }
       .build()
     val timestamps = execute(assemble) { response ->

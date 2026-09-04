@@ -12,6 +12,7 @@ import okhttp3.ResponseBody.Companion.toResponseBody
 import okio.Buffer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -64,6 +65,25 @@ class NextcloudUploadClientTest {
       UPLOAD.copy(byteCount = 0, fileName = "empty", modifiedAtEpochSeconds = null),
     )
     assertFalse(result.modificationTimeAccepted)
+  }
+
+  @Test
+  fun omitsUnknownOrInvalidTimestamps() {
+    var put: CapturedRequest? = null
+    val client = client { request ->
+      capture(request).also { captured ->
+        if (request.method == "PUT") put = captured
+      }
+      response(request, if (request.method == "MKCOL") 405 else 201)
+    }
+
+    client.upload(
+      CREDENTIAL,
+      UPLOAD.copy(modifiedAtEpochSeconds = 0, createdAtEpochSeconds = -1),
+    )
+
+    assertNull(put?.modifiedAt)
+    assertNull(put?.createdAt)
   }
 
   @Test
