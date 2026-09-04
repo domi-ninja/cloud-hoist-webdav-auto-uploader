@@ -1,6 +1,6 @@
 # 010 Run reliable background transfers
 
-Status: in progress; chunked transfer remains blocked by 007
+Status: in progress
 
 Depends on: 005, 006, 007, 009
 

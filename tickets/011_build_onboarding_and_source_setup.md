@@ -1,6 +1,6 @@
 # 011 Build onboarding and source setup
 
-Status: blocked by 010
+Status: in progress
 
 Depends on: 003, 004, 008, 009, 010
 

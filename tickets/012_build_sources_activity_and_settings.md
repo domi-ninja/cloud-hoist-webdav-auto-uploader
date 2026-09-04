@@ -1,6 +1,6 @@
 # 012 Build Sources, Activity, and Settings
 
-Status: blocked by 011
+Status: in progress
 
 Depends on: 004, 010, 011
 
