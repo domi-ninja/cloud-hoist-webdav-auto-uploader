@@ -9,6 +9,10 @@ import webDavUploadEngine, {
 import { LocalSourcePicker } from "./LocalSourcePicker";
 import { RemoteFolderPicker } from "./RemoteFolderPicker";
 import { ActionButton, Panel, Separator } from "@/components/ui";
+import {
+  defaultRemotePath,
+  ensureRemoteDestination,
+} from "./default-destination";
 
 type SourceSetupProps = {
   onComplete: () => void;
@@ -42,6 +46,7 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
   const [selection, setSelection] = useState<SourceSelection>();
   const [preview, setPreview] = useState<SourcePreview>();
   const [remotePath, setRemotePath] = useState<string[]>();
+  const [choosingDestination, setChoosingDestination] = useState(false);
   const [name, setName] = useState("");
   const [includeExisting, setIncludeExisting] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -55,6 +60,7 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
             setSelection(nextSelection);
             setPreview(nextPreview);
             setName(selectionName(nextSelection));
+            setRemotePath(defaultRemotePath());
           }}
         />
         {onCancel ? (
@@ -67,16 +73,18 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
     );
   }
 
-  if (!remotePath) {
+  if (choosingDestination) {
     return (
       <View className="gap-4">
-        <RemoteFolderPicker onSelect={setRemotePath} />
+        <RemoteFolderPicker
+          onSelect={(pathSegments) => {
+            setRemotePath(pathSegments);
+            setChoosingDestination(false);
+          }}
+        />
         <ActionButton
           label="Back"
-          onPress={() => {
-            setSelection(undefined);
-            setPreview(undefined);
-          }}
+          onPress={() => setChoosingDestination(false)}
         />
         {onCancel ? (
           <ActionButton
@@ -87,14 +95,25 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
       </View>
     );
   }
+
+  const selectedRemotePath = remotePath ?? defaultRemotePath();
 
   const save = async () => {
     setBusy(true);
     setError(undefined);
+    const destination = await ensureRemoteDestination(
+      selectedRemotePath,
+      webDavUploadEngine.createRemoteFolder,
+    );
+    if (!destination.ok) {
+      setBusy(false);
+      setError(destination.error);
+      return;
+    }
     const result = await webDavUploadEngine.commitSource({
       name,
       selection,
-      remotePathSegments: remotePath,
+      remotePathSegments: destination.value,
       includeExisting,
     });
     setBusy(false);
@@ -121,7 +140,7 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
         value={name}
       />
       <Text className="text-base text-muted-light dark:text-muted-dark">
-        {selectionName(selection)} → {displayPath(remotePath)}
+        {selectionName(selection)} → {displayPath(selectedRemotePath)}
       </Text>
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {preview.eligibleFileCount} existing files are eligible.
@@ -169,10 +188,20 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
         tone="primary"
       />
       <ActionButton
-        accessibilityLabel="Back to remote destination"
+        accessibilityLabel="Change remote destination"
         disabled={busy}
-        label="Back"
-        onPress={() => setRemotePath(undefined)}
+        label="Change destination"
+        onPress={() => setChoosingDestination(true)}
+      />
+      <ActionButton
+        accessibilityLabel="Change local source"
+        disabled={busy}
+        label="Change source"
+        onPress={() => {
+          setSelection(undefined);
+          setPreview(undefined);
+          setRemotePath(undefined);
+        }}
       />
       {onCancel ? (
         <ActionButton
