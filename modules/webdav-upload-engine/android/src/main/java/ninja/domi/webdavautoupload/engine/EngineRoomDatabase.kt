@@ -82,9 +82,15 @@ interface EngineDao {
     SET state = 'running', startedAt = :now, claimToken = :claimToken,
         attemptCount = attemptCount + 1, retryAt = NULL
     WHERE id = (
-      SELECT id FROM upload_jobs
-      WHERE state = 'queued' OR (state = 'retry_wait' AND retryAt <= :now)
-      ORDER BY createdAt ASC, id ASC
+      SELECT upload_jobs.id FROM upload_jobs
+      INNER JOIN sources ON sources.id = upload_jobs.sourceId
+      WHERE sources.enabled = 1
+        AND sources.blockerCode IS NULL
+        AND (
+          upload_jobs.state = 'queued'
+          OR (upload_jobs.state = 'retry_wait' AND upload_jobs.retryAt <= :now)
+        )
+      ORDER BY upload_jobs.createdAt ASC, upload_jobs.id ASC
       LIMIT 1
     )
     AND (state = 'queued' OR (state = 'retry_wait' AND retryAt <= :now))

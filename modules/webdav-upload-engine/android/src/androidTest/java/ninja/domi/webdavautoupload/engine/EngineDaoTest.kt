@@ -175,6 +175,19 @@ class EngineDaoTest {
     assertEquals(1, dao.jobCount())
   }
 
+  @Test
+  fun disabledAndBlockedSourcesCannotFeedClaims() {
+    dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
+    dao.upsertSource(source().copy(enabled = false))
+    assertNull(dao.claimNext(2, "disabled-worker"))
+
+    dao.upsertSource(source().copy(blockerCode = "permission_revoked"))
+    assertNull(dao.claimNext(3, "blocked-worker"))
+
+    dao.upsertSource(source())
+    assertEquals("j1", dao.claimNext(4, "enabled-worker")?.id)
+  }
+
   private fun account() = AccountEntity(
     id = "account-1",
     serverUrl = "https://cloud.example.test",
