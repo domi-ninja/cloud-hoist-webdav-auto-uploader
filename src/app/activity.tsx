@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import {
   useEngineSnapshot,
-  useRecentActivity,
+  useActivityPages,
   useUnresolvedFailures,
 } from "@/lib/engine-query";
 
@@ -32,7 +32,7 @@ function transferState(
 export default function ActivityScreen() {
   const router = useRouter();
   const snapshot = useEngineSnapshot();
-  const activity = useRecentActivity();
+  const activity = useActivityPages();
   const failures = useUnresolvedFailures();
   const [errorMessage, setErrorMessage] = useState<string>();
 
@@ -174,8 +174,8 @@ export default function ActivityScreen() {
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Recent
         </Text>
-        {activity.data?.length ? (
-          activity.data.map((entry) => (
+        {activity.data?.pages.some((page) => page.items.length) ? (
+          activity.data.pages.flatMap((page) => page.items).map((entry) => (
             <View className="gap-4 border border-muted-light p-4 dark:border-muted-dark" key={entry.id}>
               <Text className="text-base text-ink-light dark:text-ink-dark">
                 {entry.message}
@@ -189,6 +189,19 @@ export default function ActivityScreen() {
           <Text className="text-base text-muted-light dark:text-muted-dark">
             No uploads yet.
           </Text>
+        ) : null}
+        {activity.hasNextPage ? (
+          <Pressable
+            accessibilityLabel="Load older upload activity"
+            accessibilityRole="button"
+            className="border border-accent p-4"
+            disabled={activity.isFetchingNextPage}
+            onPress={() => void activity.fetchNextPage()}
+          >
+            <Text className="text-base text-ink-light dark:text-ink-dark">
+              {activity.isFetchingNextPage ? "Loading…" : "Load older"}
+            </Text>
+          </Pressable>
         ) : null}
       </ScrollView>
     </SafeAreaView>

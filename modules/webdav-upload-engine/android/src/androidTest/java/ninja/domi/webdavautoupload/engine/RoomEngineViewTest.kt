@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -120,6 +121,24 @@ class RoomEngineViewTest {
     assertEquals("scanning", worker["state"])
     assertEquals("media", worker["scope"])
     assertFalse(worker.containsKey("sourceId"))
+  }
+
+  @Test
+  fun activityPagesExcludeEntriesOlderThanThirtyDays() {
+    val day = TimeUnit.DAYS.toMillis(1)
+    enqueue("activity", JobState.COMPLETED, 35 * day, 20, completedAt = 39 * day)
+    dao.insertAttempt(UploadAttemptEntity("newest", "activity", 39 * day, 39 * day, "completed"))
+    dao.insertAttempt(UploadAttemptEntity("older", "activity", 38 * day, 38 * day, "timeout"))
+    dao.insertAttempt(UploadAttemptEntity("expired", "activity", day, day, "completed"))
+    val view = RoomEngineView(dao, onInvalidated = {}, now = { 40 * day })
+
+    val first = view.activityPage(offset = 0, pageSize = 1)
+    val second = view.activityPage(offset = 1, pageSize = 1)
+
+    assertEquals("newest", ((first["items"] as List<*>).single() as Map<*, *>)["id"])
+    assertEquals(1, first["nextOffset"])
+    assertEquals("older", ((second["items"] as List<*>).single() as Map<*, *>)["id"])
+    assertNull(second["nextOffset"])
   }
 
   private fun enqueue(

@@ -112,8 +112,8 @@ class WebDavUploadEngineModule : Module() {
       engine.sources()
     }
 
-    AsyncFunction("getRecentActivityAsync") {
-      engine.recentActivity()
+    AsyncFunction("getActivityPageAsync") { offset: Int ->
+      engine.activityPage(offset)
     }
 
     AsyncFunction("getUnresolvedFailuresAsync") {

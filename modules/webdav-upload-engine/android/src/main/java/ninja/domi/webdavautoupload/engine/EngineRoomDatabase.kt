@@ -128,8 +128,15 @@ interface EngineDao {
   )
   fun recentJobViews(limit: Int = 100): List<UploadJobView>
 
-  @Query("SELECT * FROM upload_attempts ORDER BY startedAt DESC, id DESC LIMIT :limit")
-  fun recentAttempts(limit: Int = 100): List<UploadAttemptEntity>
+  @Query(
+    "SELECT * FROM upload_attempts WHERE startedAt >= :cutoff " +
+      "ORDER BY startedAt DESC, id DESC LIMIT :limit OFFSET :offset",
+  )
+  fun activityAttempts(
+    cutoff: Long,
+    limit: Int,
+    offset: Int,
+  ): List<UploadAttemptEntity>
 
   @Query(
     "SELECT * FROM sources WHERE enabled = 1 AND (:kind IS NULL OR kind = :kind) " +

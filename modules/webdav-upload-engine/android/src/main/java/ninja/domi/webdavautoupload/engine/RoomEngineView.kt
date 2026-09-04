@@ -2,6 +2,7 @@ package ninja.domi.webdavautoupload.engine
 
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /** Produces the bridge contract from the same Room state used by headless workers. */
 class RoomEngineView(
@@ -59,16 +60,18 @@ class RoomEngineView(
     )
   }
 
-  fun recentActivity(): List<Map<String, Any?>> = dao.recentAttempts().map { attempt ->
-    mapOf(
-      "id" to attempt.id,
-      "type" to "upload",
-      "message" to if (attempt.resultCode == "completed") {
-        "Upload completed."
-      } else {
-        "Upload ${attempt.resultCode ?: "started"}."
-      },
-      "occurredAt" to instant(attempt.finishedAt ?: attempt.startedAt),
+  fun activityPage(offset: Int, pageSize: Int = ACTIVITY_PAGE_SIZE): Map<String, Any?> {
+    require(offset >= 0) { "Activity offset cannot be negative." }
+    require(pageSize in 1..MAX_ACTIVITY_PAGE_SIZE) { "Activity page size is invalid." }
+    val attempts = dao.activityAttempts(
+      cutoff = now() - ACTIVITY_RETENTION_MILLIS,
+      limit = pageSize + 1,
+      offset = offset,
+    )
+    val hasNextPage = attempts.size > pageSize
+    return mapOf(
+      "items" to attempts.take(pageSize).map(::activityMap),
+      "nextOffset" to if (hasNextPage) offset + pageSize else null,
     )
   }
 
@@ -209,6 +212,17 @@ class RoomEngineView(
     },
   )
 
+  private fun activityMap(attempt: UploadAttemptEntity): Map<String, Any?> = mapOf(
+    "id" to attempt.id,
+    "type" to "upload",
+    "message" to if (attempt.resultCode == "completed") {
+      "Upload completed."
+    } else {
+      "Upload ${attempt.resultCode ?: "started"}."
+    },
+    "occurredAt" to instant(attempt.finishedAt ?: attempt.startedAt),
+  )
+
   private fun workerMap(
     running: UploadJobView?,
     scheduler: SchedulerStatus,
@@ -245,5 +259,11 @@ class RoomEngineView(
     "local_missing" -> "The local file is no longer available."
     "local_invalid" -> "The local file cannot be uploaded."
     else -> "Upload paused after $code."
+  }
+
+  companion object {
+    private const val ACTIVITY_PAGE_SIZE = 20
+    private const val MAX_ACTIVITY_PAGE_SIZE = 50
+    private val ACTIVITY_RETENTION_MILLIS = TimeUnit.DAYS.toMillis(30)
   }
 }

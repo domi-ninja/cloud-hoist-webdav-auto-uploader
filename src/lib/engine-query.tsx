@@ -1,6 +1,7 @@
 import {
   QueryClient,
   QueryClientProvider,
+  useInfiniteQuery,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
@@ -48,10 +49,12 @@ export function useEngineSnapshot() {
   });
 }
 
-export function useRecentActivity() {
-  return useQuery({
+export function useActivityPages() {
+  return useInfiniteQuery({
     queryKey: [...engineKey, "activity"],
-    queryFn: () => webDavUploadEngine.getRecentActivity(),
+    queryFn: ({ pageParam }) => webDavUploadEngine.getActivityPage(pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
   });
 }
 

@@ -137,6 +137,11 @@ export const activityEntrySchema = z.object({
   occurredAt: z.string().datetime(),
 });
 
+export const activityPageSchema = z.object({
+  items: activityEntrySchema.array(),
+  nextOffset: z.number().int().nonnegative().nullable(),
+});
+
 export const unresolvedFailureSchema = z.object({
   id: z.string().min(1),
   code: z.string().min(1),
@@ -269,6 +274,7 @@ export type WorkerActivity = z.infer<typeof workerActivitySchema>;
 export type TransferConstraints = z.infer<typeof transferConstraintsSchema>;
 export type SchedulerStatus = z.infer<typeof schedulerStatusSchema>;
 export type ActivityEntry = z.infer<typeof activityEntrySchema>;
+export type ActivityPage = z.infer<typeof activityPageSchema>;
 export type UnresolvedFailure = z.infer<typeof unresolvedFailureSchema>;
 export type EngineSnapshot = z.infer<typeof engineSnapshotSchema>;
 export type SourceInput = z.infer<typeof sourceInputSchema>;

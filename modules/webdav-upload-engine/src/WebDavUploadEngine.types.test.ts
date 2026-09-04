@@ -3,6 +3,7 @@ import { describe, expect, it } from "@jest/globals";
 import {
   accountHealthSchema,
   accountSummarySchema,
+  activityPageSchema,
   blockerSchema,
   engineSnapshotSchema,
   engineStateSchema,
@@ -158,5 +159,22 @@ describe("native engine contract", () => {
     expect(
       notificationPermissionStateSchema.parse({ granted: false, canAskAgain: true }),
     ).toEqual({ granted: false, canAskAgain: true });
+  });
+
+  it("decodes a bounded activity page", () => {
+    const page = {
+      items: [
+        {
+          id: "attempt-1",
+          type: "upload",
+          message: "Upload completed.",
+          occurredAt: now,
+        },
+      ],
+      nextOffset: 20,
+    };
+
+    expect(activityPageSchema.parse(page)).toEqual(page);
+    expect(() => activityPageSchema.parse({ ...page, nextOffset: -1 })).toThrow();
   });
 });

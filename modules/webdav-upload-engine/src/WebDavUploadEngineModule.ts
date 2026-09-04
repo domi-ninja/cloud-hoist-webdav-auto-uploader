@@ -2,7 +2,7 @@ import { NativeModule, requireNativeModule } from "expo";
 import { z } from "zod";
 
 import {
-  activityEntrySchema,
+  activityPageSchema,
   accountSummarySchema,
   engineSnapshotSchema,
   loginFlowPollSchema,
@@ -24,7 +24,7 @@ import {
   sourceScanResultSchema,
   transferConstraintsSchema,
   unresolvedFailureSchema,
-  type ActivityEntry,
+  type ActivityPage,
   type AccountSummary,
   type EngineCommandResult,
   type EngineError,
@@ -52,7 +52,7 @@ import {
 declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineModuleEvents> {
   getSnapshotAsync(): Promise<unknown>;
   getSourcesAsync(): Promise<unknown>;
-  getRecentActivityAsync(): Promise<unknown>;
+  getActivityPageAsync(offset: number): Promise<unknown>;
   getUnresolvedFailuresAsync(): Promise<unknown>;
   getDiagnosticReportAsync(): Promise<unknown>;
   pauseAsync(): Promise<void>;
@@ -161,8 +161,9 @@ export const webDavUploadEngine = {
     return sourceSummarySchema.array().parse(await nativeModule.getSourcesAsync());
   },
 
-  async getRecentActivity(): Promise<ActivityEntry[]> {
-    return activityEntrySchema.array().parse(await nativeModule.getRecentActivityAsync());
+  async getActivityPage(offset = 0): Promise<ActivityPage> {
+    const parsedOffset = z.number().int().nonnegative().parse(offset);
+    return activityPageSchema.parse(await nativeModule.getActivityPageAsync(parsedOffset));
   },
 
   async getUnresolvedFailures(): Promise<UnresolvedFailure[]> {
