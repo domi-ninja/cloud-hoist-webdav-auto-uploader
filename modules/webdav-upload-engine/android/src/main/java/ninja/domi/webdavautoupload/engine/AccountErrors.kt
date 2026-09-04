@@ -52,3 +52,15 @@ class AccountNotConfiguredException :
 
 class AccountStorageException :
   CodedException("The encrypted account credential could not be accessed.")
+
+class DavPermissionException :
+  CodedException("The account cannot access that remote folder.")
+
+class DavNotFoundException :
+  CodedException("The remote folder no longer exists.")
+
+class DavInvalidPathException :
+  CodedException("That remote folder name or path is invalid.")
+
+class DavQuotaException :
+  CodedException("The Nextcloud account has no space for that folder operation.")

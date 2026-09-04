@@ -1,6 +1,6 @@
 # 004 Browse and create remote folders
 
-Status: blocked by 003
+Status: in progress
 
 Depends on: 003
 
