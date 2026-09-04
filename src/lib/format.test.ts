@@ -7,6 +7,7 @@ const now = Date.parse("2026-09-04T18:00:00.000Z");
 describe("formatRelativeTime", () => {
   it.each([
     ["2026-09-04T17:59:31.000Z", "just now"],
+    ["2026-09-04T18:00:01.000Z", "just now"],
     ["2026-09-04T17:58:00.000Z", "2 minutes ago"],
     ["2026-09-04T15:00:00.000Z", "3 hours ago"],
     ["2026-09-02T18:00:00.000Z", "2 days ago"],

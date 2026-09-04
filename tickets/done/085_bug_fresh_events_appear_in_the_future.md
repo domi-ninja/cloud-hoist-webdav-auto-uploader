@@ -1,6 +1,6 @@
 # 085 Bug: fresh events appear in the future
 
-Status: in progress
+Status: done
 
 Found while verifying: 083
 

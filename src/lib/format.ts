@@ -21,7 +21,7 @@ export function formatRelativeTime(value: string, now = Date.now()) {
 
   const difference = now - timestamp;
   const elapsed = Math.abs(difference);
-  if (elapsed < MINUTE) return difference < 0 ? "in a moment" : "just now";
+  if (elapsed < MINUTE) return "just now";
 
   const unit = relativeUnits.find(({ milliseconds }) => elapsed >= milliseconds);
   if (!unit) return "just now";
