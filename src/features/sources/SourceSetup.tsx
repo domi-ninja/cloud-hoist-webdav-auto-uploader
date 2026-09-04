@@ -40,13 +40,27 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
 
   if (!selection || !preview) {
     return (
-      <LocalSourcePicker
-        onSelect={(nextSelection, nextPreview) => {
-          setSelection(nextSelection);
-          setPreview(nextPreview);
-          setName(selectionName(nextSelection));
-        }}
-      />
+      <View className="gap-4">
+        <LocalSourcePicker
+          onSelect={(nextSelection, nextPreview) => {
+            setSelection(nextSelection);
+            setPreview(nextPreview);
+            setName(selectionName(nextSelection));
+          }}
+        />
+        {onCancel ? (
+          <Pressable
+            accessibilityLabel="Cancel source setup"
+            accessibilityRole="button"
+            className="p-4"
+            onPress={onCancel}
+          >
+            <Text className="text-base text-muted-light dark:text-muted-dark">
+              Cancel
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
     );
   }
 
@@ -65,6 +79,18 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
         >
           <Text className="text-base text-accent">Back</Text>
         </Pressable>
+        {onCancel ? (
+          <Pressable
+            accessibilityLabel="Cancel source setup"
+            accessibilityRole="button"
+            className="p-4"
+            onPress={onCancel}
+          >
+            <Text className="text-base text-muted-light dark:text-muted-dark">
+              Cancel
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
     );
   }
@@ -142,7 +168,7 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
       <Pressable
         accessibilityLabel="Save upload source"
         accessibilityRole="button"
-        className="bg-accent p-4"
+        className="bg-accent p-4 disabled:opacity-50"
         disabled={busy || !name.trim()}
         onPress={() => void save()}
       >
@@ -153,7 +179,7 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
       <Pressable
         accessibilityLabel="Back to remote destination"
         accessibilityRole="button"
-        className="p-4"
+        className="p-4 disabled:opacity-50"
         disabled={busy}
         onPress={() => setRemotePath(undefined)}
       >
@@ -163,7 +189,7 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
         <Pressable
           accessibilityLabel="Cancel source setup"
           accessibilityRole="button"
-          className="p-4"
+          className="p-4 disabled:opacity-50"
           disabled={busy}
           onPress={onCancel}
         >
