@@ -5,6 +5,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { project } from "@/config/project";
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
+import { SourceCard } from "@/features/sources/SourceCard";
 import { SourceSetup } from "@/features/sources/SourceSetup";
 import { useEngineSnapshot } from "@/lib/engine-query";
 
@@ -30,17 +31,6 @@ export default function HomeScreen() {
 
   const scanNow = async () => {
     const result = await webDavUploadEngine.scanNow();
-    if (!result.ok) setErrorMessage(result.error.message);
-  };
-
-  const toggleSource = async (sourceId: string) => {
-    if (!snapshot) return;
-    const source = snapshot.sources.find((item) => item.id === sourceId);
-    if (!source) return;
-    const result = await webDavUploadEngine.addOrUpdateSource({
-      ...source,
-      enabled: !source.enabled,
-    });
     if (!result.ok) setErrorMessage(result.error.message);
   };
 
@@ -89,24 +79,7 @@ export default function HomeScreen() {
                 {snapshot.queue.failed} blocked · {snapshot.queue.uploaded} uploaded
               </Text>
               {snapshot.sources.map((source) => (
-                <View className="gap-4 border border-accent p-4" key={source.id}>
-                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                    {source.name}
-                  </Text>
-                  <Text className="text-base text-muted-light dark:text-muted-dark">
-                    {source.enabled ? "Watching" : "Disabled"} · {source.remotePath}
-                  </Text>
-                  <Pressable
-                    accessibilityLabel={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
-                    accessibilityRole="button"
-                    className="border border-accent p-4"
-                    onPress={() => void toggleSource(source.id)}
-                  >
-                    <Text className="text-base text-ink-light dark:text-ink-dark">
-                      {source.enabled ? "Disable" : "Enable"}
-                    </Text>
-                  </Pressable>
-                </View>
+                <SourceCard key={source.id} snapshot={snapshot} source={source} />
               ))}
               {!addingSource ? (
                 <Pressable
