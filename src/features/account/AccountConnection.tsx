@@ -4,7 +4,10 @@ import { Linking, Pressable, Text, TextInput, View } from "react-native";
 import webDavUploadEngine, {
   type AccountHealth,
   type EngineError,
+  type SourcePreview,
+  type SourceSelection,
 } from "../../../modules/webdav-upload-engine";
+import { LocalSourcePicker } from "../sources/LocalSourcePicker";
 import { RemoteFolderPicker } from "../sources/RemoteFolderPicker";
 
 type AccountConnectionProps = {
@@ -24,6 +27,10 @@ export function AccountConnection({ account }: AccountConnectionProps) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
   const [selectedRemotePath, setSelectedRemotePath] = useState<string[]>();
+  const [selectedSource, setSelectedSource] = useState<{
+    selection: SourceSelection;
+    preview: SourcePreview;
+  }>();
 
   const pollLogin = useCallback(async () => {
     if (!loginAttemptId) {
@@ -135,7 +142,15 @@ export function AccountConnection({ account }: AccountConnectionProps) {
             </Text>
           ) : null}
         </View>
-        <RemoteFolderPicker onSelect={setSelectedRemotePath} />
+        <LocalSourcePicker
+          onSelect={(selection, preview) => {
+            setSelectedSource({ selection, preview });
+            setSelectedRemotePath(undefined);
+          }}
+        />
+        {selectedSource ? (
+          <RemoteFolderPicker onSelect={setSelectedRemotePath} />
+        ) : null}
         {selectedRemotePath ? (
           <Text className="text-base text-ink-light dark:text-ink-dark">
             Selected: /{selectedRemotePath.join("/")}
