@@ -34,6 +34,7 @@ class QueueDrainRunner(
   private val maxJobs: Int = DEFAULT_MAX_JOBS,
   private val maxRunMillis: Long = DEFAULT_MAX_RUN_MILLIS,
   private val onProgress: (TransferProgress) -> Unit = {},
+  private val onFailure: (UploadJobEntity, TransferFailure) -> Unit = { _, _ -> },
 ) {
   fun run(): QueueDrainResult {
     val startedAt = elapsed()
@@ -105,6 +106,7 @@ class QueueDrainRunner(
             ),
             failure.code,
           )
+          if (shouldNotifyAboutFailure(job, failure, finishedAt)) onFailure(job, failure)
           return QueueDrainResult(completed, retryWorker = true)
         }
         when (failure.scope) {
@@ -129,6 +131,7 @@ class QueueDrainRunner(
             failure.code,
           )
         }
+        if (shouldNotifyAboutFailure(job, failure, finishedAt)) onFailure(job, failure)
       }
     }
 
@@ -152,6 +155,7 @@ class QueueDrainRunner(
       val dao = EngineRoomDatabase.open(appContext).engineDao()
       val contentSource = AndroidLocalContentSource(appContext.contentResolver)
       val preferences = EnginePreferences(appContext)
+      val blockerNotification = BlockerNotification(appContext)
       return QueueDrainRunner(
         dao = dao,
         accountRepository = AndroidAccountRepository(appContext, dao),
@@ -167,10 +171,19 @@ class QueueDrainRunner(
         isStopped = isStopped,
         canStartNextFile = TransferConstraintChecker(appContext, preferences)::canStartNextFile,
         onProgress = onProgress,
+        onFailure = blockerNotification::show,
       )
     }
   }
 }
+
+internal fun shouldNotifyAboutFailure(
+  job: UploadJobEntity,
+  failure: TransferFailure,
+  failedAt: Long,
+) = !failure.retryable ||
+  job.attemptCount >= 3 ||
+  failedAt - job.createdAt >= TimeUnit.HOURS.toMillis(24)
 
 data class TransferFailure(
   val code: String,

@@ -22,4 +22,20 @@ class TransferNotificationTest {
     assertEquals(false, safe.any(Char::isISOControl))
     assertEquals("File", safeTransferFileName("\n\u0000"))
   }
+
+  @Test
+  fun blockerScopesDeepLinkToTheirRepairScreen() {
+    assertEquals("webdav-auto-upload:///", blockerDeepLink(BlockerScope.ACCOUNT))
+    assertEquals("webdav-auto-upload:///", blockerDeepLink(BlockerScope.SOURCE))
+    assertEquals("webdav-auto-upload:///activity", blockerDeepLink(BlockerScope.JOB))
+  }
+
+  @Test
+  fun blockerMessagesNeverExposeRuntimeDetails() {
+    assertEquals("Nextcloud storage is full.", blockerNotificationMessage("quota"))
+    assertEquals(
+      "Open Activity to review the upload problem.",
+      blockerNotificationMessage("arbitrary-private-context"),
+    )
+  }
 }

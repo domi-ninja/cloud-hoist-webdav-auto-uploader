@@ -97,6 +97,65 @@ class QueueDrainRunnerTest {
   }
 
   @Test
+  fun permanentFailureRequestsAnActionableNotification() {
+    enqueue("blocked", "revision-blocked", 10)
+    val notices = mutableListOf<Pair<String, TransferFailure>>()
+    val runner = runner(
+      davClient = DavClient { _, _ -> throw DavQuotaException() },
+      onFailure = { job, failure -> notices += job.id to failure },
+    )
+
+    runner.run()
+
+    assertEquals("blocked", notices.single().first)
+    assertEquals(TransferFailure("quota", false, BlockerScope.JOB), notices.single().second)
+  }
+
+  @Test
+  fun thirdRetryableFailureRequestsAnActionableNotification() {
+    enqueue("retrying", "revision-retrying", 10, attemptCount = 2)
+    val notices = mutableListOf<Pair<String, TransferFailure>>()
+    val runner = runner(
+      davClient = DavClient { _, _ -> throw AccountTimeoutException() },
+      onFailure = { job, failure -> notices += job.id to failure },
+    )
+
+    runner.run()
+
+    assertEquals("retrying", notices.single().first)
+    assertEquals(TransferFailure("timeout", true), notices.single().second)
+  }
+
+  @Test
+  fun dayOldRetryableFailureRequestsAnActionableNotification() {
+    clock = java.util.concurrent.TimeUnit.HOURS.toMillis(24) + 10
+    enqueue("old", "revision-old", 10)
+    val notices = mutableListOf<String>()
+    val runner = runner(
+      davClient = DavClient { _, _ -> throw AccountTimeoutException() },
+      onFailure = { job, _ -> notices += job.id },
+    )
+
+    runner.run()
+
+    assertEquals(listOf("old"), notices)
+  }
+
+  @Test
+  fun freshFirstRetryableFailureStaysQuiet() {
+    enqueue("fresh", "revision-fresh", 10)
+    val notices = mutableListOf<String>()
+    val runner = runner(
+      davClient = DavClient { _, _ -> throw AccountTimeoutException() },
+      onFailure = { job, _ -> notices += job.id },
+    )
+
+    runner.run()
+
+    assertTrue(notices.isEmpty())
+  }
+
+  @Test
   fun credentialFailureBlocksTheAccountAndStopsNewClaims() {
     enqueue("bad", "revision-bad", 10)
     enqueue("waiting", "revision-waiting", 20)
@@ -220,6 +279,7 @@ class QueueDrainRunnerTest {
     maxRunMillis: Long = 8 * 60 * 1_000,
     onProgress: (TransferProgress) -> Unit = {},
     canStartNextFile: () -> Boolean = { true },
+    onFailure: (UploadJobEntity, TransferFailure) -> Unit = { _, _ -> },
   ) = QueueDrainRunner(
     dao = dao,
     accountRepository = accountRepository(),
@@ -237,9 +297,15 @@ class QueueDrainRunnerTest {
     maxRunMillis = maxRunMillis,
     onProgress = onProgress,
     canStartNextFile = canStartNextFile,
+    onFailure = onFailure,
   )
 
-  private fun enqueue(jobId: String, revisionId: String, createdAt: Long) {
+  private fun enqueue(
+    jobId: String,
+    revisionId: String,
+    createdAt: Long,
+    attemptCount: Int = 0,
+  ) {
     dao.enqueueRevision(
       LocalRevisionEntity(
         id = revisionId,
@@ -265,7 +331,7 @@ class QueueDrainRunnerTest {
         startedAt = null,
         completedAt = null,
         retryAt = null,
-        attemptCount = 0,
+        attemptCount = attemptCount,
         claimToken = null,
         blockerCode = null,
         lastErrorCode = null,
