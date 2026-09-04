@@ -1,6 +1,6 @@
 # WebDAV Auto Upload product plan
 
-This file records the decisions for the app. We will work through them in grilling rounds. Each answer changes which questions become available next, so the later rounds are provisional.
+This file records the decisions from six grilling rounds. The original questions and recommendations remain below as decision history.
 
 Planning status: complete. All six rounds were accepted.
 
@@ -33,11 +33,11 @@ Product identity
 |   |-- Retry and recovery
 |   |-- Battery and network constraints
 |   `-- User-visible status
-|-- Distribution [research in progress]
+|-- Distribution
 |   |-- Storage permissions
 |   |-- Play Store and F-Droid variants
 |   `-- Minimum Android version
-`-- Relationship to Nextcloud source [research in progress]
+`-- Relationship to Nextcloud source
     |-- Clean implementation or reused code
     |-- License
     `-- Upstream relationship
@@ -345,9 +345,41 @@ Decisions:
 - Publish a GitHub prerelease after the acceptance suite and a seven-day physical-device soak show no silent misses. Prepare F-Droid next and defer Google Play publication.
 - Keep the recorded non-goals out of v0.1.
 
-## Provisional later rounds
+## Remaining rounds
 
 None. The design tree is empty.
+
+## Implementation tickets
+
+Foundation:
+
+1. [Bootstrap the Expo Android app](tickets/001_bootstrap_expo_android.md)
+2. [Create the typed native engine module](tickets/002_create_typed_native_engine_module.md)
+
+Server upload path:
+
+3. [Connect and validate one Nextcloud account](tickets/003_connect_nextcloud_account.md)
+4. [Browse and create remote folders](tickets/004_browse_remote_folders.md)
+5. [Upload one file with safe overwrite](tickets/005_upload_one_file_safely.md)
+6. [Add the durable Room queue](tickets/006_add_durable_room_queue.md)
+7. [Resume large chunked uploads](tickets/007_resume_large_chunked_uploads.md)
+
+Android automation:
+
+8. [Discover media and selected folders](tickets/008_discover_media_and_selected_folders.md)
+9. [Schedule scans and queue drains](tickets/009_schedule_scans_and_queue_drains.md)
+10. [Run reliable background transfers](tickets/010_run_reliable_background_transfers.md)
+
+Product interface:
+
+11. [Build onboarding and source setup](tickets/011_build_onboarding_and_source_setup.md)
+12. [Build Sources, Activity, and Settings](tickets/012_build_sources_activity_and_settings.md)
+13. [Add cleanup and private diagnostics](tickets/013_add_cleanup_and_private_diagnostics.md)
+
+Release gates:
+
+14. [Verify lifecycle and failure recovery](tickets/014_verify_lifecycle_and_failure_recovery.md)
+15. [Prepare the GitHub prerelease](tickets/015_prepare_the_github_prerelease.md)
 
 ## v0.1 acceptance statement
 

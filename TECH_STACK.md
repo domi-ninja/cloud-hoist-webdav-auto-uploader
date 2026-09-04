@@ -18,7 +18,7 @@ WebDAV Auto Upload is an Android-first, open-source React Native app for reliabl
 - **Navigation:** Expo Router
 - **Server state:** TanStack Query where request caching and synchronization are useful
 - **Local persistence:** Android Room over SQLite for the durable upload engine; lightweight React Native preferences for UI-only state
-- **Secrets:** Expo SecureStore for credentials and tokens
+- **Secrets:** Kotlin-owned encrypted credential storage backed by Android Keystore, accessible to headless workers but never returned to React Native after storage
 - **Android development:** Android Studio emulator with an Expo development build
 - **Native project management:** Expo prebuild / Continuous Native Generation
 - **Delivery:** EAS-compatible builds, without requiring EAS-hosted services
