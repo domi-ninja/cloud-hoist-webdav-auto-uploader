@@ -1,6 +1,6 @@
 # 088 Support many watch folders
 
-Status: in progress
+Status: done
 
 Depends on: 011, 012, 083, 087
 
@@ -44,3 +44,10 @@ Users can keep adding independently watched Android folders without an app-defin
 
 The app will not set its own limit. Android, the device, and persisted Storage Access Framework grants remain finite platform resources.
 
+## Verified
+
+- The Android database suite stored and returned 256 independent SAF sources.
+- A release build added WatchAlpha, WatchBeta, and WatchGamma in one repeated setup session.
+- Each folder discovered and uploaded a distinct image to `/WebDAV Auto Upload`.
+- All uploaded fixtures were byte-identical when fetched back from Nextcloud.
+- The remote fixtures, temporary sources, and emulator folders were removed after the run.

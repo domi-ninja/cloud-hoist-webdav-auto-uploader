@@ -1,6 +1,6 @@
 # 089 Bug: headless scan state stays stale
 
-Status: in progress
+Status: done
 
 Depends on: 010, 012, 088
 
@@ -33,3 +33,8 @@ Foreground engine commands emit `onSnapshotInvalidated` through the live Expo mo
 - Build and install the release APK.
 - Trigger a real emulator scan and confirm the open UI settles without an app restart.
 
+## Verified
+
+- Unit tests cover signed-out, connected-idle, and active-worker polling intervals.
+- The release app discovered and uploaded a new SAF image through a global scan.
+- The open Sources screen settled to Last scan just now and 6 uploaded without a process restart.
