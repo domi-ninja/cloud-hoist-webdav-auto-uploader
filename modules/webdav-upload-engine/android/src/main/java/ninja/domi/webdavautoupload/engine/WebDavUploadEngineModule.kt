@@ -85,6 +85,19 @@ class WebDavUploadEngineModule : Module() {
       NextcloudChunkTransport(AndroidLocalContentSource(context.contentResolver)),
     )
   }
+  private val sourceRemovalCleanup by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    SourceRemovalCleanup(
+      context,
+      engineDatabase.engineDao(),
+      releaseReadPermission = { sourceUri ->
+        context.contentResolver.releasePersistableUriPermission(
+          Uri.parse(sourceUri),
+          Intent.FLAG_GRANT_READ_URI_PERMISSION,
+        )
+      },
+    )
+  }
   private val signOutCleanup by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
     SignOutCleanup(
@@ -111,6 +124,7 @@ class WebDavUploadEngineModule : Module() {
 
     OnCreate {
       signOutCleanup.finishInterruptedSignOut()
+      sourceRemovalCleanup.finishInterruptedRemoval()
       if (accountRepository.currentAccount() != null) workScheduler.ensureScheduled()
     }
 
@@ -185,19 +199,10 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("removeSourceAsync") { sourceId: String ->
-      val dao = engineDatabase.engineDao()
-      val source = dao.source(sourceId) ?: throw EngineSourceNotFoundException(sourceId)
-      engine.removeSource(sourceId)
-      diagnosticLog.record(DiagnosticEventCode.SOURCE_CHANGED)
-      if (source.kind == "saf" && dao.allSources().none { it.localUri == source.localUri }) {
-        val context = appContext.reactContext ?: throw AccountStorageException()
-        runCatching {
-          context.contentResolver.releasePersistableUriPermission(
-            Uri.parse(source.localUri),
-            Intent.FLAG_GRANT_READ_URI_PERMISSION,
-          )
-        }
+      sourceRemovalCleanup.remove(sourceId) {
+        engine.removeSource(sourceId)
       }
+      diagnosticLog.record(DiagnosticEventCode.SOURCE_CHANGED)
     }
 
     AsyncFunction("resetSourceHistoryAsync") { sourceId: String ->
