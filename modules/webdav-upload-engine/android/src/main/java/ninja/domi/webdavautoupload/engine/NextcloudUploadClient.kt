@@ -173,11 +173,14 @@ class NextcloudUploadClient(
       input.use {
         val content = it.source()
         val buffer = Buffer()
+        var transferred = 0L
         while (true) {
           if (upload.isCancelled()) throw TransferCancelledException()
           val read = content.read(buffer, STREAM_BUFFER_BYTES)
           if (read == -1L) break
           sink.write(buffer, read)
+          transferred += read
+          upload.onProgress(transferred)
         }
       }
     }

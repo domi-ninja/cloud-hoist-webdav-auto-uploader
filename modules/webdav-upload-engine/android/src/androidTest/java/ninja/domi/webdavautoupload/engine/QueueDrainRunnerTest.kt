@@ -167,6 +167,26 @@ class QueueDrainRunnerTest {
     assertEquals("cancelled", dao.job("large")?.lastErrorCode)
   }
 
+  @Test
+  fun reportsUploadProgressWithStableJobContext() {
+    enqueue("job", "revision", 10)
+    val progress = mutableListOf<TransferProgress>()
+    val runner = runner(
+      davClient = DavClient { _, request ->
+        request.onProgress(7)
+        DavUploadResult(false, false)
+      },
+      onProgress = progress::add,
+    )
+
+    runner.run()
+
+    assertEquals(
+      listOf(TransferProgress("job", "job.jpg", uploadedBytes = 7, totalBytes = 12)),
+      progress,
+    )
+  }
+
   private fun runner(
     maxJobs: Int = 3,
     davClient: DavClient = DavClient { _, request ->
@@ -176,6 +196,7 @@ class QueueDrainRunnerTest {
     chunkedDavClient: ChunkedDavClient? = null,
     elapsed: () -> Long = { 0 },
     maxRunMillis: Long = 8 * 60 * 1_000,
+    onProgress: (TransferProgress) -> Unit = {},
   ) = QueueDrainRunner(
     dao = dao,
     accountRepository = accountRepository(),
@@ -191,6 +212,7 @@ class QueueDrainRunnerTest {
     retryJitter = { 0.5 },
     maxJobs = maxJobs,
     maxRunMillis = maxRunMillis,
+    onProgress = onProgress,
   )
 
   private fun enqueue(jobId: String, revisionId: String, createdAt: Long) {

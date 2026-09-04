@@ -10,6 +10,13 @@ data class QueueDrainResult(
   val retryWorker: Boolean,
 )
 
+data class TransferProgress(
+  val jobId: String,
+  val fileName: String,
+  val uploadedBytes: Long,
+  val totalBytes: Long,
+)
+
 /** Claims and uploads a small batch. Room owns every state transition before this returns. */
 class QueueDrainRunner(
   private val dao: EngineDao,
@@ -25,6 +32,7 @@ class QueueDrainRunner(
   private val retryJitter: () -> Double = Math::random,
   private val maxJobs: Int = DEFAULT_MAX_JOBS,
   private val maxRunMillis: Long = DEFAULT_MAX_RUN_MILLIS,
+  private val onProgress: (TransferProgress) -> Unit = {},
 ) {
   fun run(): QueueDrainResult {
     val startedAt = elapsed()
@@ -58,6 +66,16 @@ class QueueDrainRunner(
           createdAtEpochSeconds = revision.createdAt,
           isCancelled = {
             isPaused() || isStopped() || elapsed() - startedAt >= maxRunMillis
+          },
+          onProgress = { uploadedBytes ->
+            onProgress(
+              TransferProgress(
+                jobId = job.id,
+                fileName = job.remoteFileName,
+                uploadedBytes = uploadedBytes,
+                totalBytes = revision.byteCount,
+              ),
+            )
           },
         )
         chunkedDavClient?.upload(credential, job.id, request)
@@ -124,6 +142,7 @@ class QueueDrainRunner(
     fun create(
       context: Context,
       isStopped: () -> Boolean = { false },
+      onProgress: (TransferProgress) -> Unit = {},
     ): QueueDrainRunner {
       val appContext = context.applicationContext
       val dao = EngineRoomDatabase.open(appContext).engineDao()
@@ -141,6 +160,7 @@ class QueueDrainRunner(
         },
         isPaused = EnginePreferences(appContext)::isPaused,
         isStopped = isStopped,
+        onProgress = onProgress,
       )
     }
   }

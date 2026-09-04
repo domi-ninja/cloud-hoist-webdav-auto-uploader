@@ -288,6 +288,7 @@ class NextcloudChunkTransport(
           if (read == -1L) throw LocalContentInvalidException()
           sink.write(buffer, read)
           remaining -= read
+          upload.onProgress(chunk.offset + chunk.byteCount - remaining)
         }
       }
     }

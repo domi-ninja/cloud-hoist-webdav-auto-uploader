@@ -128,6 +128,9 @@ class NextcloudChunkUploadClient(
     val activeCheckpoint = checkNotNull(checkpoint)
     val activePlan = checkNotNull(plan)
     val confirmed = activeCheckpoint.confirmedChunks.toMutableSet()
+    request.onProgress(
+      activePlan.chunks.takeWhile { it.name in confirmed }.sumOf(UploadChunk::byteCount),
+    )
     for (chunk in activePlan.chunks) {
       if (chunk.name in confirmed) continue
       if (request.isCancelled()) throw TransferCancelledException()

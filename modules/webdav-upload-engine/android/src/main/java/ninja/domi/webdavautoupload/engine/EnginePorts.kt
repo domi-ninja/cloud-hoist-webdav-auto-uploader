@@ -30,6 +30,7 @@ data class DavUploadRequest(
   val modifiedAtEpochSeconds: Long?,
   val createdAtEpochSeconds: Long?,
   val isCancelled: () -> Boolean = { false },
+  val onProgress: (uploadedBytes: Long) -> Unit = {},
 )
 
 data class DavUploadResult(
