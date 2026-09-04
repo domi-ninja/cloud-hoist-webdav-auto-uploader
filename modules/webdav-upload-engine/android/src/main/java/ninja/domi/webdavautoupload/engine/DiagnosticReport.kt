@@ -53,16 +53,18 @@ class DiagnosticReportBuilder(
 }
 
 object DiagnosticRedactor {
-  private val authorizationLine = Regex("""(?im)(^\s*authorization\s*:\s*)[^\r\n]*""")
+  private val sensitiveHeaderLine = Regex(
+    """(?im)(^\s*(?:authorization|cookie|set-cookie)\s*:\s*)[^\r\n]*""",
+  )
   private val secretValue = Regex(
-    """(?i)(\"?(?:authorization|password|token|secret|appPassword)\"?\s*[:=]\s*)(\"[^\"]*\"|[^\s,}]+)""",
+    """(?i)(\"?(?:authorization|password|token|secret|appPassword|fileName|localPath|remotePath)\"?\s*[:=]\s*)(\"[^\"]*\"|[^\s,}]+)""",
   )
   private val url = Regex("""(?i)https?://[^\"\s]+""")
   private val contentUri = Regex("""(?i)content://[^\"\s]+""")
   private val androidPath = Regex("""(?i)/(?:storage|sdcard|data)/[^\"\s]+""")
 
   fun redact(value: String): String = value
-    .replace(authorizationLine, "$1[redacted]")
+    .replace(sensitiveHeaderLine, "$1[redacted]")
     .replace(secretValue, "$1\"[redacted]\"")
     .replace(url, "[redacted-url]")
     .replace(contentUri, "[redacted-uri]")

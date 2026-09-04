@@ -24,4 +24,33 @@ class DiagnosticRedactorTest {
     assertTrue(redacted.contains("[redacted-uri]"))
     assertTrue(redacted.contains("[redacted-path]"))
   }
+
+  @Test
+  fun removesPrivateFieldsAndHeadersFromNestedErrorText() {
+    val sensitive = """
+      Upload failed: IOException(cause=GET https://cloud.example.test/private?token=query-secret)
+        Authorization: Bearer header-secret
+        Cookie: session=cookie-secret
+        Set-Cookie: refresh=refresh-secret
+        fileName=private-photo.jpg
+        localPath=/data/user/0/app/private-photo.jpg
+        remotePath="/Photos/private-photo.jpg"
+        source=content://provider/private/tree
+    """.trimIndent()
+
+    val redacted = DiagnosticRedactor.redact(sensitive)
+
+    listOf(
+      "query-secret",
+      "header-secret",
+      "cookie-secret",
+      "refresh-secret",
+      "private-photo.jpg",
+      "cloud.example.test",
+      "content://provider",
+    ).forEach { value ->
+      assertFalse("$value remained after redaction", redacted.contains(value))
+    }
+    assertTrue(redacted.contains("Upload failed: IOException"))
+  }
 }
