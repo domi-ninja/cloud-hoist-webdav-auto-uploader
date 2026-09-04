@@ -29,6 +29,7 @@ data class DavUploadRequest(
   val mimeType: String?,
   val modifiedAtEpochSeconds: Long?,
   val createdAtEpochSeconds: Long?,
+  val isCancelled: () -> Boolean = { false },
 )
 
 data class DavUploadResult(

@@ -57,6 +57,7 @@ class QueueDrainRunner(
             mimeType = revision.mimeType ?: mimeType(revision.localUri),
             modifiedAtEpochSeconds = revision.modifiedAt,
             createdAtEpochSeconds = revision.createdAt,
+            isCancelled = { isPaused() || isStopped() },
           ),
         )
         val finishedAt = now()
@@ -157,6 +158,7 @@ fun classifyTransferFailure(error: Exception): TransferFailure = when (error) {
   is DavQuotaException -> TransferFailure("quota", false, BlockerScope.JOB)
   is LocalContentMissingException -> TransferFailure("local_missing", false, BlockerScope.SOURCE)
   is LocalContentInvalidException -> TransferFailure("local_invalid", false, BlockerScope.JOB)
+  is TransferCancelledException -> TransferFailure("cancelled", true)
   is DavRateLimitedException -> TransferFailure(
     "rate_limited",
     true,

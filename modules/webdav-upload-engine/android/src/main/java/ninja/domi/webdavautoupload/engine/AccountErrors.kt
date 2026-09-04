@@ -76,3 +76,6 @@ class LocalContentMissingException :
 
 class LocalContentInvalidException :
   CodedException("The local file metadata is invalid.")
+
+class TransferCancelledException :
+  CodedException("The upload was stopped before it completed.")

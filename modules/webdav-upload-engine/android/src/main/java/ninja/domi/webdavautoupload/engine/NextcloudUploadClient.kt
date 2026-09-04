@@ -19,6 +19,7 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.Response
 import okio.BufferedSink
+import okio.Buffer
 import okio.source
 
 class NextcloudUploadClient(
@@ -30,16 +31,19 @@ class NextcloudUploadClient(
     credential: StoredAccountCredential,
     request: DavUploadRequest,
   ): DavUploadResult {
+    if (request.isCancelled()) throw TransferCancelledException()
     val remotePath = DavPath.validate(request.remotePathSegments)
     val fileName = DavPath.validateName(request.fileName)
     if (request.byteCount < 0) throw LocalContentInvalidException()
     createParentFolders(credential, remotePath)
+    if (request.isCancelled()) throw TransferCancelledException()
 
     val temporaryName = ".$fileName.webdav-auto-upload-${uploadId()}.part"
     val temporaryUrl = NextcloudDavUrl.file(credential.account, remotePath, temporaryName)
     val destinationUrl = NextcloudDavUrl.file(credential.account, remotePath, fileName)
     try {
       val uploadResponse = putTemporary(credential, request, temporaryUrl)
+      if (request.isCancelled()) throw TransferCancelledException()
       moveIntoPlace(credential, temporaryUrl.toString(), destinationUrl.toString())
       return uploadResponse
     } catch (error: CodedException) {
@@ -166,7 +170,20 @@ class NextcloudUploadClient(
 
     override fun writeTo(sink: BufferedSink) {
       val input = source.open(upload.localUri) ?: throw LocalContentMissingException()
-      input.use { sink.writeAll(it.source()) }
+      input.use {
+        val content = it.source()
+        val buffer = Buffer()
+        while (true) {
+          if (upload.isCancelled()) throw TransferCancelledException()
+          val read = content.read(buffer, STREAM_BUFFER_BYTES)
+          if (read == -1L) break
+          sink.write(buffer, read)
+        }
+      }
+    }
+
+    private companion object {
+      const val STREAM_BUFFER_BYTES = 64L * 1_024
     }
   }
 }

@@ -1,6 +1,7 @@
 package ninja.domi.webdavautoupload.engine
 
 import java.io.ByteArrayInputStream
+import java.io.InputStream
 import java.time.Instant
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -137,6 +138,45 @@ class NextcloudUploadClientTest {
     assertEquals(60_000L, retryDelayMillis(2, jitter = 0.5))
     assertEquals(180_000L, retryDelayMillis(2, jitter = 0.5, serverDelayMillis = 180_000))
     assertEquals(21_600_000L, retryDelayMillis(99, jitter = 1.0))
+  }
+
+  @Test
+  fun cancellationDuringStreamingNeverMovesTheTemporaryFile() {
+    var cancelled = false
+    val methods = mutableListOf<String>()
+    val client = NextcloudUploadClient(
+      contentSource = LocalContentSource {
+        object : InputStream() {
+          private var offset = 0
+
+          override fun read(): Int = if (offset < CONTENT.size) {
+            CONTENT[offset++].toInt().and(0xff).also { cancelled = true }
+          } else {
+            -1
+          }
+
+          override fun read(target: ByteArray, targetOffset: Int, length: Int): Int {
+            if (offset >= CONTENT.size) return -1
+            target[targetOffset] = CONTENT[offset++]
+            cancelled = true
+            return 1
+          }
+        }
+      },
+      httpClient = OkHttpClient.Builder().addInterceptor { chain ->
+        methods += chain.request().method
+        if (chain.request().method == "PUT") {
+          chain.request().body!!.writeTo(Buffer())
+        }
+        response(chain.request(), 201)
+      }.build(),
+      uploadId = { "cancelled" },
+    )
+
+    assertThrows(TransferCancelledException::class.java) {
+      client.upload(CREDENTIAL, UPLOAD.copy(isCancelled = { cancelled }))
+    }
+    assertEquals(listOf("MKCOL", "PUT"), methods)
   }
 
   private fun client(respond: (Request) -> Response) = NextcloudUploadClient(
