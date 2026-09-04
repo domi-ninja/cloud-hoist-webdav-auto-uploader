@@ -17,14 +17,16 @@ fun chunkPlan(
   totalBytes: Long,
   chunkingSupported: Boolean,
   advertisedMaxChunkSize: Long?,
+  savedChunkSize: Long? = null,
 ): ChunkPlan? {
   if (!chunkingSupported || totalBytes < CHUNK_THRESHOLD_BYTES) return null
   val maximum = minOf(advertisedMaxChunkSize ?: MAX_CHUNK_BYTES, MAX_CHUNK_BYTES)
   if (maximum < MIN_CHUNK_BYTES) return null
 
   val requiredForChunkLimit = ceilDivision(totalBytes, MAX_CHUNK_COUNT.toLong())
-  val chunkSize = maxOf(MIN_CHUNK_BYTES, DEFAULT_CHUNK_BYTES, requiredForChunkLimit)
-    .coerceAtMost(maximum)
+  if (savedChunkSize != null && savedChunkSize !in MIN_CHUNK_BYTES..maximum) return null
+  val requested = savedChunkSize ?: minOf(DEFAULT_CHUNK_BYTES, maximum)
+  val chunkSize = maxOf(MIN_CHUNK_BYTES, requested, requiredForChunkLimit).coerceAtMost(maximum)
   val count = ceilDivision(totalBytes, chunkSize)
   if (count !in 1..MAX_CHUNK_COUNT.toLong()) return null
 

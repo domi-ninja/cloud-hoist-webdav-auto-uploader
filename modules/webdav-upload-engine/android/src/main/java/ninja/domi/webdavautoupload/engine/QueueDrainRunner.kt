@@ -15,6 +15,7 @@ class QueueDrainRunner(
   private val dao: EngineDao,
   private val accountRepository: AccountRepository,
   private val davClient: DavClient,
+  private val chunkedDavClient: ChunkedDavClient? = null,
   private val mimeType: (String) -> String?,
   private val isPaused: () -> Boolean,
   private val isStopped: () -> Boolean = { false },
@@ -47,19 +48,20 @@ class QueueDrainRunner(
 
       val attemptId = newId()
       try {
-        davClient.upload(
-          credential,
-          DavUploadRequest(
-            localUri = revision.localUri,
-            remotePathSegments = job.remotePathSegments,
-            fileName = job.remoteFileName,
-            byteCount = revision.byteCount,
-            mimeType = revision.mimeType ?: mimeType(revision.localUri),
-            modifiedAtEpochSeconds = revision.modifiedAt,
-            createdAtEpochSeconds = revision.createdAt,
-            isCancelled = { isPaused() || isStopped() },
-          ),
+        val request = DavUploadRequest(
+          localUri = revision.localUri,
+          remotePathSegments = job.remotePathSegments,
+          fileName = job.remoteFileName,
+          byteCount = revision.byteCount,
+          mimeType = revision.mimeType ?: mimeType(revision.localUri),
+          modifiedAtEpochSeconds = revision.modifiedAt,
+          createdAtEpochSeconds = revision.createdAt,
+          isCancelled = {
+            isPaused() || isStopped() || elapsed() - startedAt >= maxRunMillis
+          },
         )
+        chunkedDavClient?.upload(credential, job.id, request)
+          ?: davClient.upload(credential, request)
         val finishedAt = now()
         dao.insertAttempt(UploadAttemptEntity(attemptId, job.id, claimedAt, finishedAt, "completed"))
         check(dao.completeClaim(job.id, claimToken, finishedAt) == 1)
@@ -125,10 +127,15 @@ class QueueDrainRunner(
     ): QueueDrainRunner {
       val appContext = context.applicationContext
       val dao = EngineRoomDatabase.open(appContext).engineDao()
+      val contentSource = AndroidLocalContentSource(appContext.contentResolver)
       return QueueDrainRunner(
         dao = dao,
         accountRepository = AndroidAccountRepository(appContext, dao),
-        davClient = NextcloudUploadClient(AndroidLocalContentSource(appContext.contentResolver)),
+        davClient = NextcloudUploadClient(contentSource),
+        chunkedDavClient = NextcloudChunkUploadClient(
+          checkpoints = RoomChunkCheckpointStore(dao),
+          transport = NextcloudChunkTransport(contentSource),
+        ),
         mimeType = { uri ->
           runCatching { appContext.contentResolver.getType(Uri.parse(uri)) }.getOrNull()
         },

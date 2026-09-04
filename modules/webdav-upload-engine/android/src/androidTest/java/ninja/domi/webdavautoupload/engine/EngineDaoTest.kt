@@ -352,6 +352,8 @@ class EngineDaoTest {
       listOf("0000000000000001"),
       dao.chunkCheckpoint("j1")?.confirmedChunks,
     )
+    assertEquals(1, dao.deleteChunkCheckpoint("j1"))
+    assertEquals(null, dao.chunkCheckpoint("j1"))
   }
 
   @Test

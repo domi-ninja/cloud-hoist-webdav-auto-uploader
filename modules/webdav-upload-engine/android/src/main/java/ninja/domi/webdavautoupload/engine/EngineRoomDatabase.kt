@@ -125,6 +125,9 @@ interface EngineDao {
   @Query("SELECT * FROM chunk_checkpoints WHERE jobId = :jobId")
   fun chunkCheckpoint(jobId: String): ChunkCheckpointEntity?
 
+  @Query("DELETE FROM chunk_checkpoints WHERE jobId = :jobId")
+  fun deleteChunkCheckpoint(jobId: String): Int
+
   @Query(
     """
     UPDATE upload_jobs

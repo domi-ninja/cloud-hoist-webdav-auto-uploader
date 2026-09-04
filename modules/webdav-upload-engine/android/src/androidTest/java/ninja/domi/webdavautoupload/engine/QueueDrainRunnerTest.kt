@@ -128,25 +128,69 @@ class QueueDrainRunnerTest {
     assertEquals(JobState.QUEUED, dao.job("waiting")?.state)
   }
 
+  @Test
+  fun givesChunkedClientFirstRefusalAndFallsBackToDirectUpload() {
+    enqueue("large", "revision-large", 10)
+    enqueue("small", "revision-small", 20)
+    val chunkedJobs = mutableListOf<String>()
+    val runner = runner(
+      chunkedDavClient = ChunkedDavClient { _, jobId, request ->
+        chunkedJobs += jobId
+        if (request.fileName == "large.jpg") DavUploadResult(false, false) else null
+      },
+    )
+
+    val result = runner.run()
+
+    assertEquals(2, result.completedJobs)
+    assertEquals(listOf("large", "small"), chunkedJobs)
+    assertEquals(listOf("small.jpg"), uploaded.map { it.fileName })
+  }
+
+  @Test
+  fun elapsedBudgetCancelsTheCurrentStreamIntoRetryWait() {
+    enqueue("large", "revision-large", 10)
+    val elapsedValues = listOf(0L, 0L, 100L).iterator()
+    val runner = runner(
+      davClient = DavClient { _, request ->
+        if (request.isCancelled()) throw TransferCancelledException()
+        error("The elapsed budget should cancel this upload")
+      },
+      elapsed = elapsedValues::next,
+      maxRunMillis = 100,
+    )
+
+    val result = runner.run()
+
+    assertTrue(result.retryWorker)
+    assertEquals(JobState.RETRY_WAIT, dao.job("large")?.state)
+    assertEquals("cancelled", dao.job("large")?.lastErrorCode)
+  }
+
   private fun runner(
     maxJobs: Int = 3,
     davClient: DavClient = DavClient { _, request ->
       uploaded += request
       DavUploadResult(false, false)
     },
+    chunkedDavClient: ChunkedDavClient? = null,
+    elapsed: () -> Long = { 0 },
+    maxRunMillis: Long = 8 * 60 * 1_000,
   ) = QueueDrainRunner(
     dao = dao,
     accountRepository = accountRepository(),
     davClient = davClient,
+    chunkedDavClient = chunkedDavClient,
     mimeType = { "image/jpeg" },
     isPaused = { false },
     newId = generateSequence(0) { it + 1 }.iterator().let { ids ->
       { "generated-${ids.next()}" }
     },
     now = { clock },
-    elapsed = { 0 },
+    elapsed = elapsed,
     retryJitter = { 0.5 },
     maxJobs = maxJobs,
+    maxRunMillis = maxRunMillis,
   )
 
   private fun enqueue(jobId: String, revisionId: String, createdAt: Long) {

@@ -21,11 +21,44 @@ import okio.source
 import org.w3c.dom.Element
 
 /** The stateless HTTP half of Nextcloud chunked-upload v2. */
+interface ChunkTransport {
+  fun createSession(
+    credential: StoredAccountCredential,
+    uploadId: String,
+    request: DavUploadRequest,
+  )
+
+  fun listChunks(
+    credential: StoredAccountCredential,
+    uploadId: String,
+    request: DavUploadRequest,
+  ): Set<String>?
+
+  fun uploadChunk(
+    credential: StoredAccountCredential,
+    uploadId: String,
+    request: DavUploadRequest,
+    chunk: UploadChunk,
+  )
+
+  fun finalize(
+    credential: StoredAccountCredential,
+    uploadId: String,
+    request: DavUploadRequest,
+  ): DavUploadResult
+
+  fun abort(
+    credential: StoredAccountCredential,
+    uploadId: String,
+    request: DavUploadRequest,
+  )
+}
+
 class NextcloudChunkTransport(
   private val contentSource: LocalContentSource,
   private val httpClient: OkHttpClient = OkHttpClient(),
-) {
-  fun createSession(
+) : ChunkTransport {
+  override fun createSession(
     credential: StoredAccountCredential,
     uploadId: String,
     request: DavUploadRequest,
@@ -44,7 +77,7 @@ class NextcloudChunkTransport(
   }
 
   /** Returns null when Nextcloud has expired or removed the upload session. */
-  fun listChunks(
+  override fun listChunks(
     credential: StoredAccountCredential,
     uploadId: String,
     request: DavUploadRequest,
@@ -66,7 +99,7 @@ class NextcloudChunkTransport(
     }
   }
 
-  fun uploadChunk(
+  override fun uploadChunk(
     credential: StoredAccountCredential,
     uploadId: String,
     request: DavUploadRequest,
@@ -85,7 +118,7 @@ class NextcloudChunkTransport(
     }
   }
 
-  fun finalize(
+  override fun finalize(
     credential: StoredAccountCredential,
     uploadId: String,
     request: DavUploadRequest,
@@ -129,12 +162,18 @@ class NextcloudChunkTransport(
     return timestamps
   }
 
-  fun abort(credential: StoredAccountCredential, uploadId: String) {
-    val request = authenticatedRequest(
+  override fun abort(
+    credential: StoredAccountCredential,
+    uploadId: String,
+    request: DavUploadRequest,
+  ) {
+    val networkRequest = authenticatedRequest(
       credential,
       NextcloudDavUrl.uploadFolder(credential.account, uploadId),
-    ).delete().build()
-    execute(request) { response ->
+    ).delete()
+      .header("Destination", stagingUrl(credential.account, uploadId, request).toString())
+      .build()
+    execute(networkRequest) { response ->
       if (response.code !in listOf(204, 404)) throwForStatus(response)
     }
   }

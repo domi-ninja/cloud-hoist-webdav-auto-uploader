@@ -35,6 +35,19 @@ class ChunkPlanTest {
   }
 
   @Test
+  fun restoresTheExactSavedChunkSize() {
+    val savedSize = 7L * 1_024 * 1_024
+
+    val plan = checkNotNull(chunkPlan(CHUNK_THRESHOLD_BYTES, true, null, savedSize))
+
+    assertEquals(savedSize, plan.chunkSize)
+    assertEquals(
+      listOf(savedSize, savedSize, CHUNK_THRESHOLD_BYTES - savedSize * 2),
+      plan.chunks.map { it.byteCount },
+    )
+  }
+
+  @Test
   fun hugeFilesIncreaseChunkSizeToStayWithinTenThousandChunks() {
     val bytes = DEFAULT_CHUNK_BYTES * MAX_CHUNK_COUNT + 1
     val plan = checkNotNull(chunkPlan(bytes, true, null))
