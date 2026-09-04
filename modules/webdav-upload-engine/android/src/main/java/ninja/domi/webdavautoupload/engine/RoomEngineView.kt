@@ -223,7 +223,7 @@ class RoomEngineView(
       scheduler.workerScope != null &&
       scheduler.lastScanRequestedAt != null -> mapOf(
         "state" to "scanning",
-        "sourceId" to scheduler.workerScope,
+        "scope" to scheduler.workerScope,
         "startedAt" to scheduler.lastScanRequestedAt,
       )
     else -> mapOf("state" to "idle")

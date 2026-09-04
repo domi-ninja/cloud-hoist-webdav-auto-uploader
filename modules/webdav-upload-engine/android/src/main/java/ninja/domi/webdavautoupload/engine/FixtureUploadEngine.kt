@@ -87,7 +87,7 @@ internal class FixtureUploadEngine(
     ) {
       mapOf(
         "state" to "scanning",
-        "sourceId" to scheduler.workerScope,
+        "scope" to scheduler.workerScope,
         "startedAt" to scheduler.lastScanRequestedAt,
       )
     } else {

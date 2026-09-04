@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -100,6 +101,25 @@ class RoomEngineViewTest {
     assertEquals(JobState.QUEUED, dao.job("queued")?.state)
     assertEquals(JobState.BLOCKED, dao.job("blocked")?.state)
     assertEquals(listOf(2), invalidations)
+  }
+
+  @Test
+  fun scanningWorkerReportsItsScopeInsteadOfAFakeSourceId() {
+    val view = RoomEngineView(dao, onInvalidated = {})
+
+    val snapshot = view.snapshot(
+      CONNECTED_ACCOUNT,
+      SchedulerStatus(
+        lastScanRequestedAt = "2026-09-04T12:00:00Z",
+        workerState = "scanning",
+        workerScope = "media",
+      ),
+    )
+
+    val worker = snapshot["worker"] as Map<*, *>
+    assertEquals("scanning", worker["state"])
+    assertEquals("media", worker["scope"])
+    assertFalse(worker.containsKey("sourceId"))
   }
 
   private fun enqueue(

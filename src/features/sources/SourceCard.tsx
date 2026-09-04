@@ -26,7 +26,10 @@ function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary) {
   if (permissionBlocker) return "Permission required";
   if (!source.enabled) return "Disabled";
   if (snapshot.engine.state === "paused") return "Paused";
-  if (snapshot.worker.state === "scanning" && snapshot.worker.sourceId === source.id) {
+  if (
+    snapshot.worker.state === "scanning" &&
+    (snapshot.worker.scope === "all" || source.kind === "media_store")
+  ) {
     return "Scanning";
   }
   if (activeJob?.sourceId === source.id) return "Uploading";

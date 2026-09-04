@@ -71,7 +71,7 @@ describe("native engine contract", () => {
 
   it.each([
     { state: "idle" },
-    { state: "scanning", sourceId: "source-1", startedAt: now },
+    { state: "scanning", scope: "media", startedAt: now },
     { state: "uploading", jobId: "job-1", bytesSent: 10, totalBytes: 20 },
     { state: "waiting", reason: "Wi-Fi required" },
   ])("decodes worker activity %#", (value) => {

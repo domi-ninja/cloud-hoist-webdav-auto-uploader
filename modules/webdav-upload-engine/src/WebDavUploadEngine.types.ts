@@ -103,7 +103,7 @@ export const workerActivitySchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("idle") }),
   z.object({
     state: z.literal("scanning"),
-    sourceId: z.string().min(1),
+    scope: z.enum(["media", "all"]),
     startedAt: z.string().datetime(),
   }),
   z.object({
