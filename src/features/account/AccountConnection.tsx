@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Linking, Pressable, Text, TextInput, View } from "react-native";
+import { Image, Linking, Pressable, Text, TextInput, View } from "react-native";
 
 import webDavUploadEngine, {
   type AccountHealth,
   type EngineError,
 } from "../../../modules/webdav-upload-engine";
+import { nextcloudInstanceIconUrl } from "@/features/account/instance-icon";
 import { useStoredAccountVerification } from "@/lib/engine-query";
 
 type AccountConnectionProps = {
@@ -13,6 +14,35 @@ type AccountConnectionProps = {
 
 function errorText(error: EngineError) {
   return error.message;
+}
+
+function InstanceIcon({ serverUrl }: { serverUrl: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <View
+        accessibilityLabel="Nextcloud instance icon"
+        accessibilityRole="image"
+        accessible
+        className="h-16 w-16 items-center justify-center border border-accent"
+      >
+        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+          NC
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      accessibilityLabel="Nextcloud instance icon"
+      className="h-16 w-16 border border-accent"
+      onError={() => setFailed(true)}
+      resizeMode="contain"
+      source={{ uri: nextcloudInstanceIconUrl(serverUrl) }}
+    />
+  );
 }
 
 export function AccountConnection({ account }: AccountConnectionProps) {
@@ -103,23 +133,27 @@ export function AccountConnection({ account }: AccountConnectionProps) {
 
   if (account.status === "connected") {
     return (
-      <View className="gap-4 border border-accent p-4">
-        <Text className="text-base text-muted-light dark:text-muted-dark">
-          Connected account
-        </Text>
-        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+      <View className="w-40 items-end gap-4">
+        <InstanceIcon key={account.serverUrl} serverUrl={account.serverUrl} />
+        <Text
+          className="text-right text-base font-semibold text-ink-light dark:text-ink-dark"
+          numberOfLines={1}
+        >
           {account.displayName}
         </Text>
-        <Text className="text-base text-muted-light dark:text-muted-dark">
-          {account.serverUrl} · DAV user {account.davUserId}
+        <Text
+          className="text-right text-base text-muted-light dark:text-muted-dark"
+          numberOfLines={2}
+        >
+          {account.serverUrl}
         </Text>
         {accountVerification.isFetching ? (
-          <Text className="text-base text-muted-light dark:text-muted-dark">
+          <Text className="text-right text-base text-muted-light dark:text-muted-dark">
             Checking account…
           </Text>
         ) : accountVerification.error ? (
           <>
-            <Text className="text-base text-red-700 dark:text-red-300">
+            <Text className="text-right text-base text-red-700 dark:text-red-300">
               {accountVerification.error.message}
             </Text>
             <Pressable

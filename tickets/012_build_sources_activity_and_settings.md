@@ -11,6 +11,7 @@ The three-tab interface exposes source health, upload history, global controls, 
 ## Work
 
 - Build Sources as the main screen with account health, global pause or resume, and a simple list of sources.
+- Place the connected account in a compact portrait block at the upper-right. Load the instance's public themed touch icon and show a local fallback if it fails.
 - Show one status line per source: uploading, waiting for network, paused, blocked, or last scanned at a concrete time.
 - Show queued and failed counts without inventing a guaranteed next-run time.
 - Add source enable or disable, scan now, edit destination, restore permission, reset history, and remove actions.
@@ -26,6 +27,7 @@ The three-tab interface exposes source health, upload history, global controls, 
 ## Acceptance criteria
 
 - Every engine and blocker state has a clear representation and a relevant next action.
+- A connected account's name, server, themed instance icon, verification progress, and failed-check retry fit in the upper-right account block.
 - Pause, resume, scan, retry, source enable, and source disable update native state and invalidate the right queries.
 - Pull-to-refresh and the global Scan now button use the same scan command and reload the engine snapshot before their progress state ends.
 - Activity retains unresolved failures and shows only the retained 30-day completed window.

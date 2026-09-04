@@ -70,23 +70,32 @@ export default function HomeScreen() {
         }
       >
         <View className="gap-4">
-          <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-            {project.displayName}
-          </Text>
-          <Text className="text-base text-muted-light dark:text-muted-dark">
-            Automatic uploads for {project.supportedServer}.
-          </Text>
-          <Text className="text-base text-muted-light dark:text-muted-dark">
-            {snapshot
-              ? `Native engine: ${snapshot.engine.state} · revision ${snapshot.revision}`
-              : "Loading native engine…"}
-          </Text>
+          <View className="flex-row items-start justify-between gap-4">
+            <View className="shrink gap-4">
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                {project.displayName}
+              </Text>
+              <Text className="text-base text-muted-light dark:text-muted-dark">
+                Automatic uploads for {project.supportedServer}.
+              </Text>
+              <Text className="text-base text-muted-light dark:text-muted-dark">
+                {snapshot
+                  ? `Native engine: ${snapshot.engine.state} · revision ${snapshot.revision}`
+                  : "Loading native engine…"}
+              </Text>
+            </View>
+            {snapshot?.account.status === "connected" ? (
+              <AccountConnection account={snapshot.account} />
+            ) : null}
+          </View>
           {errorMessage || snapshotError ? (
             <Text className="text-base text-red-700 dark:text-red-300">
               {errorMessage ?? "Native engine contract failed."}
             </Text>
           ) : null}
-          {snapshot ? <AccountConnection account={snapshot.account} /> : null}
+          {snapshot && snapshot.account.status !== "connected" ? (
+            <AccountConnection account={snapshot.account} />
+          ) : null}
           {snapshot?.account.status === "connected" &&
           (snapshot.sources.length === 0 || addingSource) ? (
             <SourceSetup
