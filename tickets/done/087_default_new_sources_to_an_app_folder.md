@@ -1,6 +1,6 @@
 # 087 Default new sources to an app folder
 
-Status: in progress
+Status: done
 
 Depends on: 004, 011, 083
 
