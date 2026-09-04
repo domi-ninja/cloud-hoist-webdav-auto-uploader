@@ -50,7 +50,11 @@ Use these checks before committing application changes:
 pnpm typecheck
 pnpm lint
 pnpm test
+pnpm test:native
 ```
+
+`test:native` generates the ignored Android project when necessary, loads the
+pinned SDK/JDK environment, and runs the Kotlin engine module tests.
 
 ## Local credentials
 

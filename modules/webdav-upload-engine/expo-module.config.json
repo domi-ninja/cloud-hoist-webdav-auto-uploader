@@ -1,0 +1,6 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["ninja.domi.webdavautoupload.engine.WebDavUploadEngineModule"]
+  }
+}

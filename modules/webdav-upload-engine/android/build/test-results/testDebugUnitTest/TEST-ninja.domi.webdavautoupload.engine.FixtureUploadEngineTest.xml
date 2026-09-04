@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="ninja.domi.webdavautoupload.engine.FixtureUploadEngineTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-09-04T12:10:00.897Z" hostname="thoth" time="0.034">
+  <properties/>
+  <testcase name="snapshotHasTheCompleteBridgeContract" classname="ninja.domi.webdavautoupload.engine.FixtureUploadEngineTest" time="0.022"/>
+  <testcase name="commandsIncrementRevisionAndInvalidate" classname="ninja.domi.webdavautoupload.engine.FixtureUploadEngineTest" time="0.005"/>
+  <testcase name="unknownSourceUsesStableCodedException" classname="ninja.domi.webdavautoupload.engine.FixtureUploadEngineTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

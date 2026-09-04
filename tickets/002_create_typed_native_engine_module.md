@@ -1,6 +1,6 @@
 # 002 Create the typed native engine module
 
-Status: blocked by 001
+Status: in progress
 
 Depends on: 001
 
