@@ -1,6 +1,6 @@
 # 013 Add cleanup and private diagnostics
 
-Status: blocked by 012
+Status: in progress
 
 Depends on: 003, 006, 009, 010, 012
 
