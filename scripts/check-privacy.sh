@@ -23,6 +23,7 @@ NODE_ENV=production ./android/gradlew -p android :app:assembleRelease >/dev/null
 AAPT="$ANDROID_PROJECT_SDK/build-tools/36.0.0/aapt"
 APK=android/app/build/outputs/apk/release/app-release.apk
 PERMISSIONS=$($AAPT dump permissions "$APK")
+MANIFEST=$($AAPT dump xmltree "$APK" AndroidManifest.xml)
 
 for prohibited in android.permission.SYSTEM_ALERT_WINDOW com.google.android.gms.permission.AD_ID; do
   if printf '%s\n' "$PERMISSIONS" | grep -Fq "$prohibited"; then
@@ -38,4 +39,9 @@ for required in android.permission.INTERNET android.permission.POST_NOTIFICATION
   fi
 done
 
-printf '%s\n' "Release dependencies and permissions contain no known telemetry or advertising hooks."
+if printf '%s\n' "$MANIFEST" | grep -Eq 'account-acceptance|DebugAccountAcceptanceProvider'; then
+  printf '%s\n' "Release APK contains the debug acceptance provider." >&2
+  exit 1
+fi
+
+printf '%s\n' "Release dependencies, permissions, and providers pass the privacy check."
