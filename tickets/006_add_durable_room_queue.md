@@ -1,6 +1,6 @@
 # 006 Add the durable Room queue
 
-Status: blocked by 005
+Status: in progress
 
 Depends on: 002, 005
 
