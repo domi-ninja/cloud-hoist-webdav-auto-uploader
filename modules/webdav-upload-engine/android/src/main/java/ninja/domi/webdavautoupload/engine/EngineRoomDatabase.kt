@@ -178,6 +178,20 @@ interface EngineDao {
   @Query("SELECT * FROM chunk_checkpoints WHERE jobId = :jobId")
   fun chunkCheckpoint(jobId: String): ChunkCheckpointEntity?
 
+  @Query(
+    """
+    SELECT chunk_checkpoints.uploadId, local_revisions.localUri,
+      upload_jobs.remotePathSegments, upload_jobs.remoteFileName,
+      local_revisions.byteCount, local_revisions.mimeType,
+      local_revisions.modifiedAt, local_revisions.createdAt
+    FROM chunk_checkpoints
+    INNER JOIN upload_jobs ON upload_jobs.id = chunk_checkpoints.jobId
+    INNER JOIN local_revisions ON local_revisions.id = upload_jobs.revisionId
+    ORDER BY chunk_checkpoints.updatedAt ASC, chunk_checkpoints.uploadId ASC
+    """,
+  )
+  fun chunkSessions(): List<ChunkSessionRecord>
+
   @Query("DELETE FROM chunk_checkpoints WHERE jobId = :jobId")
   fun deleteChunkCheckpoint(jobId: String): Int
 

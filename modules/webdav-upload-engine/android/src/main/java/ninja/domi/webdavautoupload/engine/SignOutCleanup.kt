@@ -10,6 +10,7 @@ class SignOutCleanup(
   private val enginePreferences: EnginePreferences,
   private val cancelWork: () -> Unit,
   private val releaseReadPermission: (String) -> Unit,
+  private val cleanupRemoteSessions: () -> Unit = {},
   private val clearDiagnostics: () -> Unit = {},
 ) {
   private val state = context.applicationContext.getSharedPreferences(
@@ -39,6 +40,7 @@ class SignOutCleanup(
     if (!state.getBoolean(KEY_IN_PROGRESS, false)) return
     val sourceUris = state.getStringSet(KEY_SOURCE_URIS, emptySet()).orEmpty().toSet()
     cancelWork()
+    cleanupRemoteSessions()
     accountRepository.clear()
     sourceUris.forEach { uri -> runCatching { releaseReadPermission(uri) } }
     enginePreferences.clear()

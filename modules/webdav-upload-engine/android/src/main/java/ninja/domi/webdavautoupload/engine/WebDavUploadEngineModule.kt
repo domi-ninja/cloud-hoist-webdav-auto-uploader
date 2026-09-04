@@ -77,6 +77,14 @@ class WebDavUploadEngineModule : Module() {
     val context = appContext.reactContext ?: throw AccountStorageException()
     DiagnosticEventLog(context)
   }
+  private val chunkSessionCleanup by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    ChunkSessionCleanup(
+      engineDatabase.engineDao(),
+      accountRepository,
+      NextcloudChunkTransport(AndroidLocalContentSource(context.contentResolver)),
+    )
+  }
   private val signOutCleanup by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
     SignOutCleanup(
@@ -91,6 +99,7 @@ class WebDavUploadEngineModule : Module() {
           Intent.FLAG_GRANT_READ_URI_PERMISSION,
         )
       },
+      cleanupRemoteSessions = chunkSessionCleanup::run,
       clearDiagnostics = diagnosticLog::clear,
     )
   }

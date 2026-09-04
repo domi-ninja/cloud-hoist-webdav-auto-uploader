@@ -352,6 +352,11 @@ class EngineDaoTest {
       listOf("0000000000000001"),
       dao.chunkCheckpoint("j1")?.confirmedChunks,
     )
+    val session = dao.chunkSessions().single()
+    assertEquals("upload-1", session.uploadId)
+    assertEquals("content://fixture/r1", session.localUri)
+    assertEquals(listOf("Auto Upload", "Camera"), session.remotePathSegments)
+    assertEquals("photo.jpg", session.remoteFileName)
     assertEquals(1, dao.deleteChunkCheckpoint("j1"))
     assertEquals(null, dao.chunkCheckpoint("j1"))
   }

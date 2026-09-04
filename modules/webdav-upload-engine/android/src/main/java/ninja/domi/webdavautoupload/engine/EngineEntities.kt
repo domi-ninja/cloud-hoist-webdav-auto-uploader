@@ -162,3 +162,14 @@ data class ChunkCheckpointEntity(
   val confirmedChunks: List<String>,
   val updatedAt: Long,
 )
+
+data class ChunkSessionRecord(
+  val uploadId: String,
+  val localUri: String,
+  val remotePathSegments: List<String>,
+  val remoteFileName: String,
+  val byteCount: Long,
+  val mimeType: String?,
+  val modifiedAt: Long,
+  val createdAt: Long?,
+)
