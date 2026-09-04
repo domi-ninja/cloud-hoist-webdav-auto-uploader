@@ -367,7 +367,7 @@ Server upload path:
 Android automation:
 
 8. [Discover media and selected folders](tickets/done/008_discover_media_and_selected_folders.md)
-9. [Schedule scans and queue drains](tickets/009_schedule_scans_and_queue_drains.md)
+9. [Schedule scans and queue drains](tickets/done/009_schedule_scans_and_queue_drains.md)
 10. [Run reliable background transfers](tickets/010_run_reliable_background_transfers.md)
 
 Product interface:

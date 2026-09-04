@@ -1,6 +1,6 @@
 # 009 Schedule scans and queue drains
 
-Status: in progress
+Status: complete
 
 Depends on: 006, 008
 
@@ -34,9 +34,12 @@ WorkManager wakes the engine for MediaStore changes and periodic reconciliation,
 
 ## Verification
 
-- Add WorkManager tests for unique-work policies, constraints, pause, resume, and repeated initialization.
-- Use `adb` to inspect scheduled jobs before and after force-stop and reboot.
-- Seed a missed file without firing the observer and confirm periodic reconciliation finds it.
+- WorkManager instrumentation tests cover unique policies, the 15-minute periodic interval, transfer constraints, pause persistence, cancellation, and repeated initialization.
+- Scan-runner tests prove media events scan only MediaStore sources, reconciliation includes SAF sources, and bounded runs request a drain before yielding.
+- The full API 36 instrumentation suite passes 35 tests with the two credential-gated live tests skipped.
+- With the activity closed and app process killed, inserting a MediaStore image woke `MediaObserverWorker`. WorkManager completed the scan and rearmed the observer.
+- `dumpsys jobscheduler` showed one periodic `ReconciliationWorker` and one `MediaObserverWorker` after an APK update.
+- A full emulator reboot restored the same two jobs before app launch. Launching the app did not duplicate either job.
 
 ## Not in this ticket
 
