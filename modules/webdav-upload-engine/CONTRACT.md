@@ -7,3 +7,10 @@ Read calls return complete snapshots and lists. TypeScript treats every native r
 Commands emit `onSnapshotInvalidated` after state changes. The event carries only a monotonically increasing revision. Consumers refetch the complete snapshot instead of reducing partial native state in JavaScript.
 
 Fixture calls are fast and deterministic apart from timestamps. Real database, discovery, scheduling, and DAV implementations added later must run blocking work on background dispatchers. Account secrets never belong in return values, events, messages, or errors.
+
+## Scaffolding note
+
+Expo SDK 57's local-module generator ignored an explicit destination and created
+`modules/my-module`. If this module must be recreated, generate it locally, move
+the result to `modules/webdav-upload-engine`, then confirm the resolved Android
+project with `pnpm exec expo-modules-autolinking resolve --platform android`.
