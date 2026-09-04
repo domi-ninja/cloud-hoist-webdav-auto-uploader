@@ -43,6 +43,7 @@ class SignOutCleanupTest {
     val released = mutableListOf<String>()
     var cancellations = 0
     var clears = 0
+    var diagnosticClears = 0
     val repository = object : AccountRepository {
       override fun currentAccount(): StoredAccount? = null
       override fun credential(): StoredAccountCredential? = null
@@ -59,6 +60,7 @@ class SignOutCleanupTest {
       EnginePreferences(context),
       cancelWork = { cancellations += 1 },
       releaseReadPermission = released::add,
+      clearDiagnostics = { diagnosticClears += 1 },
     )
 
     cleanup.prepare()
@@ -67,6 +69,7 @@ class SignOutCleanupTest {
 
     assertEquals(2, clears)
     assertEquals(1, cancellations)
+    assertEquals(1, diagnosticClears)
     assertEquals(listOf("content://fixture/tree"), released)
     assertNull(dao.account("account"))
     assertFalse(

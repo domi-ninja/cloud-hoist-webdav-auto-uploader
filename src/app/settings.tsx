@@ -125,8 +125,9 @@ export default function SettingsScreen() {
             Diagnostics
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            Includes app and Android versions, queue counts, transfer rules, and blocker codes.
-            Credentials, server addresses, paths, and filenames are excluded.
+            Includes app and Android versions, queue counts, transfer rules, blocker codes,
+            and up to seven days of engine event codes. Credentials, server addresses, paths,
+            and filenames are excluded.
           </Text>
           <Pressable
             accessibilityLabel="Share private diagnostic report"

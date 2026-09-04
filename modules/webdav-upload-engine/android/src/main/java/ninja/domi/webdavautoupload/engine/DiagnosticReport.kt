@@ -7,6 +7,7 @@ import org.json.JSONObject
 /** Builds a support snapshot from aggregates only; private identifiers never enter the report. */
 class DiagnosticReportBuilder(
   private val dao: EngineDao,
+  private val eventLog: DiagnosticEventLog,
   private val now: () -> Instant = Instant::now,
 ) {
   fun build(account: StoredAccount?, scheduler: SchedulerStatus): String {
@@ -39,6 +40,7 @@ class DiagnosticReportBuilder(
             .sorted(),
         ),
         "scheduler" to scheduler.toMap(),
+        "events" to eventLog.events(),
       ),
     ).toString(2)
     return DiagnosticRedactor.redact(raw)

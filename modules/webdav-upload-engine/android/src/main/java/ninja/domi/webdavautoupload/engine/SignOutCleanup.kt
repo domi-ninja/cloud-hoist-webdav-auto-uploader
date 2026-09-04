@@ -10,6 +10,7 @@ class SignOutCleanup(
   private val enginePreferences: EnginePreferences,
   private val cancelWork: () -> Unit,
   private val releaseReadPermission: (String) -> Unit,
+  private val clearDiagnostics: () -> Unit = {},
 ) {
   private val state = context.applicationContext.getSharedPreferences(
     PREFERENCES_NAME,
@@ -41,6 +42,7 @@ class SignOutCleanup(
     accountRepository.clear()
     sourceUris.forEach { uri -> runCatching { releaseReadPermission(uri) } }
     enginePreferences.clear()
+    clearDiagnostics()
     check(state.edit().clear().commit()) { "Could not clear sign-out state." }
   }
 

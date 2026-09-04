@@ -112,6 +112,24 @@ class QueueDrainRunnerTest {
   }
 
   @Test
+  fun recordsOnlyClassifiedAttemptOutcomes() {
+    enqueue("blocked", "revision-blocked", 10)
+    enqueue("uploaded", "revision-uploaded", 20)
+    val outcomes = mutableListOf<String>()
+    val runner = runner(
+      davClient = DavClient { _, request ->
+        if (request.fileName == "blocked.jpg") throw DavQuotaException()
+        DavUploadResult(false, false)
+      },
+      onAttemptFinished = outcomes::add,
+    )
+
+    runner.run()
+
+    assertEquals(listOf("quota", "completed"), outcomes)
+  }
+
+  @Test
   fun thirdRetryableFailureRequestsAnActionableNotification() {
     enqueue("retrying", "revision-retrying", 10, attemptCount = 2)
     val notices = mutableListOf<Pair<String, TransferFailure>>()
@@ -280,6 +298,7 @@ class QueueDrainRunnerTest {
     onProgress: (TransferProgress) -> Unit = {},
     canStartNextFile: () -> Boolean = { true },
     onFailure: (UploadJobEntity, TransferFailure) -> Unit = { _, _ -> },
+    onAttemptFinished: (String) -> Unit = {},
   ) = QueueDrainRunner(
     dao = dao,
     accountRepository = accountRepository(),
@@ -298,6 +317,7 @@ class QueueDrainRunnerTest {
     onProgress = onProgress,
     canStartNextFile = canStartNextFile,
     onFailure = onFailure,
+    onAttemptFinished = onAttemptFinished,
   )
 
   private fun enqueue(

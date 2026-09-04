@@ -73,6 +73,10 @@ class WebDavUploadEngineModule : Module() {
     val context = appContext.reactContext ?: throw AccountStorageException()
     EnginePreferences(context)
   }
+  private val diagnosticLog by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    DiagnosticEventLog(context)
+  }
   private val signOutCleanup by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
     SignOutCleanup(
@@ -87,6 +91,7 @@ class WebDavUploadEngineModule : Module() {
           Intent.FLAG_GRANT_READ_URI_PERMISSION,
         )
       },
+      clearDiagnostics = diagnosticLog::clear,
     )
   }
 
@@ -121,7 +126,7 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("getDiagnosticReportAsync") {
-      DiagnosticReportBuilder(engineDatabase.engineDao()).build(
+      DiagnosticReportBuilder(engineDatabase.engineDao(), diagnosticLog).build(
         accountRepository.currentAccount(),
         enginePreferences.status(),
       )
@@ -129,36 +134,43 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("pauseAsync") {
       workScheduler.pause()
+      diagnosticLog.record(DiagnosticEventCode.ENGINE_PAUSED)
       engine.invalidate()
     }
 
     AsyncFunction("resumeAsync") {
       workScheduler.resume()
+      diagnosticLog.record(DiagnosticEventCode.ENGINE_RESUMED)
       engine.invalidate()
     }
 
     AsyncFunction("scanNowAsync") {
       workScheduler.requestFullScan()
+      diagnosticLog.record(DiagnosticEventCode.SCAN_REQUESTED)
       engine.invalidate()
     }
 
     AsyncFunction("retryFailedAsync") {
       engine.retryFailed()
       workScheduler.requestQueueDrain()
+      diagnosticLog.record(DiagnosticEventCode.RETRY_REQUESTED)
     }
 
     AsyncFunction("clearCompletedHistoryAsync") {
       engine.clearCompletedHistory()
+      diagnosticLog.record(DiagnosticEventCode.HISTORY_CLEARED)
     }
 
     AsyncFunction("setTransferConstraintsAsync") { input: TransferConstraintsRecord ->
       workScheduler.updateDrainConstraints(input.toConstraints())
+      diagnosticLog.record(DiagnosticEventCode.CONSTRAINTS_CHANGED)
       engine.invalidate()
     }
 
     AsyncFunction("addOrUpdateSourceAsync") { source: SourceInputRecord ->
       val account = accountRepository.currentAccount() ?: throw AccountNotConfiguredException()
       engine.addOrUpdateSource(source, account.id)
+      diagnosticLog.record(DiagnosticEventCode.SOURCE_CHANGED)
       workScheduler.ensureScheduled()
       workScheduler.requestQueueDrain()
     }
@@ -167,6 +179,7 @@ class WebDavUploadEngineModule : Module() {
       val dao = engineDatabase.engineDao()
       val source = dao.source(sourceId) ?: throw EngineSourceNotFoundException(sourceId)
       engine.removeSource(sourceId)
+      diagnosticLog.record(DiagnosticEventCode.SOURCE_CHANGED)
       if (source.kind == "saf" && dao.allSources().none { it.localUri == source.localUri }) {
         val context = appContext.reactContext ?: throw AccountStorageException()
         runCatching {
@@ -180,6 +193,7 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("resetSourceHistoryAsync") { sourceId: String ->
       engine.resetSourceHistory(sourceId)
+      diagnosticLog.record(DiagnosticEventCode.SOURCE_CHANGED)
       workScheduler.requestFullScan()
     }
 
@@ -238,6 +252,7 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("commitSourceAsync") { source: SourceCommitRecord ->
       sourceDiscoveryManager.commit(source.toCommit()).also { result ->
+        diagnosticLog.record(DiagnosticEventCode.SOURCE_CHANGED)
         engine.invalidate()
         workScheduler.ensureScheduled()
         if (result.jobsAdded > 0) workScheduler.requestQueueDrain()

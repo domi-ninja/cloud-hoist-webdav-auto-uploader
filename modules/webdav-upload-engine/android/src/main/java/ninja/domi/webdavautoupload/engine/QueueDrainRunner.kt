@@ -35,6 +35,7 @@ class QueueDrainRunner(
   private val maxRunMillis: Long = DEFAULT_MAX_RUN_MILLIS,
   private val onProgress: (TransferProgress) -> Unit = {},
   private val onFailure: (UploadJobEntity, TransferFailure) -> Unit = { _, _ -> },
+  private val onAttemptFinished: (String) -> Unit = {},
 ) {
   fun run(): QueueDrainResult {
     val startedAt = elapsed()
@@ -88,9 +89,11 @@ class QueueDrainRunner(
         val finishedAt = now()
         dao.insertAttempt(UploadAttemptEntity(attemptId, job.id, claimedAt, finishedAt, "completed"))
         check(dao.completeClaim(job.id, claimToken, finishedAt) == 1)
+        onAttemptFinished("completed")
         completed += 1
       } catch (error: Exception) {
         val failure = classifyTransferFailure(error)
+        onAttemptFinished(failure.code)
         val finishedAt = now()
         dao.insertAttempt(
           UploadAttemptEntity(attemptId, job.id, claimedAt, finishedAt, failure.code),
@@ -156,6 +159,7 @@ class QueueDrainRunner(
       val contentSource = AndroidLocalContentSource(appContext.contentResolver)
       val preferences = EnginePreferences(appContext)
       val blockerNotification = BlockerNotification(appContext)
+      val diagnosticLog = DiagnosticEventLog(appContext)
       return QueueDrainRunner(
         dao = dao,
         accountRepository = AndroidAccountRepository(appContext, dao),
@@ -172,6 +176,7 @@ class QueueDrainRunner(
         canStartNextFile = TransferConstraintChecker(appContext, preferences)::canStartNextFile,
         onProgress = onProgress,
         onFailure = blockerNotification::show,
+        onAttemptFinished = diagnosticLog::recordUploadResult,
       )
     }
   }
