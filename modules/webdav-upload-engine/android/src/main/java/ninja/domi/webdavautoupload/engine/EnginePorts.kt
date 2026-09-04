@@ -42,6 +42,7 @@ interface AccountRepository {
   fun currentAccount(): StoredAccount?
   fun credential(): StoredAccountCredential?
   fun save(credential: StoredAccountCredential)
+  fun clear()
 }
 
 interface DavClient {

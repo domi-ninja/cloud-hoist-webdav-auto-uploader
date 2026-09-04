@@ -98,6 +98,13 @@ class AndroidAccountRepository(context: Context) : AccountRepository {
     }
   }
 
+  @Synchronized
+  override fun clear() {
+    if (!metadata.edit().clear().commit() || !secrets.edit().clear().commit()) {
+      throw AccountStorageException()
+    }
+  }
+
   private fun encryptionKey(): SecretKey {
     val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
     (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }

@@ -112,6 +112,9 @@ class AccountManagerTest {
     override fun save(credential: StoredAccountCredential) {
       stored = credential
     }
+    override fun clear() {
+      stored = null
+    }
   }
 
   private class FakeAccountNetworkClient : AccountNetworkClient {
