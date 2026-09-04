@@ -1,13 +1,11 @@
 package ninja.domi.webdavautoupload.engine
 
 import java.io.IOException
-import java.io.StringReader
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
-import javax.xml.parsers.DocumentBuilderFactory
 import okhttp3.Credentials
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -16,7 +14,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.HttpUrl
 import org.w3c.dom.Element
-import org.xml.sax.InputSource
 
 class NextcloudDavClient(
   private val httpClient: OkHttpClient = OkHttpClient(),
@@ -109,17 +106,7 @@ class NextcloudDavClient(
 
 object RemoteFolderXmlDecoder {
   fun decode(xml: String, requestUrl: HttpUrl, parentPath: List<String>): List<RemoteFolder> {
-    val factory = DocumentBuilderFactory.newInstance().apply {
-      isNamespaceAware = true
-      setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-      setFeature("http://xml.org/sax/features/external-general-entities", false)
-      setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-    }
-    val document = try {
-      factory.newDocumentBuilder().parse(InputSource(StringReader(xml)))
-    } catch (_: Exception) {
-      throw AccountUnsupportedResponseException()
-    }
+    val document = parseDavXml(xml)
     val requestedSegments = requestUrl.pathSegments.dropLastWhile(String::isEmpty)
     val responses = document.getElementsByTagNameNS("DAV:", "response")
     return buildList {

@@ -7,7 +7,6 @@ import java.net.UnknownHostException
 import java.security.cert.CertificateException
 import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
-import javax.xml.parsers.DocumentBuilderFactory
 import okhttp3.Credentials
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -297,17 +296,7 @@ class NextcloudChunkTransport(
   private object ChunkListing {
     fun decode(xml: String): Set<String> {
       if (xml.isBlank()) throw AccountUnsupportedResponseException()
-      val factory = DocumentBuilderFactory.newInstance().apply {
-        isNamespaceAware = true
-        setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-        setFeature("http://xml.org/sax/features/external-general-entities", false)
-        setFeature("http://xml.org/sax/features/external-parameter-entities", false)
-      }
-      val document = try {
-        factory.newDocumentBuilder().parse(xml.byteInputStream())
-      } catch (_: Exception) {
-        throw AccountUnsupportedResponseException()
-      }
+      val document = parseDavXml(xml)
       val responses = document.getElementsByTagNameNS("DAV:", "response")
       return buildSet {
         for (index in 0 until responses.length) {
