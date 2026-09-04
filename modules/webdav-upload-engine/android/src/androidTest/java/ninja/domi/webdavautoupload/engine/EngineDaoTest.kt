@@ -251,6 +251,39 @@ class EngineDaoTest {
     }
   }
 
+  @Test
+  fun blockerAttemptAndChunkCheckpointRemainAttachedToTheJob() {
+    dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
+    dao.claimNext(2, "worker")
+    dao.insertAttempt(
+      UploadAttemptEntity(
+        id = "attempt-1",
+        jobId = "j1",
+        startedAt = 2,
+        finishedAt = 3,
+        resultCode = "quota",
+      ),
+    )
+    dao.upsertChunkCheckpoint(
+      ChunkCheckpointEntity(
+        uploadId = "upload-1",
+        jobId = "j1",
+        chunkSize = 10,
+        confirmedChunks = listOf("0000000000000001"),
+        updatedAt = 3,
+      ),
+    )
+
+    assertEquals(1, dao.blockClaim("j1", "worker", "quota", "dav_quota"))
+    assertEquals(JobState.BLOCKED, dao.job("j1")?.state)
+    assertEquals("quota", dao.job("j1")?.blockerCode)
+    assertEquals(1, dao.attemptCount("j1"))
+    assertEquals(
+      listOf("0000000000000001"),
+      dao.chunkCheckpoint("j1")?.confirmedChunks,
+    )
+  }
+
   private fun account() = AccountEntity(
     id = "account-1",
     serverUrl = "https://cloud.example.test",

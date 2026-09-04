@@ -361,7 +361,7 @@ Server upload path:
 3. [Connect and validate one Nextcloud account](tickets/003_connect_nextcloud_account.md)
 4. [Browse and create remote folders](tickets/004_browse_remote_folders.md)
 5. [Upload one file with safe overwrite](tickets/005_upload_one_file_safely.md)
-6. [Add the durable Room queue](tickets/006_add_durable_room_queue.md)
+6. [Add the durable Room queue](tickets/done/006_add_durable_room_queue.md)
 7. [Resume large chunked uploads](tickets/007_resume_large_chunked_uploads.md)
 
 Android automation:

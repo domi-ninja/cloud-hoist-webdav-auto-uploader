@@ -78,6 +78,12 @@ interface EngineDao {
   @Query("SELECT COUNT(*) FROM upload_jobs")
   fun jobCount(): Int
 
+  @Query("SELECT COUNT(*) FROM upload_attempts WHERE jobId = :jobId")
+  fun attemptCount(jobId: String): Int
+
+  @Query("SELECT * FROM chunk_checkpoints WHERE jobId = :jobId")
+  fun chunkCheckpoint(jobId: String): ChunkCheckpointEntity?
+
   @Query(
     """
     UPDATE upload_jobs
