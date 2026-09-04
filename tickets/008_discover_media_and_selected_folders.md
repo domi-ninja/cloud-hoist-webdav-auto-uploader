@@ -1,6 +1,6 @@
 # 008 Discover media and selected folders
 
-Status: blocked by 006
+Status: in progress
 
 Depends on: 002, 006
 
