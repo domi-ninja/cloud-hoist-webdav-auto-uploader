@@ -340,6 +340,15 @@ interface EngineDao {
     }
     return DiscoveryWriteCounts(revisionsAdded, jobsAdded)
   }
+
+  @Transaction
+  fun recordExistingDiscovery(
+    source: SourceEntity,
+    writes: List<PendingDiscoveryWrite>,
+  ): DiscoveryWriteCounts? {
+    if (source(source.id) == null) return null
+    return recordDiscovery(source, writes)
+  }
 }
 
 @Database(

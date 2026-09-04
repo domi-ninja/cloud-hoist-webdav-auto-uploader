@@ -24,15 +24,19 @@ class SourceRevisionRecorder(
     files: List<DiscoveredFile>,
     queueNewRevisions: Boolean,
     permissionAccess: MediaPermissionAccess? = null,
+    requireExisting: Boolean = false,
   ): DiscoveryRecordResult {
     val discoveredAt = now()
     val writes = files
       .sortedWith(compareBy(DiscoveredFile::modifiedAtEpochSeconds, DiscoveredFile::providerId))
       .map { file -> pendingWrite(source, file, queueNewRevisions, discoveredAt) }
-    val counts = dao.recordDiscovery(
-      source.copy(lastScanAt = discoveredAt, blockerCode = null),
-      writes,
-    )
+    val updatedSource = source.copy(lastScanAt = discoveredAt, blockerCode = null)
+    val counts = if (requireExisting) {
+      dao.recordExistingDiscovery(updatedSource, writes)
+        ?: throw EngineSourceNotFoundException(source.id)
+    } else {
+      dao.recordDiscovery(updatedSource, writes)
+    }
     return DiscoveryRecordResult(
       preview = files.toSourcePreview(permissionAccess),
       revisionsAdded = counts.revisionsAdded,

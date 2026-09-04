@@ -81,6 +81,7 @@ class SourceDiscoveryManager(
         discovery.files,
         queueNewRevisions = true,
         permissionAccess = discovery.permissionAccess,
+        requireExisting = true,
       )
       SourceScanResult(
         sourceId = sourceId,

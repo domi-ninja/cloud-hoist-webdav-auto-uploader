@@ -493,6 +493,31 @@ class EngineDaoTest {
     assertNull(dao.claimNext(30_001, "worker"))
   }
 
+  @Test
+  fun scanCannotResurrectSourceRemovedDuringDiscovery() {
+    dao.upsertSource(source().copy(localUri = "mediastore://camera"))
+    val manager = SourceDiscoveryManager(
+      accountRepository = storedAccountRepository(),
+      recorder = SourceRevisionRecorder(dao),
+      mediaDiscovery = MediaPresetDiscovery {
+        dao.removeSource("source-1")
+        MediaDiscovery(
+          listOf(discoveredFile("provider", "photo.jpg", 50, 100)),
+          MediaPermissionAccess.FULL,
+        )
+      },
+      documentTreeDiscovery = DocumentTreeSourceDiscovery { emptyList() },
+    )
+
+    org.junit.Assert.assertThrows(EngineSourceNotFoundException::class.java) {
+      manager.scan("source-1")
+    }
+
+    assertEquals(0, dao.sourceCount("source-1"))
+    assertEquals(0, dao.revisionCount())
+    assertEquals(0, dao.jobCount())
+  }
+
   private fun account() = AccountEntity(
     id = "account-1",
     serverUrl = "https://cloud.example.test",

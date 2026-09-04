@@ -164,7 +164,18 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("removeSourceAsync") { sourceId: String ->
+      val dao = engineDatabase.engineDao()
+      val source = dao.source(sourceId) ?: throw EngineSourceNotFoundException(sourceId)
       engine.removeSource(sourceId)
+      if (source.kind == "saf" && dao.allSources().none { it.localUri == source.localUri }) {
+        val context = appContext.reactContext ?: throw AccountStorageException()
+        runCatching {
+          context.contentResolver.releasePersistableUriPermission(
+            Uri.parse(source.localUri),
+            Intent.FLAG_GRANT_READ_URI_PERMISSION,
+          )
+        }
+      }
     }
 
     AsyncFunction("resetSourceHistoryAsync") { sourceId: String ->
