@@ -40,7 +40,8 @@ class NextcloudUploadClientTest {
     assertEquals(listOf("MKCOL", "PUT", "MOVE"), requests.map { it.method })
     assertEquals("binary fixture", requests.single { it.method == "PUT" }.body)
     val put = requests.single { it.method == "PUT" }
-    assertTrue(put.path.endsWith("/.photo%20%231.jpg.webdav-auto-upload-fixed-id.part"))
+    assertTrue(put.path.endsWith("/.photo%20%231.jpg.webdav-auto-upload-fixed-id"))
+    assertFalse(put.path.endsWith(".part"))
     assertFalse(put.path.endsWith("/photo%20%231.jpg"))
     val move = requests.single { it.method == "MOVE" }
     assertTrue(move.destination.orEmpty().endsWith("/photo%20%231.jpg"))

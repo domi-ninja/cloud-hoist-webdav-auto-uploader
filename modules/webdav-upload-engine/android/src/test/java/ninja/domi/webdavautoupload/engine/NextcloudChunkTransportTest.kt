@@ -46,11 +46,12 @@ class NextcloudChunkTransportTest {
       it.path.substringAfterLast('/')
     })
     assertTrue(captured.filter { it.method == "PUT" }.all {
-      it.totalLength == UPLOAD.byteCount.toString() && it.destination?.contains(".part") == true
+      it.totalLength == UPLOAD.byteCount.toString() &&
+        it.destination?.endsWith(".webdav-auto-upload-upload-id") == true
     })
     val moves = captured.filter { it.method == "MOVE" }
     assertTrue(moves.first().path.endsWith("/upload-id/.file"))
-    assertTrue(moves.first().destination.orEmpty().contains(".part"))
+    assertTrue(moves.first().destination.orEmpty().endsWith(".webdav-auto-upload-upload-id"))
     assertTrue(moves.last().destination.orEmpty().endsWith("/large%20file.bin"))
     assertEquals("T", moves.last().overwrite)
     assertTrue(result.modificationTimeAccepted)
@@ -105,7 +106,7 @@ class NextcloudChunkTransportTest {
     transport.abort(CREDENTIAL, "id", UPLOAD)
 
     assertTrue(deleted.first().endsWith("/uploads/user/id/"))
-    assertTrue(deleted.last().endsWith("/.large%20file.bin.webdav-auto-upload-id.part"))
+    assertTrue(deleted.last().endsWith("/.large%20file.bin.webdav-auto-upload-id"))
   }
 
   @Test
@@ -120,7 +121,7 @@ class NextcloudChunkTransportTest {
 
     assertTrue(failure is AccountServerException)
     assertEquals(2, deleted.size)
-    assertTrue(deleted.last().contains(".webdav-auto-upload-id.part"))
+    assertTrue(deleted.last().endsWith(".webdav-auto-upload-id"))
   }
 
   private fun transport(respond: (Request) -> Response) = NextcloudChunkTransport(

@@ -213,7 +213,7 @@ class NextcloudChunkTransport(
     return NextcloudDavUrl.file(
       account,
       DavPath.validate(request.remotePathSegments),
-      ".$fileName.webdav-auto-upload-$uploadId.part",
+      ".$fileName.webdav-auto-upload-$uploadId",
     )
   }
 

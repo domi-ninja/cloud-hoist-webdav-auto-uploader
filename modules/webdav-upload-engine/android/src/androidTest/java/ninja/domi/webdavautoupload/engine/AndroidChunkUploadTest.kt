@@ -101,7 +101,10 @@ class AndroidChunkUploadTest {
     }.toByteArray()
     assertArrayEquals(hash(bytes), hash(uploaded))
     assertTrue(requests[6].path.orEmpty().endsWith("/upload-id/.file"))
-    assertTrue(requests[6].getHeader("Destination").orEmpty().contains(".part"))
+    assertTrue(
+      requests[6].getHeader("Destination").orEmpty()
+        .endsWith(".webdav-auto-upload-upload-id"),
+    )
     assertTrue(requests[7].getHeader("Destination").orEmpty().endsWith("/large.bin"))
     assertEquals("T", requests[7].getHeader("Overwrite"))
     assertTrue(result.modificationTimeAccepted)
