@@ -9,6 +9,7 @@ import {
   jobStateSchema,
   loginFlowPollSchema,
   loginFlowStartSchema,
+  notificationPermissionStateSchema,
   remoteFolderSchema,
   remotePathSegmentsSchema,
   schedulerStatusSchema,
@@ -151,5 +152,11 @@ describe("native engine contract", () => {
     expect(remoteFolderSchema.parse(folder)).toEqual(folder);
     expect(() => remotePathSegmentsSchema.parse(["Auto Upload/Photos"])).toThrow();
     expect(() => remotePathSegmentsSchema.parse([".."])).toThrow();
+  });
+
+  it("decodes notification permission without platform-specific details", () => {
+    expect(
+      notificationPermissionStateSchema.parse({ granted: false, canAskAgain: true }),
+    ).toEqual({ granted: false, canAskAgain: true });
   });
 });

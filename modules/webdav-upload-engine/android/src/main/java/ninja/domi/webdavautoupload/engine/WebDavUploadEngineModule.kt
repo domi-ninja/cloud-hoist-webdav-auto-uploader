@@ -56,6 +56,13 @@ class WebDavUploadEngineModule : Module() {
       appContext.permissions ?: throw Exceptions.PermissionsModuleNotFound(),
     )
   }
+  private val notificationPermissionController by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    NotificationPermissionController(
+      context,
+      appContext.permissions ?: throw Exceptions.PermissionsModuleNotFound(),
+    )
+  }
   private val workScheduler by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
     EngineWorkScheduler(context)
@@ -196,6 +203,14 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("requestMediaPermissionAsync") { promise: Promise ->
       mediaPermissionController.request { state -> promise.resolve(state.toMap()) }
+    }
+
+    AsyncFunction("getNotificationPermissionAsync") { promise: Promise ->
+      notificationPermissionController.get { state -> promise.resolve(state.toMap()) }
+    }
+
+    AsyncFunction("requestNotificationPermissionAsync") { promise: Promise ->
+      notificationPermissionController.request { state -> promise.resolve(state.toMap()) }
     }
 
     AsyncFunction("scanSourceAsync") { sourceId: String ->

@@ -242,6 +242,11 @@ export const mediaPermissionStateSchema = z.object({
   canAskAgain: z.boolean(),
 });
 
+export const notificationPermissionStateSchema = z.object({
+  granted: z.boolean(),
+  canAskAgain: z.boolean(),
+});
+
 export const sourceScanResultSchema = z.object({
   sourceId: z.string().uuid(),
   preview: sourcePreviewSchema.nullable(),
@@ -278,6 +283,9 @@ export type SourcePreview = z.infer<typeof sourcePreviewSchema>;
 export type SourceCommit = z.infer<typeof sourceCommitSchema>;
 export type SourceCommitResult = z.infer<typeof sourceCommitResultSchema>;
 export type MediaPermissionState = z.infer<typeof mediaPermissionStateSchema>;
+export type NotificationPermissionState = z.infer<
+  typeof notificationPermissionStateSchema
+>;
 export type SourceScanResult = z.infer<typeof sourceScanResultSchema>;
 
 export type WebDavUploadEngineModuleEvents = {

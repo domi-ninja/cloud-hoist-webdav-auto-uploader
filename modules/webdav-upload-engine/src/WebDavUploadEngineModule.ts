@@ -9,6 +9,7 @@ import {
   loginFlowStartSchema,
   manualAccountInputSchema,
   mediaPermissionStateSchema,
+  notificationPermissionStateSchema,
   remoteFolderSchema,
   remotePathSegmentSchema,
   remotePathSegmentsSchema,
@@ -33,6 +34,7 @@ import {
   type LoginFlowStart,
   type ManualAccountInput,
   type MediaPermissionState,
+  type NotificationPermissionState,
   type RemoteFolder,
   type SelectedDocumentTree,
   type SourceCommit,
@@ -72,6 +74,8 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   commitSourceAsync(source: SourceCommit): Promise<unknown>;
   getMediaPermissionAsync(): Promise<unknown>;
   requestMediaPermissionAsync(): Promise<unknown>;
+  getNotificationPermissionAsync(): Promise<unknown>;
+  requestNotificationPermissionAsync(): Promise<unknown>;
   scanSourceAsync(sourceId: string): Promise<unknown>;
 }
 
@@ -249,6 +253,18 @@ export const webDavUploadEngine = {
     runValueCommand(
       () => nativeModule.requestMediaPermissionAsync(),
       (value): MediaPermissionState => mediaPermissionStateSchema.parse(value),
+    ),
+  getNotificationPermission: () =>
+    runValueCommand(
+      () => nativeModule.getNotificationPermissionAsync(),
+      (value): NotificationPermissionState =>
+        notificationPermissionStateSchema.parse(value),
+    ),
+  requestNotificationPermission: () =>
+    runValueCommand(
+      () => nativeModule.requestNotificationPermissionAsync(),
+      (value): NotificationPermissionState =>
+        notificationPermissionStateSchema.parse(value),
     ),
   scanSource: (sourceId: string) =>
     runValueCommand(

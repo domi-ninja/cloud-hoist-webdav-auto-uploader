@@ -83,6 +83,7 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
       setError(result.error);
       return;
     }
+    await webDavUploadEngine.requestNotificationPermission();
     onComplete();
   };
 
@@ -105,6 +106,9 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
       </Text>
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {preview.eligibleFileCount} existing files are eligible.
+      </Text>
+      <Text className="text-base text-muted-light dark:text-muted-dark">
+        Android will ask to show transfer progress while uploads run in the background.
       </Text>
       <View className="gap-4">
         <Pressable
