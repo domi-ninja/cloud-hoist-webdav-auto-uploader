@@ -18,10 +18,13 @@ import org.junit.runner.RunWith
 class EngineWorkSchedulerTest {
   private val context = ApplicationProvider.getApplicationContext<Context>()
   private val workManager = WorkManager.getInstance(context)
-  private val scheduler = EngineWorkScheduler(context, workManager)
+  private val preferences = EnginePreferences(context)
+  private val scheduler = EngineWorkScheduler(context, workManager, preferences)
 
   @Before
   fun clearEngineWork() {
+    preferences.resume()
+    preferences.setConstraints(TransferConstraints())
     workManager.cancelAllWorkByTag(EngineWorkScheduler.ENGINE_WORK_TAG).result.get()
     workManager.pruneWork().result.get()
   }
@@ -72,8 +75,18 @@ class EngineWorkSchedulerTest {
     assertTrue(!replacement.constraints.requiresBatteryNotLow())
     assertTrue(replacement.constraints.requiresCharging())
 
-    scheduler.pauseQueueDrain()
+    scheduler.pause()
     workManager.getWorkInfosForUniqueWork(EngineWorkScheduler.QUEUE_DRAIN_WORK).get()
+    assertTrue(activeWork(EngineWorkScheduler.QUEUE_DRAIN_WORK).isEmpty())
+  }
+
+  @Test
+  fun pausedStateSurvivesRecreationAndPreventsNewDrains() {
+    scheduler.pause()
+
+    EngineWorkScheduler(context, workManager, EnginePreferences(context)).requestQueueDrain()
+
+    assertTrue(EnginePreferences(context).isPaused())
     assertTrue(activeWork(EngineWorkScheduler.QUEUE_DRAIN_WORK).isEmpty())
   }
 

@@ -21,6 +21,7 @@ data class TransferConstraints(
 class EngineWorkScheduler(
   context: Context,
   private val workManager: WorkManager = WorkManager.getInstance(context),
+  private val preferences: EnginePreferences = EnginePreferences(context),
 ) {
   fun ensureScheduled() {
     workManager.enqueueUniqueWork(
@@ -51,7 +52,8 @@ class EngineWorkScheduler(
     )
   }
 
-  fun requestQueueDrain(constraints: TransferConstraints = TransferConstraints()) {
+  fun requestQueueDrain(constraints: TransferConstraints = preferences.constraints()) {
+    if (preferences.isPaused()) return
     workManager.enqueueUniqueWork(
       QUEUE_DRAIN_WORK,
       ExistingWorkPolicy.KEEP,
@@ -60,6 +62,7 @@ class EngineWorkScheduler(
   }
 
   fun updateDrainConstraints(constraints: TransferConstraints) {
+    preferences.setConstraints(constraints)
     val current = workManager.getWorkInfosForUniqueWork(QUEUE_DRAIN_WORK).get()
     if (current.none { !it.state.isFinished }) return
     workManager.enqueueUniqueWork(
@@ -69,8 +72,15 @@ class EngineWorkScheduler(
     )
   }
 
-  fun pauseQueueDrain() {
+  fun pause() {
+    preferences.pause()
     workManager.cancelUniqueWork(QUEUE_DRAIN_WORK)
+  }
+
+  fun resume() {
+    preferences.resume()
+    ensureScheduled()
+    requestQueueDrain()
   }
 
   private fun queueDrainRequest(settings: TransferConstraints) =

@@ -87,13 +87,12 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("pauseAsync") {
       engine.pause()
-      workScheduler.pauseQueueDrain()
+      workScheduler.pause()
     }
 
     AsyncFunction("resumeAsync") {
       engine.resume()
-      workScheduler.ensureScheduled()
-      workScheduler.requestQueueDrain()
+      workScheduler.resume()
     }
 
     AsyncFunction("scanNowAsync") {
