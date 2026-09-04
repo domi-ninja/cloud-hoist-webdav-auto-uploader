@@ -6,6 +6,7 @@ import { project } from "@/config/project";
 import webDavUploadEngine, {
   type EngineSnapshot,
 } from "../../modules/webdav-upload-engine";
+import { AccountConnection } from "@/features/account/AccountConnection";
 
 export default function HomeScreen() {
   const [snapshot, setSnapshot] = useState<EngineSnapshot>();
@@ -65,6 +66,7 @@ export default function HomeScreen() {
               {errorMessage}
             </Text>
           ) : null}
+          {snapshot ? <AccountConnection account={snapshot.account} /> : null}
         </View>
 
         <Pressable
