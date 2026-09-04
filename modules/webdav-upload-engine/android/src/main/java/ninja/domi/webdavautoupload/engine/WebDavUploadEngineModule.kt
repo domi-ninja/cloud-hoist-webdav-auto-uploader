@@ -157,11 +157,11 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("getMediaPermissionAsync") { promise: Promise ->
-      mediaPermissionController.get(promise::resolve)
+      mediaPermissionController.get { state -> promise.resolve(state.toMap()) }
     }
 
     AsyncFunction("requestMediaPermissionAsync") { promise: Promise ->
-      mediaPermissionController.request(promise::resolve)
+      mediaPermissionController.request { state -> promise.resolve(state.toMap()) }
     }
 
     AsyncFunction("scanSourceAsync") { sourceId: String ->
