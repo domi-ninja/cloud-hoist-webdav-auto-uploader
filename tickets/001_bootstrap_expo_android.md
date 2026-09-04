@@ -1,6 +1,6 @@
 # 001 Bootstrap the Expo Android app
 
-Status: ready
+Status: in progress
 
 Depends on: none
 

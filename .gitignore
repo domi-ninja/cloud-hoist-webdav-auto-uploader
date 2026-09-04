@@ -1,2 +1,35 @@
-# Local acceptance-test credentials. Never commit or package this file.
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+expo-env.d.ts
+
+# Generated native projects
+/android/
+/ios/
+.kotlin/
+*.orig.*
+
+# Android signing and local SDK configuration
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.pem
+local.properties
+
+# Tool output
+coverage/
+*.tsbuildinfo
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+
+# Local environment and acceptance credentials
+.env*.local
 test-creds.tct
