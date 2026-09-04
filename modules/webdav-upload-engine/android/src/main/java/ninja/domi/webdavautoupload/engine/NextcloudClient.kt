@@ -1,6 +1,9 @@
 package ninja.domi.webdavautoupload.engine
 
 import java.io.IOException
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.security.cert.CertificateException
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLHandshakeException
@@ -123,6 +126,12 @@ class NextcloudClient(
     throw AccountNetworkException()
   } catch (_: SSLPeerUnverifiedException) {
     throw AccountCertificateException()
+  } catch (_: UnknownHostException) {
+    throw AccountDnsException()
+  } catch (_: SocketTimeoutException) {
+    throw AccountTimeoutException()
+  } catch (_: ConnectException) {
+    throw AccountConnectionRefusedException()
   } catch (error: IOException) {
     throw AccountNetworkException()
   }

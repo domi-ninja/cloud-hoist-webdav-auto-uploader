@@ -26,6 +26,15 @@ class AccountCertificateException :
 class AccountNetworkException :
   CodedException("The Nextcloud server could not be reached.")
 
+class AccountDnsException :
+  CodedException("Android could not find the Nextcloud server hostname.")
+
+class AccountTimeoutException :
+  CodedException("The Nextcloud server took too long to respond.")
+
+class AccountConnectionRefusedException :
+  CodedException("The Nextcloud server refused the connection.")
+
 class AccountServerException :
   CodedException("The Nextcloud server could not complete the request.")
 

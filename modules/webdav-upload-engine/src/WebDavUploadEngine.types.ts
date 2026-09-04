@@ -202,6 +202,9 @@ export type EngineError =
   | { code: "unexpected_redirect"; message: string }
   | { code: "certificate"; message: string }
   | { code: "network"; message: string }
+  | { code: "dns"; message: string }
+  | { code: "timeout"; message: string }
+  | { code: "connection_refused"; message: string }
   | { code: "server"; message: string }
   | { code: "login_expired"; message: string }
   | { code: "login_cancelled"; message: string }
