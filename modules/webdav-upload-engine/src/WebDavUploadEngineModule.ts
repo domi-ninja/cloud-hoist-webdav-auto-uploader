@@ -14,6 +14,7 @@ import {
   snapshotInvalidatedSchema,
   sourceInputSchema,
   sourceSummarySchema,
+  selectedDocumentTreeSchema,
   unresolvedFailureSchema,
   type ActivityEntry,
   type AccountSummary,
@@ -25,6 +26,7 @@ import {
   type LoginFlowStart,
   type ManualAccountInput,
   type RemoteFolder,
+  type SelectedDocumentTree,
   type SourceInput,
   type SourceSummary,
   type UnresolvedFailure,
@@ -50,6 +52,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   verifyStoredAccountAsync(): Promise<unknown>;
   listRemoteFoldersAsync(pathSegments: string[]): Promise<unknown>;
   createRemoteFolderAsync(parentPathSegments: string[], name: string): Promise<unknown>;
+  pickDocumentTreeAsync(initialUri: string | null): Promise<unknown>;
 }
 
 const nativeModule =
@@ -190,6 +193,12 @@ export const webDavUploadEngine = {
       (value): RemoteFolder => remoteFolderSchema.parse(value),
     );
   },
+  pickDocumentTree: (initialUri: string | null = null) =>
+    runValueCommand(
+      () => nativeModule.pickDocumentTreeAsync(initialUri),
+      (value): SelectedDocumentTree | null =>
+        selectedDocumentTreeSchema.nullable().parse(value),
+    ),
 
   addSnapshotInvalidatedListener(
     listener: (revision: number) => void,

@@ -182,6 +182,10 @@ export const remoteFolderSchema = z.object({
   pathSegments: remotePathSegmentsSchema,
 });
 
+export const selectedDocumentTreeSchema = z.object({
+  treeUri: z.string().startsWith("content://"),
+});
+
 export type AccountCapabilities = z.infer<typeof accountCapabilitiesSchema>;
 export type AccountSummary = z.infer<typeof accountSummarySchema>;
 export type AccountHealth = z.infer<typeof accountHealthSchema>;
@@ -200,6 +204,7 @@ export type ManualAccountInput = z.infer<typeof manualAccountInputSchema>;
 export type LoginFlowStart = z.infer<typeof loginFlowStartSchema>;
 export type LoginFlowPoll = z.infer<typeof loginFlowPollSchema>;
 export type RemoteFolder = z.infer<typeof remoteFolderSchema>;
+export type SelectedDocumentTree = z.infer<typeof selectedDocumentTreeSchema>;
 
 export type WebDavUploadEngineModuleEvents = {
   onSnapshotInvalidated: (payload: SnapshotInvalidated) => void;

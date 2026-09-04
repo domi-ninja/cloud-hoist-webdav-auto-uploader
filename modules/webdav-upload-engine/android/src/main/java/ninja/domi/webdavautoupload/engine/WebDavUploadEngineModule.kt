@@ -2,8 +2,12 @@ package ninja.domi.webdavautoupload.engine
 
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
+import expo.modules.kotlin.functions.Coroutine
 
 class WebDavUploadEngineModule : Module() {
+  private lateinit var documentTreePicker:
+    AppContextActivityResultLauncher<DocumentTreePickerInput, DocumentTreePickerResult>
   private val engine = FixtureUploadEngine { revision ->
     sendEvent("onSnapshotInvalidated", mapOf("revision" to revision))
   }
@@ -25,11 +29,19 @@ class WebDavUploadEngineModule : Module() {
   private val remoteFolderManager by lazy {
     RemoteFolderManager(accountRepository, NextcloudDavClient())
   }
+  private val documentTreeGateway by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    AndroidDocumentTreeGateway(context)
+  }
 
   override fun definition() = ModuleDefinition {
     Name("WebDavUploadEngine")
 
     Events("onSnapshotInvalidated")
+
+    RegisterActivityContracts {
+      documentTreePicker = registerForActivityResult(DocumentTreePickerContract())
+    }
 
     AsyncFunction("getSnapshotAsync") {
       engine.snapshot(accountManager.accountHealth())
@@ -106,6 +118,16 @@ class WebDavUploadEngineModule : Module() {
     AsyncFunction("createRemoteFolderAsync") {
         parentPathSegments: List<String>, name: String ->
       remoteFolderManager.create(parentPathSegments, name).toMap()
+    }
+
+    AsyncFunction("pickDocumentTreeAsync") Coroutine { initialUri: String? ->
+      when (val result = documentTreePicker.launch(DocumentTreePickerInput(initialUri))) {
+        DocumentTreePickerResult.Cancelled -> null
+        is DocumentTreePickerResult.Selected -> {
+          documentTreeGateway.persistReadPermission(result.treeUri, result.resultFlags)
+          mapOf("treeUri" to result.treeUri)
+        }
+      }
     }
   }
 }
