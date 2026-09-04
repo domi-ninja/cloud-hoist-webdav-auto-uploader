@@ -12,6 +12,7 @@ import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.Upsert
 import org.json.JSONArray
 
 object JobState {
@@ -36,10 +37,10 @@ class EngineTypeConverters {
 
 @Dao
 interface EngineDao {
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  @Upsert
   fun upsertAccount(account: AccountEntity)
 
-  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  @Upsert
   fun upsertSource(source: SourceEntity)
 
   @Insert(onConflict = OnConflictStrategy.IGNORE)

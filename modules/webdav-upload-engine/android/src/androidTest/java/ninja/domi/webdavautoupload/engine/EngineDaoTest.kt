@@ -163,6 +163,18 @@ class EngineDaoTest {
     context.deleteDatabase(name)
   }
 
+  @Test
+  fun parentUpsertsPreserveTheQueue() {
+    dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
+
+    dao.upsertAccount(account().copy(displayName = "Changed"))
+    dao.upsertSource(source().copy(name = "Renamed", enabled = false))
+
+    assertEquals(1, dao.sourceCount("source-1"))
+    assertEquals(1, dao.revisionCount())
+    assertEquals(1, dao.jobCount())
+  }
+
   private fun account() = AccountEntity(
     id = "account-1",
     serverUrl = "https://cloud.example.test",
