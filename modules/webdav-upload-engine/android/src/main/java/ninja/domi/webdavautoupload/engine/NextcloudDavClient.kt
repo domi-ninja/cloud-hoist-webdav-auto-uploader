@@ -15,7 +15,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.HttpUrl
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.w3c.dom.Element
 import org.xml.sax.InputSource
 
@@ -55,12 +54,7 @@ class NextcloudDavClient(
   }
 
   private fun folderUrl(account: StoredAccount, pathSegments: List<String>): HttpUrl =
-    account.serverUrl.toHttpUrl().newBuilder()
-      .addPathSegments("remote.php/dav/files")
-      .addPathSegment(account.davUserId)
-      .apply { pathSegments.forEach(::addPathSegment) }
-      .addPathSegment("")
-      .build()
+    NextcloudDavUrl.folder(account, pathSegments)
 
   private fun authenticatedRequest(
     url: HttpUrl,

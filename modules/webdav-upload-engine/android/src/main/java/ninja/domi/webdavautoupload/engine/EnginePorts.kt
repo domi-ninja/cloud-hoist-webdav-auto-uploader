@@ -23,8 +23,17 @@ data class StoredAccountCredential(
 
 data class DavUploadRequest(
   val localUri: String,
-  val remotePath: String,
+  val remotePathSegments: List<String>,
+  val fileName: String,
   val byteCount: Long,
+  val mimeType: String?,
+  val modifiedAtEpochSeconds: Long?,
+  val createdAtEpochSeconds: Long?,
+)
+
+data class DavUploadResult(
+  val modificationTimeAccepted: Boolean,
+  val creationTimeAccepted: Boolean,
 )
 
 data class QueuedUpload(
@@ -46,7 +55,11 @@ interface AccountRepository {
 }
 
 interface DavClient {
-  suspend fun upload(request: DavUploadRequest)
+  fun upload(credential: StoredAccountCredential, request: DavUploadRequest): DavUploadResult
+}
+
+fun interface LocalContentSource {
+  fun open(uri: String): java.io.InputStream?
 }
 
 interface EngineDatabase {

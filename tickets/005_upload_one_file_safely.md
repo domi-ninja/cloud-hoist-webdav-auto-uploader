@@ -1,6 +1,6 @@
 # 005 Upload one file with safe overwrite
 
-Status: blocked by 003
+Status: in progress
 
 Depends on: 002, 003
 

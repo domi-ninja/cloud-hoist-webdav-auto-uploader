@@ -64,3 +64,15 @@ class DavInvalidPathException :
 
 class DavQuotaException :
   CodedException("The Nextcloud account has no space for that folder operation.")
+
+class DavLockedException :
+  CodedException("The remote destination is locked.")
+
+class DavRateLimitedException :
+  CodedException("The Nextcloud server asked the upload to wait.")
+
+class LocalContentMissingException :
+  CodedException("The local file can no longer be opened.")
+
+class LocalContentInvalidException :
+  CodedException("The local file metadata is invalid.")
