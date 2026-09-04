@@ -1,11 +1,37 @@
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
-import { useRecentActivity, useUnresolvedFailures } from "@/lib/engine-query";
+import {
+  useEngineSnapshot,
+  useRecentActivity,
+  useUnresolvedFailures,
+} from "@/lib/engine-query";
+
+function transferState(
+  state:
+    | { status: "queued" }
+    | { status: "uploading"; bytesSent: number }
+    | { status: "uploaded"; uploadedAt: string }
+    | { status: "failed"; code: string; retryable: boolean },
+) {
+  switch (state.status) {
+    case "queued":
+      return "Queued";
+    case "uploading":
+      return `Uploading · ${state.bytesSent.toLocaleString()} bytes sent`;
+    case "uploaded":
+      return `Uploaded · ${new Date(state.uploadedAt).toLocaleString()}`;
+    case "failed":
+      return `${state.retryable ? "Waiting to retry" : "Blocked"} · ${state.code}`;
+  }
+}
 
 export default function ActivityScreen() {
+  const router = useRouter();
+  const snapshot = useEngineSnapshot();
   const activity = useRecentActivity();
   const failures = useUnresolvedFailures();
   const [errorMessage, setErrorMessage] = useState<string>();
@@ -21,15 +47,49 @@ export default function ActivityScreen() {
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Activity
         </Text>
-        {activity.isLoading || failures.isLoading ? (
+        {snapshot.isLoading || activity.isLoading || failures.isLoading ? (
           <Text className="text-base text-muted-light dark:text-muted-dark">
             Loading activity…
           </Text>
         ) : null}
-        {activity.error || failures.error || errorMessage ? (
+        {snapshot.error || activity.error || failures.error || errorMessage ? (
           <Text className="text-base text-red-700 dark:text-red-300">
             {errorMessage ?? "Activity could not be loaded."}
           </Text>
+        ) : null}
+        {snapshot.data?.blockers.length ? (
+          <View className="gap-4">
+            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+              Blockers
+            </Text>
+            {snapshot.data.blockers.map((blocker, index) => (
+              <View className="gap-4 border border-accent p-4" key={`${blocker.kind}-${index}`}>
+                <Text className="text-base text-ink-light dark:text-ink-dark">
+                  {blocker.kind === "account"
+                    ? blocker.message
+                    : blocker.kind === "permission"
+                      ? `${blocker.permission === "media" ? "Photo access" : "Folder access"} must be restored.`
+                      : blocker.kind === "network"
+                        ? "Waiting for an allowed network."
+                        : blocker.kind === "storage"
+                          ? "Not enough local storage."
+                          : blocker.message}
+                </Text>
+                {blocker.kind === "account" || blocker.kind === "permission" ? (
+                  <Pressable
+                    accessibilityLabel="Repair blocker in Sources"
+                    accessibilityRole="button"
+                    className="border border-accent p-4"
+                    onPress={() => router.navigate("/")}
+                  >
+                    <Text className="text-base text-ink-light dark:text-ink-dark">
+                      Repair in Sources
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            ))}
+          </View>
         ) : null}
         {failures.data?.length ? (
           <View className="gap-4">
@@ -57,6 +117,28 @@ export default function ActivityScreen() {
               </Text>
             </Pressable>
           </View>
+        ) : null}
+        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+          Transfers
+        </Text>
+        {snapshot.data?.recentJobs.length ? (
+          snapshot.data.recentJobs.map((job) => (
+            <View
+              className="gap-4 border border-muted-light p-4 dark:border-muted-dark"
+              key={job.id}
+            >
+              <Text className="text-base text-ink-light dark:text-ink-dark">
+                {job.fileName}
+              </Text>
+              <Text className="text-base text-muted-light dark:text-muted-dark">
+                {transferState(job.state)} · {job.byteCount.toLocaleString()} bytes
+              </Text>
+            </View>
+          ))
+        ) : !snapshot.isLoading ? (
+          <Text className="text-base text-muted-light dark:text-muted-dark">
+            No queued transfers.
+          </Text>
         ) : null}
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Recent
