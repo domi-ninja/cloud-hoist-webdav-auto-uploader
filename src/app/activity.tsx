@@ -9,6 +9,8 @@ import {
   useActivityPages,
   useUnresolvedFailures,
 } from "@/lib/engine-query";
+import { formatBytes, formatRelativeTime } from "@/lib/format";
+import { useNow } from "@/lib/use-now";
 
 function transferState(
   state:
@@ -16,14 +18,15 @@ function transferState(
     | { status: "uploading"; bytesSent: number }
     | { status: "uploaded"; uploadedAt: string }
     | { status: "failed"; code: string; retryable: boolean },
+  now: number,
 ) {
   switch (state.status) {
     case "queued":
       return "Queued";
     case "uploading":
-      return `Uploading · ${state.bytesSent.toLocaleString()} bytes sent`;
+      return `Uploading · ${formatBytes(state.bytesSent)} sent`;
     case "uploaded":
-      return `Uploaded · ${new Date(state.uploadedAt).toLocaleString()}`;
+      return `Uploaded ${formatRelativeTime(state.uploadedAt, now)}`;
     case "failed":
       return `${state.retryable ? "Waiting to retry" : "Blocked"} · ${state.code}`;
   }
@@ -35,6 +38,7 @@ export default function ActivityScreen() {
   const activity = useActivityPages();
   const failures = useUnresolvedFailures();
   const [errorMessage, setErrorMessage] = useState<string>();
+  const now = useNow();
 
   const retryFailed = async () => {
     const result = await webDavUploadEngine.retryFailed();
@@ -150,7 +154,7 @@ export default function ActivityScreen() {
                 {job.fileName}
               </Text>
               <Text className="text-base text-muted-light dark:text-muted-dark">
-                {transferState(job.state)} · {job.byteCount.toLocaleString()} bytes
+                {transferState(job.state, now)} · {formatBytes(job.byteCount)}
               </Text>
             </View>
           ))
@@ -181,7 +185,7 @@ export default function ActivityScreen() {
                 {entry.message}
               </Text>
               <Text className="text-base text-muted-light dark:text-muted-dark">
-                {new Date(entry.occurredAt).toLocaleString()}
+                {formatRelativeTime(entry.occurredAt, now)}
               </Text>
             </View>
           ))

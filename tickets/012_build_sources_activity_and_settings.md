@@ -22,6 +22,7 @@ The three-tab interface exposes source health, upload history, global controls, 
 - Build Settings with global network policy, battery-not-low, charging requirement, account summary, diagnostic export, about and license, and sign-out.
 - Keep transfer rules global. Do not expose per-source network controls.
 - Use the system light or dark setting and font scaling. Keep spacing and type scale deliberately small and consistent.
+- Show scan, upload, failure, and activity timestamps as live relative time instead of locale-formatted dates.
 - Preserve useful screens across cold-start notification and deep-link navigation.
 
 ## Acceptance criteria
@@ -34,6 +35,7 @@ The three-tab interface exposes source health, upload history, global controls, 
 - Settings changes replace WorkManager constraints without deleting jobs.
 - Cold-start deep links from notifications open the intended repair view.
 - Empty, loading, offline, and native-module-error states do not strand the user.
+- Relative times update while a screen remains open and byte counts use readable units.
 - The interface contains no file browsing, download, sharing, decorative dashboard, or unrelated settings.
 
 ## Verification

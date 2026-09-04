@@ -6,6 +6,7 @@ import webDavUploadEngine, {
   type SourcePreview,
   type SourceSelection,
 } from "../../../modules/webdav-upload-engine";
+import { formatBytes } from "@/lib/format";
 
 type LocalSourcePickerProps = {
   onSelect: (selection: SourceSelection, preview: SourcePreview) => void;
@@ -15,15 +16,6 @@ type PendingMediaSelection = Extract<
   SourceSelection,
   { type: "camera" | "screenshots" }
 >;
-
-function formatBytes(byteCount: number) {
-  if (byteCount < 1_000) return `${byteCount} B`;
-  if (byteCount < 1_000_000) return `${(byteCount / 1_000).toFixed(1)} kB`;
-  if (byteCount < 1_000_000_000) {
-    return `${(byteCount / 1_000_000).toFixed(1)} MB`;
-  }
-  return `${(byteCount / 1_000_000_000).toFixed(1)} GB`;
-}
 
 function sourceLabel(selection: SourceSelection) {
   switch (selection.type) {

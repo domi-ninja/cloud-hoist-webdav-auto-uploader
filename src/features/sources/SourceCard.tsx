@@ -6,14 +6,16 @@ import webDavUploadEngine, {
   type EngineSnapshot,
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
+import { formatRelativeTime } from "@/lib/format";
 import { RemoteFolderPicker } from "./RemoteFolderPicker";
 
 type SourceCardProps = {
   snapshot: EngineSnapshot;
   source: SourceSummary;
+  now: number;
 };
 
-function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary) {
+function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary, now: number) {
   const permissionBlocker = snapshot.blockers.some(
     (blocker) => blocker.kind === "permission" && blocker.sourceId === source.id,
   );
@@ -37,12 +39,12 @@ function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary) {
     return "Waiting for network";
   }
   if (source.lastScanAt) {
-    return `Last scanned ${new Date(source.lastScanAt).toLocaleString()}`;
+    return `Last scanned ${formatRelativeTime(source.lastScanAt, now)}`;
   }
   return "Ready to scan";
 }
 
-export function SourceCard({ snapshot, source }: SourceCardProps) {
+export function SourceCard({ snapshot, source, now }: SourceCardProps) {
   const [editingDestination, setEditingDestination] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
@@ -166,7 +168,7 @@ export function SourceCard({ snapshot, source }: SourceCardProps) {
         {source.name}
       </Text>
       <Text className="text-base text-muted-light dark:text-muted-dark">
-        {sourceStatus(snapshot, source)} · {source.remotePath}
+        {sourceStatus(snapshot, source, now)} · {source.remotePath}
       </Text>
       {error ? (
         <Text className="text-base text-red-700 dark:text-red-300">{error.message}</Text>

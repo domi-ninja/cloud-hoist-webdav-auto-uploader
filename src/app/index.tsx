@@ -8,12 +8,14 @@ import { AccountConnection } from "@/features/account/AccountConnection";
 import { SourceCard } from "@/features/sources/SourceCard";
 import { SourceSetup } from "@/features/sources/SourceSetup";
 import { useEngineSnapshot } from "@/lib/engine-query";
+import { useNow } from "@/lib/use-now";
 
 export default function HomeScreen() {
   const { data: snapshot, error: snapshotError, refetch } = useEngineSnapshot();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [addingSource, setAddingSource] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const now = useNow();
 
   const togglePaused = async () => {
     if (!snapshot) {
@@ -116,7 +118,7 @@ export default function HomeScreen() {
                 {snapshot.queue.failed} blocked · {snapshot.queue.uploaded} uploaded
               </Text>
               {snapshot.sources.map((source) => (
-                <SourceCard key={source.id} snapshot={snapshot} source={source} />
+                <SourceCard key={source.id} now={now} snapshot={snapshot} source={source} />
               ))}
               {!addingSource ? (
                 <Pressable
