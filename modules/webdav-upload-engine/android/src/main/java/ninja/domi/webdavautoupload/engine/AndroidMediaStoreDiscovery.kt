@@ -92,12 +92,19 @@ fun currentMediaPermissionAccess(context: Context): MediaPermissionAccess {
   fun granted(permission: String) =
     context.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
 
+  return mediaPermissionAccess(Build.VERSION.SDK_INT, ::granted)
+}
+
+fun mediaPermissionAccess(
+  sdkInt: Int,
+  granted: (String) -> Boolean,
+): MediaPermissionAccess {
   return when {
-    Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
+    sdkInt >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
       val fullTypes = listOf(
         Manifest.permission.READ_MEDIA_IMAGES,
         Manifest.permission.READ_MEDIA_VIDEO,
-      ).count(::granted)
+      ).count { permission -> granted(permission) }
       when {
         fullTypes == 2 -> MediaPermissionAccess.FULL
         fullTypes == 1 || granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) ->
@@ -105,11 +112,11 @@ fun currentMediaPermissionAccess(context: Context): MediaPermissionAccess {
         else -> MediaPermissionAccess.DENIED
       }
     }
-    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU -> {
+    sdkInt >= Build.VERSION_CODES.TIRAMISU -> {
       val grantedTypes = listOf(
         Manifest.permission.READ_MEDIA_IMAGES,
         Manifest.permission.READ_MEDIA_VIDEO,
-      ).count(::granted)
+      ).count { permission -> granted(permission) }
       when (grantedTypes) {
         2 -> MediaPermissionAccess.FULL
         1 -> MediaPermissionAccess.PARTIAL

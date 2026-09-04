@@ -1,5 +1,6 @@
 package ninja.domi.webdavautoupload.engine
 
+import android.Manifest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -55,6 +56,37 @@ class SourceDiscoveryModelsTest {
       SourcePreview(2, 2_048, MediaPermissionAccess.PARTIAL),
       listOf(valid, valid).toSourcePreview(MediaPermissionAccess.PARTIAL),
     )
+  }
+
+  @Test
+  fun mapsEverySupportedAndroidMediaPermissionBranch() {
+    fun access(sdk: Int, vararg permissions: String) = mediaPermissionAccess(
+      sdk,
+      permissions.toSet()::contains,
+    )
+
+    assertEquals(
+      MediaPermissionAccess.FULL,
+      access(32, Manifest.permission.READ_EXTERNAL_STORAGE),
+    )
+    assertEquals(MediaPermissionAccess.DENIED, access(32))
+    assertEquals(
+      MediaPermissionAccess.PARTIAL,
+      access(33, Manifest.permission.READ_MEDIA_IMAGES),
+    )
+    assertEquals(
+      MediaPermissionAccess.FULL,
+      access(
+        33,
+        Manifest.permission.READ_MEDIA_IMAGES,
+        Manifest.permission.READ_MEDIA_VIDEO,
+      ),
+    )
+    assertEquals(
+      MediaPermissionAccess.PARTIAL,
+      access(34, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED),
+    )
+    assertEquals(MediaPermissionAccess.DENIED, access(34))
   }
 
   private fun item(
