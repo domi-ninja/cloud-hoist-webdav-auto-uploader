@@ -27,6 +27,14 @@ data class SourceCommitResult(
   val jobsAdded: Int,
 )
 
+data class SourceScanResult(
+  val sourceId: String,
+  val preview: SourcePreview?,
+  val revisionsAdded: Int,
+  val jobsAdded: Int,
+  val blocker: SourceAccessBlocker?,
+)
+
 class SourceDiscoveryManager(
   private val accountRepository: AccountRepository,
   private val recorder: SourceRevisionRecorder,
@@ -64,6 +72,29 @@ class SourceDiscoveryManager(
     return SourceCommitResult(sourceId, recorded.preview, recorded.jobsAdded)
   }
 
+  fun scan(sourceId: String): SourceScanResult {
+    val source = recorder.source(sourceId) ?: throw EngineSourceNotFoundException(sourceId)
+    return try {
+      val discovery = discover(source.selection())
+      val recorded = recorder.record(
+        source,
+        discovery.files,
+        queueNewRevisions = true,
+        permissionAccess = discovery.permissionAccess,
+      )
+      SourceScanResult(
+        sourceId = sourceId,
+        preview = recorded.preview,
+        revisionsAdded = recorded.revisionsAdded,
+        jobsAdded = recorded.jobsAdded,
+        blocker = null,
+      )
+    } catch (error: SourceAccessException) {
+      recorder.markBlocked(sourceId, error.blocker)
+      SourceScanResult(sourceId, null, 0, 0, error.blocker)
+    }
+  }
+
   private fun discover(selection: SourceSelection): SelectedSourceDiscovery = when (selection.type) {
     SourceType.CAMERA -> media(MediaPreset.CAMERA)
     SourceType.SCREENSHOTS -> media(MediaPreset.SCREENSHOTS)
@@ -90,6 +121,18 @@ class SourceDiscoveryManager(
     SourceType.CAMERA -> "mediastore://camera"
     SourceType.SCREENSHOTS -> "mediastore://screenshots"
     SourceType.DOCUMENT_TREE -> checkNotNull(treeUri)
+  }
+
+  private fun SourceEntity.selection(): SourceSelection = when {
+    kind == "media_store" && localUri == "mediastore://camera" ->
+      SourceSelection(SourceType.CAMERA)
+    kind == "media_store" && localUri == "mediastore://screenshots" ->
+      SourceSelection(SourceType.SCREENSHOTS)
+    kind == "saf" -> SourceSelection(SourceType.DOCUMENT_TREE, localUri)
+    else -> throw SourceAccessException(
+      SourceAccessBlocker.FOLDER_UNAVAILABLE,
+      "The local source configuration is invalid.",
+    )
   }
 
   private data class SelectedSourceDiscovery(

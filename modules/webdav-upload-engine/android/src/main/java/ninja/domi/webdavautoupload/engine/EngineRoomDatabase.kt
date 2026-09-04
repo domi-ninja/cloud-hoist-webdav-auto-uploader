@@ -79,6 +79,14 @@ interface EngineDao {
   @Query("SELECT COUNT(*) FROM sources WHERE id = :sourceId")
   fun sourceCount(sourceId: String): Int
 
+  @Query("SELECT * FROM sources WHERE id = :sourceId")
+  fun source(sourceId: String): SourceEntity?
+
+  @Query(
+    "UPDATE sources SET blockerCode = :blockerCode, lastScanAt = :scannedAt WHERE id = :sourceId",
+  )
+  fun markSourceBlocked(sourceId: String, blockerCode: String, scannedAt: Long): Int
+
   @Query("SELECT COUNT(*) FROM accounts")
   fun accountCount(): Int
 

@@ -57,3 +57,11 @@ fun SourceCommitResult.toMap(): Map<String, Any?> = mapOf(
   "preview" to preview.toMap(),
   "jobsAdded" to jobsAdded,
 )
+
+fun SourceScanResult.toMap(): Map<String, Any?> = mapOf(
+  "sourceId" to sourceId,
+  "preview" to preview?.toMap(),
+  "revisionsAdded" to revisionsAdded,
+  "jobsAdded" to jobsAdded,
+  "blocker" to blocker?.name?.lowercase(),
+)

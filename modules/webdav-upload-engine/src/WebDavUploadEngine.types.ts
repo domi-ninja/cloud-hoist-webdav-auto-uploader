@@ -220,6 +220,16 @@ export const mediaPermissionStateSchema = z.object({
   canAskAgain: z.boolean(),
 });
 
+export const sourceScanResultSchema = z.object({
+  sourceId: z.string().uuid(),
+  preview: sourcePreviewSchema.nullable(),
+  revisionsAdded: z.number().int().nonnegative(),
+  jobsAdded: z.number().int().nonnegative(),
+  blocker: z
+    .enum(["permission_revoked", "folder_unavailable", "unreadable_document"])
+    .nullable(),
+});
+
 export type AccountCapabilities = z.infer<typeof accountCapabilitiesSchema>;
 export type AccountSummary = z.infer<typeof accountSummarySchema>;
 export type AccountHealth = z.infer<typeof accountHealthSchema>;
@@ -244,6 +254,7 @@ export type SourcePreview = z.infer<typeof sourcePreviewSchema>;
 export type SourceCommit = z.infer<typeof sourceCommitSchema>;
 export type SourceCommitResult = z.infer<typeof sourceCommitResultSchema>;
 export type MediaPermissionState = z.infer<typeof mediaPermissionStateSchema>;
+export type SourceScanResult = z.infer<typeof sourceScanResultSchema>;
 
 export type WebDavUploadEngineModuleEvents = {
   onSnapshotInvalidated: (payload: SnapshotInvalidated) => void;

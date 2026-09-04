@@ -399,6 +399,28 @@ class EngineDaoTest {
     assertEquals(SourceAccessBlocker.PERMISSION_REVOKED, error.blocker)
   }
 
+  @Test
+  fun failedRescanBlocksSourceWithoutDeletingItsQueue() {
+    dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
+    dao.upsertSource(source().copy(localUri = "mediastore://camera"))
+    val manager = SourceDiscoveryManager(
+      accountRepository = storedAccountRepository(),
+      recorder = SourceRevisionRecorder(dao, now = { 30_000 }),
+      mediaDiscovery = MediaPresetDiscovery {
+        MediaDiscovery(emptyList(), MediaPermissionAccess.DENIED)
+      },
+      documentTreeDiscovery = DocumentTreeSourceDiscovery { emptyList() },
+    )
+
+    val result = manager.scan("source-1")
+
+    assertEquals(SourceAccessBlocker.PERMISSION_REVOKED, result.blocker)
+    assertEquals("permission_revoked", dao.source("source-1")?.blockerCode)
+    assertEquals(30_000L, dao.source("source-1")?.lastScanAt)
+    assertEquals(1, dao.jobCount())
+    assertNull(dao.claimNext(30_001, "worker"))
+  }
+
   private fun account() = AccountEntity(
     id = "account-1",
     serverUrl = "https://cloud.example.test",

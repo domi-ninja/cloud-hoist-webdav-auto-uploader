@@ -13,6 +13,12 @@ class SourceRevisionRecorder(
   private val newId: () -> String = { UUID.randomUUID().toString() },
   private val now: () -> Long = System::currentTimeMillis,
 ) {
+  fun source(sourceId: String): SourceEntity? = dao.source(sourceId)
+
+  fun markBlocked(sourceId: String, blocker: SourceAccessBlocker) {
+    dao.markSourceBlocked(sourceId, blocker.name.lowercase(), now())
+  }
+
   fun record(
     source: SourceEntity,
     files: List<DiscoveredFile>,

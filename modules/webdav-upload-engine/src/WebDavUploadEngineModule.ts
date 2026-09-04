@@ -20,6 +20,7 @@ import {
   sourceCommitSchema,
   sourcePreviewSchema,
   sourceSelectionSchema,
+  sourceScanResultSchema,
   unresolvedFailureSchema,
   type ActivityEntry,
   type AccountSummary,
@@ -37,6 +38,7 @@ import {
   type SourceCommitResult,
   type SourcePreview,
   type SourceSelection,
+  type SourceScanResult,
   type SourceInput,
   type SourceSummary,
   type UnresolvedFailure,
@@ -67,6 +69,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   commitSourceAsync(source: SourceCommit): Promise<unknown>;
   getMediaPermissionAsync(): Promise<unknown>;
   requestMediaPermissionAsync(): Promise<unknown>;
+  scanSourceAsync(sourceId: string): Promise<unknown>;
 }
 
 const nativeModule =
@@ -239,6 +242,11 @@ export const webDavUploadEngine = {
     runValueCommand(
       () => nativeModule.requestMediaPermissionAsync(),
       (value): MediaPermissionState => mediaPermissionStateSchema.parse(value),
+    ),
+  scanSource: (sourceId: string) =>
+    runValueCommand(
+      () => nativeModule.scanSourceAsync(z.string().uuid().parse(sourceId)),
+      (value): SourceScanResult => sourceScanResultSchema.parse(value),
     ),
 
   addSnapshotInvalidatedListener(
