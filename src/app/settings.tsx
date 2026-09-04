@@ -144,7 +144,14 @@ export default function SettingsScreen() {
             About
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            {project.displayName} · GPL-3.0-or-later
+            {project.displayName} · {project.license}
+          </Text>
+          <Text className="text-base text-muted-light dark:text-muted-dark">
+            {project.compatibilityNotice}
+          </Text>
+          <Text className="text-base text-muted-light dark:text-muted-dark">
+            The app source is licensed under {project.license}. Third-party packages retain
+            their own licenses.
           </Text>
         </View>
       </ScrollView>
