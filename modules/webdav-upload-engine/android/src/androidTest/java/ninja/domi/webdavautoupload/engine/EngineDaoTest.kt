@@ -187,6 +187,29 @@ class EngineDaoTest {
   }
 
   @Test
+  fun storesManyIndependentSourcesWithoutTruncatingOrReplacing() {
+    assertTrue(dao.removeSource("source-1"))
+    val expectedIds = List(256) { index -> "folder-${index.toString().padStart(3, '0')}" }
+
+    expectedIds.forEachIndexed { index, id ->
+      dao.upsertSource(
+        source().copy(
+          id = id,
+          name = "Folder $index",
+          kind = "saf",
+          localUri = "content://documents/tree/$index",
+          createdAt = index.toLong(),
+        ),
+      )
+    }
+
+    val stored = dao.allSources()
+    assertEquals(256, stored.size)
+    assertEquals(expectedIds, stored.map(SourceEntity::id))
+    assertEquals(256, stored.map(SourceEntity::localUri).distinct().size)
+  }
+
+  @Test
   fun disabledAndBlockedSourcesCannotFeedClaims() {
     dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
     dao.upsertSource(source().copy(enabled = false))

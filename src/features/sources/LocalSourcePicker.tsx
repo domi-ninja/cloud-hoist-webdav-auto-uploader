@@ -10,6 +10,7 @@ import { formatBytes } from "@/lib/format";
 import { ActionButton, Panel, Separator } from "@/components/ui";
 
 type LocalSourcePickerProps = {
+  mode?: "all" | "folder" | "media";
   onSelect: (selection: SourceSelection, preview: SourcePreview) => void;
 };
 
@@ -29,7 +30,10 @@ function sourceLabel(selection: SourceSelection) {
   }
 }
 
-export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
+export function LocalSourcePicker({
+  mode = "all",
+  onSelect,
+}: LocalSourcePickerProps) {
   const [pendingMedia, setPendingMedia] = useState<PendingMediaSelection>();
   const [selection, setSelection] = useState<SourceSelection>();
   const [preview, setPreview] = useState<SourcePreview>();
@@ -109,33 +113,49 @@ export function LocalSourcePicker({ onSelect }: LocalSourcePickerProps) {
   return (
     <Panel>
       <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-        Choose what to upload
+        {mode === "folder"
+          ? "Choose a watch folder"
+          : mode === "media"
+            ? "Choose a media collection"
+            : "Choose what to upload"}
       </Text>
       <Text className="text-base text-muted-light dark:text-muted-dark">
-        Pick a media collection or any readable Android folder.
+        {mode === "folder"
+          ? "Pick any readable Android folder. You can add as many as you need."
+          : mode === "media"
+            ? "Watch new photos from an Android media collection."
+            : "Pick a media collection or any readable Android folder."}
       </Text>
 
-      <Separator />
-      <ActionButton
-        accessibilityLabel="Choose Camera source"
-        disabled={busy}
-        label="Camera"
-        onPress={() => void chooseMedia({ type: "camera" })}
-      />
-      <Separator />
-      <ActionButton
-        accessibilityLabel="Choose Screenshots source"
-        disabled={busy}
-        label="Screenshots"
-        onPress={() => void chooseMedia({ type: "screenshots" })}
-      />
-      <Separator />
-      <ActionButton
-        accessibilityLabel="Choose local folder source"
-        disabled={busy}
-        label="Choose folder"
-        onPress={() => void chooseFolder()}
-      />
+      {mode !== "folder" ? (
+        <>
+          <Separator />
+          <ActionButton
+            accessibilityLabel="Choose Camera source"
+            disabled={busy}
+            label="Camera"
+            onPress={() => void chooseMedia({ type: "camera" })}
+          />
+          <Separator />
+          <ActionButton
+            accessibilityLabel="Choose Screenshots source"
+            disabled={busy}
+            label="Screenshots"
+            onPress={() => void chooseMedia({ type: "screenshots" })}
+          />
+        </>
+      ) : null}
+      {mode !== "media" ? (
+        <>
+          <Separator />
+          <ActionButton
+            accessibilityLabel="Choose local folder source"
+            disabled={busy}
+            label="Choose folder"
+            onPress={() => void chooseFolder()}
+          />
+        </>
+      ) : null}
 
       {pendingMedia && !preview ? (
         <View className="gap-4">

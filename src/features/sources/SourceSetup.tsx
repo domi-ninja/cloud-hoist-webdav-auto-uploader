@@ -15,8 +15,16 @@ import {
 } from "./default-destination";
 
 type SourceSetupProps = {
+  mode?: SourceSetupMode;
   onComplete: () => void;
   onCancel?: () => void;
+};
+
+export type SourceSetupMode = "all" | "folder" | "media";
+
+type SavedSource = {
+  name: string;
+  remotePath: string[];
 };
 
 function selectionName(selection: SourceSelection) {
@@ -42,7 +50,12 @@ function ChoiceMark({ selected }: { selected: boolean }) {
   );
 }
 
-export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
+export function SourceSetup({
+  mode = "all",
+  onComplete,
+  onCancel,
+}: SourceSetupProps) {
+  const [pickerMode, setPickerMode] = useState(mode);
   const [selection, setSelection] = useState<SourceSelection>();
   const [preview, setPreview] = useState<SourcePreview>();
   const [remotePath, setRemotePath] = useState<string[]>();
@@ -51,11 +64,48 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
   const [includeExisting, setIncludeExisting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
+  const [savedSource, setSavedSource] = useState<SavedSource>();
+
+  const resetForAnotherFolder = () => {
+    setPickerMode("folder");
+    setSelection(undefined);
+    setPreview(undefined);
+    setRemotePath(undefined);
+    setChoosingDestination(false);
+    setName("");
+    setIncludeExisting(false);
+    setError(undefined);
+    setSavedSource(undefined);
+  };
+
+  if (savedSource) {
+    return (
+      <Panel>
+        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+          Source added
+        </Text>
+        <Text
+          accessibilityLiveRegion="polite"
+          className="text-base text-muted-light dark:text-muted-dark"
+        >
+          {savedSource.name} will upload to {displayPath(savedSource.remotePath)}.
+        </Text>
+        <ActionButton
+          accessibilityLabel="Add another watch folder"
+          label="Add another watch folder"
+          onPress={resetForAnotherFolder}
+          tone="primary"
+        />
+        <ActionButton label="Done" onPress={onComplete} />
+      </Panel>
+    );
+  }
 
   if (!selection || !preview) {
     return (
       <View className="gap-4">
         <LocalSourcePicker
+          mode={pickerMode}
           onSelect={(nextSelection, nextPreview) => {
             setSelection(nextSelection);
             setPreview(nextPreview);
@@ -116,13 +166,14 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
       remotePathSegments: destination.value,
       includeExisting,
     });
-    setBusy(false);
     if (!result.ok) {
+      setBusy(false);
       setError(result.error);
       return;
     }
     await webDavUploadEngine.requestNotificationPermission();
-    onComplete();
+    setBusy(false);
+    setSavedSource({ name: name.trim(), remotePath: destination.value });
   };
 
   return (
@@ -201,6 +252,7 @@ export function SourceSetup({ onComplete, onCancel }: SourceSetupProps) {
           setSelection(undefined);
           setPreview(undefined);
           setRemotePath(undefined);
+          setError(undefined);
         }}
       />
       {onCancel ? (
