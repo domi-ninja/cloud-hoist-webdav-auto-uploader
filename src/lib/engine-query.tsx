@@ -10,6 +10,7 @@ import { useEffect, type PropsWithChildren } from "react";
 import webDavUploadEngine, {
   type AccountHealth,
 } from "../../modules/webdav-upload-engine";
+import { enginePollInterval } from "./engine-polling";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +58,8 @@ export function useEngineSnapshot() {
   return useQuery({
     queryKey: [...engineKey, "snapshot"],
     queryFn: () => webDavUploadEngine.getSnapshot(),
+    refetchInterval: (query) => enginePollInterval(query.state.data),
+    refetchIntervalInBackground: false,
   });
 }
 
