@@ -1,6 +1,8 @@
 package ninja.domi.webdavautoupload.engine
 
 import android.content.Context
+import android.content.Intent
+import android.content.pm.ServiceInfo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.NetworkType
@@ -88,6 +90,24 @@ class EngineWorkSchedulerTest {
 
     assertTrue(EnginePreferences(context).isPaused())
     assertTrue(activeWork(EngineWorkScheduler.QUEUE_DRAIN_WORK).isEmpty())
+  }
+
+  @Test
+  fun notificationActionPausesActiveQueueWork() {
+    scheduler.requestQueueDrain()
+
+    PauseUploadsReceiver().onReceive(context, Intent())
+
+    assertTrue(preferences.isPaused())
+    assertTrue(activeWork(EngineWorkScheduler.QUEUE_DRAIN_WORK).isEmpty())
+  }
+
+  @Test
+  fun transferForegroundInfoUsesDataSyncAndOffersPause() {
+    val info = TransferNotification(context).foregroundInfo(queueCount = 2)
+
+    assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC, info.foregroundServiceType)
+    assertEquals("Pause", info.notification.actions.single().title)
   }
 
   @Test

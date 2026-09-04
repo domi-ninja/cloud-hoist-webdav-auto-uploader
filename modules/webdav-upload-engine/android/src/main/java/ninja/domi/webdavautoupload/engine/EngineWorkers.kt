@@ -72,7 +72,20 @@ class QueueDrainWorker(
   parameters: WorkerParameters,
 ) : Worker(context, parameters) {
   override fun doWork(): Result {
-    val drain = QueueDrainRunner.create(applicationContext) { isStopped }.run()
+    val queueCount = EngineRoomDatabase.open(applicationContext).engineDao()
+      .eligibleJobCount(System.currentTimeMillis())
+    val notification = if (queueCount > 0) {
+      TransferNotification(applicationContext).also {
+        setForegroundAsync(it.foregroundInfo(queueCount)).get()
+      }
+    } else {
+      null
+    }
+    val drain = QueueDrainRunner.create(
+      context = applicationContext,
+      isStopped = { isStopped },
+      onProgress = { progress -> notification?.update(progress, queueCount) },
+    ).run()
     return if (drain.retryWorker) Result.retry() else Result.success()
   }
 }
