@@ -21,6 +21,7 @@ import {
   sourcePreviewSchema,
   sourceSelectionSchema,
   sourceScanResultSchema,
+  transferConstraintsSchema,
   unresolvedFailureSchema,
   type ActivityEntry,
   type AccountSummary,
@@ -41,6 +42,7 @@ import {
   type SourceScanResult,
   type SourceInput,
   type SourceSummary,
+  type TransferConstraints,
   type UnresolvedFailure,
   type WebDavUploadEngineModuleEvents,
 } from "./WebDavUploadEngine.types";
@@ -54,6 +56,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   resumeAsync(): Promise<void>;
   scanNowAsync(): Promise<void>;
   retryFailedAsync(): Promise<void>;
+  setTransferConstraintsAsync(input: TransferConstraints): Promise<void>;
   addOrUpdateSourceAsync(source: SourceInput): Promise<void>;
   removeSourceAsync(sourceId: string): Promise<void>;
   resetSourceHistoryAsync(sourceId: string): Promise<void>;
@@ -165,6 +168,10 @@ export const webDavUploadEngine = {
   resume: () => runCommand(() => nativeModule.resumeAsync()),
   scanNow: () => runCommand(() => nativeModule.scanNowAsync()),
   retryFailed: () => runCommand(() => nativeModule.retryFailedAsync()),
+  setTransferConstraints: (input: TransferConstraints) => {
+    const constraints = transferConstraintsSchema.parse(input);
+    return runCommand(() => nativeModule.setTransferConstraintsAsync(constraints));
+  },
   addOrUpdateSource: (source: SourceInput) => {
     const input = sourceInputSchema.parse(source);
     return runCommand(() => nativeModule.addOrUpdateSourceAsync(input));

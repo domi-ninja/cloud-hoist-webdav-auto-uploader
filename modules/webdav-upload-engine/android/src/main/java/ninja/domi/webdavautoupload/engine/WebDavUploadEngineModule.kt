@@ -108,6 +108,11 @@ class WebDavUploadEngineModule : Module() {
       engine.retryFailed()
     }
 
+    AsyncFunction("setTransferConstraintsAsync") { input: TransferConstraintsRecord ->
+      workScheduler.updateDrainConstraints(input.toConstraints())
+      engine.schedulerChanged()
+    }
+
     AsyncFunction("addOrUpdateSourceAsync") { source: SourceInputRecord ->
       engine.addOrUpdateSource(source)
     }

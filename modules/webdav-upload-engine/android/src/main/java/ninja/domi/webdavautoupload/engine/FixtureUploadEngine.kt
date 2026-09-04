@@ -140,6 +140,11 @@ internal class FixtureUploadEngine(
   }
 
   @Synchronized
+  fun schedulerChanged() {
+    invalidate()
+  }
+
+  @Synchronized
   fun addOrUpdateSource(input: SourceInputRecord) {
     validate(input)
     val sourceId = input.id ?: "source-${nextSourceId++}"
