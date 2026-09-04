@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">WebDAV Auto Upload</title>
+  <desc id="desc">A phone sends a file toward a connected cloud.</desc>
+
+  <!-- background:start -->
+  <g id="background">
+    <rect width="1024" height="1024" fill="#2C6E5B" />
+  </g>
+  <!-- background:end -->
+
+  <!-- mark:start -->
+  <g id="mark" shape-rendering="geometricPrecision" transform="translate(76.8 76.8) scale(.85)">
+    <!-- A connected-circle cloud, familiar without reproducing Nextcloud's mark. -->
+    <g fill="none" stroke="#F5F1E8" stroke-linecap="round" stroke-linejoin="round" stroke-width="58">
+      <path d="M500 300 552 278M688 278l52 38" />
+      <circle cx="472" cy="318" r="47" />
+      <circle cx="620" cy="254" r="91" />
+      <circle cx="770" cy="336" r="47" />
+    </g>
+
+    <!-- The upload arrow rises out of the phone screen. -->
+    <path fill="#95D7C4" d="m573 369 108 91h-55v167H520V460h-55z" transform="translate(15 18)" />
+    <path fill="#F5F1E8" d="m573 369 108 91h-55v167H520V460h-55z" />
+
+    <!-- A diagonal phone rendered as a compact three-dimensional slab. -->
+    <path fill="#76B9A7" d="m224 604 231 146v82L224 686z" />
+    <path fill="#95D7C4" d="m455 750 310-126v82L455 832z" />
+    <path fill="#F5F1E8" d="m224 604 304-124 237 144-310 126z" />
+    <path fill="#214B3F" d="m286 611 237-97 180 109-242 99z" />
+    <ellipse cx="317" cy="612" rx="15" ry="9" fill="#95D7C4" transform="rotate(-22 317 612)" />
+  </g>
+  <!-- mark:end -->
+</svg>
