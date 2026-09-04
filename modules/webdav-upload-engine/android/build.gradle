@@ -17,6 +17,9 @@ android {
   lintOptions {
     abortOnError false
   }
+  sourceSets {
+    androidTest.assets.srcDirs += files("$projectDir/schemas")
+  }
 }
 
 ksp {

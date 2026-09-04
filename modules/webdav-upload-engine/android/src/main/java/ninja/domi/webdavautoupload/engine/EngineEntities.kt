@@ -88,11 +88,23 @@ data class LocalRevisionEntity(
       childColumns = ["revisionId"],
       onDelete = ForeignKey.CASCADE,
     ),
+    ForeignKey(
+      entity = AccountEntity::class,
+      parentColumns = ["id"],
+      childColumns = ["accountId"],
+      onDelete = ForeignKey.CASCADE,
+    ),
   ],
-  indices = [Index("sourceId"), Index(value = ["revisionId"], unique = true), Index("claimToken")],
+  indices = [
+    Index("accountId"),
+    Index("sourceId"),
+    Index(value = ["revisionId"], unique = true),
+    Index("claimToken"),
+  ],
 )
 data class UploadJobEntity(
   @PrimaryKey val id: String,
+  val accountId: String,
   val sourceId: String,
   val revisionId: String,
   val remotePathSegments: List<String>,

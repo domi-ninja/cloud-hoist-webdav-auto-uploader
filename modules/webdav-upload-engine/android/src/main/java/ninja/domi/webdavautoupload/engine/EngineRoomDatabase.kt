@@ -13,6 +13,8 @@ import androidx.room.Transaction
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
 import androidx.room.Upsert
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import org.json.JSONArray
 
 object JobState {
@@ -178,7 +180,7 @@ interface EngineDao {
     UploadAttemptEntity::class,
     ChunkCheckpointEntity::class,
   ],
-  version = 1,
+  version = 2,
   exportSchema = true,
 )
 @TypeConverters(EngineTypeConverters::class)
@@ -190,6 +192,91 @@ abstract class EngineRoomDatabase : RoomDatabase() {
       context.applicationContext,
       EngineRoomDatabase::class.java,
       "webdav-upload-engine.db",
-    ).build()
+    ).addMigrations(MIGRATION_1_2).build()
+
+    val MIGRATION_1_2 = object : Migration(1, 2) {
+      override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+          """
+          CREATE TABLE upload_jobs_new (
+            id TEXT NOT NULL PRIMARY KEY,
+            accountId TEXT NOT NULL,
+            sourceId TEXT NOT NULL,
+            revisionId TEXT NOT NULL,
+            remotePathSegments TEXT NOT NULL,
+            remoteFileName TEXT NOT NULL,
+            state TEXT NOT NULL,
+            createdAt INTEGER NOT NULL,
+            startedAt INTEGER,
+            completedAt INTEGER,
+            retryAt INTEGER,
+            attemptCount INTEGER NOT NULL,
+            claimToken TEXT,
+            blockerCode TEXT,
+            lastErrorCode TEXT,
+            FOREIGN KEY(accountId) REFERENCES accounts(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+            FOREIGN KEY(sourceId) REFERENCES sources(id) ON UPDATE NO ACTION ON DELETE CASCADE,
+            FOREIGN KEY(revisionId) REFERENCES local_revisions(id) ON UPDATE NO ACTION ON DELETE CASCADE
+          )
+          """.trimIndent(),
+        )
+        database.execSQL(
+          """
+          INSERT INTO upload_jobs_new
+          SELECT upload_jobs.id, sources.accountId, upload_jobs.sourceId, upload_jobs.revisionId,
+            upload_jobs.remotePathSegments, upload_jobs.remoteFileName, upload_jobs.state,
+            upload_jobs.createdAt, upload_jobs.startedAt, upload_jobs.completedAt,
+            upload_jobs.retryAt, upload_jobs.attemptCount, upload_jobs.claimToken,
+            upload_jobs.blockerCode, upload_jobs.lastErrorCode
+          FROM upload_jobs
+          INNER JOIN sources ON sources.id = upload_jobs.sourceId
+          """.trimIndent(),
+        )
+        database.execSQL("CREATE TEMP TABLE upload_attempts_backup AS SELECT * FROM upload_attempts")
+        database.execSQL("CREATE TEMP TABLE chunk_checkpoints_backup AS SELECT * FROM chunk_checkpoints")
+        database.execSQL("DROP TABLE upload_attempts")
+        database.execSQL("DROP TABLE chunk_checkpoints")
+        database.execSQL("DROP TABLE upload_jobs")
+        database.execSQL("ALTER TABLE upload_jobs_new RENAME TO upload_jobs")
+        database.execSQL(
+          """
+          CREATE TABLE upload_attempts (
+            id TEXT NOT NULL PRIMARY KEY,
+            jobId TEXT NOT NULL,
+            startedAt INTEGER NOT NULL,
+            finishedAt INTEGER,
+            resultCode TEXT,
+            FOREIGN KEY(jobId) REFERENCES upload_jobs(id) ON UPDATE NO ACTION ON DELETE CASCADE
+          )
+          """.trimIndent(),
+        )
+        database.execSQL(
+          "INSERT INTO upload_attempts SELECT id, jobId, startedAt, finishedAt, resultCode FROM upload_attempts_backup",
+        )
+        database.execSQL(
+          """
+          CREATE TABLE chunk_checkpoints (
+            uploadId TEXT NOT NULL PRIMARY KEY,
+            jobId TEXT NOT NULL,
+            chunkSize INTEGER NOT NULL,
+            confirmedChunks TEXT NOT NULL,
+            updatedAt INTEGER NOT NULL,
+            FOREIGN KEY(jobId) REFERENCES upload_jobs(id) ON UPDATE NO ACTION ON DELETE CASCADE
+          )
+          """.trimIndent(),
+        )
+        database.execSQL(
+          "INSERT INTO chunk_checkpoints SELECT uploadId, jobId, chunkSize, confirmedChunks, updatedAt FROM chunk_checkpoints_backup",
+        )
+        database.execSQL("DROP TABLE upload_attempts_backup")
+        database.execSQL("DROP TABLE chunk_checkpoints_backup")
+        database.execSQL("CREATE INDEX index_upload_jobs_accountId ON upload_jobs(accountId)")
+        database.execSQL("CREATE INDEX index_upload_jobs_sourceId ON upload_jobs(sourceId)")
+        database.execSQL("CREATE UNIQUE INDEX index_upload_jobs_revisionId ON upload_jobs(revisionId)")
+        database.execSQL("CREATE INDEX index_upload_jobs_claimToken ON upload_jobs(claimToken)")
+        database.execSQL("CREATE INDEX index_upload_attempts_jobId ON upload_attempts(jobId)")
+        database.execSQL("CREATE UNIQUE INDEX index_chunk_checkpoints_jobId ON chunk_checkpoints(jobId)")
+      }
+    }
   }
 }

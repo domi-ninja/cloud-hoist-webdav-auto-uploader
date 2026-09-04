@@ -2,8 +2,11 @@ package ninja.domi.webdavautoupload.engine
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.testing.MigrationTestHelper
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -14,11 +17,19 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class EngineDaoTest {
+  @get:Rule
+  val migrationHelper = MigrationTestHelper(
+    InstrumentationRegistry.getInstrumentation(),
+    EngineRoomDatabase::class.java.canonicalName,
+    FrameworkSQLiteOpenHelperFactory(),
+  )
+
   private lateinit var database: EngineRoomDatabase
   private lateinit var dao: EngineDao
 
@@ -188,6 +199,58 @@ class EngineDaoTest {
     assertEquals("j1", dao.claimNext(4, "enabled-worker")?.id)
   }
 
+  @Test
+  fun migrationOneToTwoBackfillsAccountIdAndPreservesChildren() {
+    val name = "engine-migration-test.db"
+    migrationHelper.createDatabase(name, 1).apply {
+      execSQL(
+        "INSERT INTO accounts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("account-1", "https://cloud.test", "login", "dav", "Domi", 1, "34", 1, null, "key"),
+      )
+      execSQL(
+        "INSERT INTO sources VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("source-1", "account-1", "Camera", "media_store", "content://media", "[]", 1, 1, null, null),
+      )
+      execSQL(
+        "INSERT INTO local_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("revision-1", "source-1", "provider", "content://photo", "photo.jpg", 10, 1, 1),
+      )
+      execSQL(
+        "INSERT INTO upload_jobs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("job-1", "source-1", "revision-1", "[]", "photo.jpg", "queued", 1, null, null, null, 0, null, null, null),
+      )
+      execSQL(
+        "INSERT INTO upload_attempts VALUES (?, ?, ?, ?, ?)",
+        arrayOf("attempt-1", "job-1", 1, null, null),
+      )
+      execSQL(
+        "INSERT INTO chunk_checkpoints VALUES (?, ?, ?, ?, ?)",
+        arrayOf("upload-1", "job-1", 10, "[]", 1),
+      )
+      close()
+    }
+
+    migrationHelper.runMigrationsAndValidate(
+      name,
+      2,
+      true,
+      EngineRoomDatabase.MIGRATION_1_2,
+    ).use { migrated ->
+      migrated.query("SELECT accountId FROM upload_jobs WHERE id = 'job-1'").use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertEquals("account-1", cursor.getString(0))
+      }
+      migrated.query("SELECT COUNT(*) FROM upload_attempts").use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertEquals(1, cursor.getInt(0))
+      }
+      migrated.query("SELECT COUNT(*) FROM chunk_checkpoints").use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertEquals(1, cursor.getInt(0))
+      }
+    }
+  }
+
   private fun account() = AccountEntity(
     id = "account-1",
     serverUrl = "https://cloud.example.test",
@@ -232,6 +295,7 @@ class EngineDaoTest {
 
   private fun job(id: String, revisionId: String, createdAt: Long) = UploadJobEntity(
     id = id,
+    accountId = "account-1",
     sourceId = "source-1",
     revisionId = revisionId,
     remotePathSegments = listOf("Auto Upload", "Camera"),
