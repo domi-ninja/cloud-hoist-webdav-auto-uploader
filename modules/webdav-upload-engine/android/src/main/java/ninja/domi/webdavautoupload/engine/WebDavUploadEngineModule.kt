@@ -33,6 +33,15 @@ class WebDavUploadEngineModule : Module() {
     val context = appContext.reactContext ?: throw AccountStorageException()
     AndroidDocumentTreeGateway(context)
   }
+  private val sourceDiscoveryManager by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    SourceDiscoveryManager(
+      accountRepository = accountRepository,
+      recorder = SourceRevisionRecorder(engineDatabase.engineDao()),
+      mediaDiscovery = AndroidMediaStoreDiscovery(context),
+      documentTreeDiscovery = DocumentTreeDiscovery(documentTreeGateway),
+    )
+  }
 
   override fun definition() = ModuleDefinition {
     Name("WebDavUploadEngine")
@@ -128,6 +137,14 @@ class WebDavUploadEngineModule : Module() {
           mapOf("treeUri" to result.treeUri)
         }
       }
+    }
+
+    AsyncFunction("previewSourceAsync") { selection: SourceSelectionRecord ->
+      sourceDiscoveryManager.preview(selection.toSelection()).toMap()
+    }
+
+    AsyncFunction("commitSourceAsync") { source: SourceCommitRecord ->
+      sourceDiscoveryManager.commit(source.toCommit()).toMap()
     }
   }
 }

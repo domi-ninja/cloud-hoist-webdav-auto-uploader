@@ -1,5 +1,7 @@
 package ninja.domi.webdavautoupload.engine
 
+import expo.modules.kotlin.exception.CodedException
+
 enum class MediaPreset {
   CAMERA,
   SCREENSHOTS,
@@ -64,7 +66,15 @@ class SourceAccessException(
   val blocker: SourceAccessBlocker,
   message: String,
   cause: Throwable? = null,
-) : Exception(message, cause)
+) : CodedException("ERR_SOURCE_${blocker.name}", message, cause)
+
+fun interface MediaPresetDiscovery {
+  fun discover(preset: MediaPreset): MediaDiscovery
+}
+
+fun interface DocumentTreeSourceDiscovery {
+  fun discover(treeUri: String): List<DiscoveredFile>
+}
 
 fun Iterable<DiscoveredFile>.toSourcePreview(
   permissionAccess: MediaPermissionAccess? = null,

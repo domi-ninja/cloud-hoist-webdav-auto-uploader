@@ -2,8 +2,8 @@ package ninja.domi.webdavautoupload.engine
 
 class DocumentTreeDiscovery(
   private val gateway: DocumentTreeGateway,
-) {
-  fun discover(treeUri: String): List<DiscoveredFile> {
+) : DocumentTreeSourceDiscovery {
+  override fun discover(treeUri: String): List<DiscoveredFile> {
     val root = gateway.root(treeUri)
     if (!root.isDirectory) {
       throw SourceAccessException(

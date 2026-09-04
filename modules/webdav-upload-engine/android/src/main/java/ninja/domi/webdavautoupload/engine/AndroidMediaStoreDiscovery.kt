@@ -22,8 +22,8 @@ class AndroidMediaStoreDiscovery(
   private val permissionAccess: () -> MediaPermissionAccess = {
     currentMediaPermissionAccess(context)
   },
-) {
-  fun discover(preset: MediaPreset): MediaDiscovery {
+) : MediaPresetDiscovery {
+  override fun discover(preset: MediaPreset): MediaDiscovery {
     val items = buildList {
       contentResolver.query(
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),

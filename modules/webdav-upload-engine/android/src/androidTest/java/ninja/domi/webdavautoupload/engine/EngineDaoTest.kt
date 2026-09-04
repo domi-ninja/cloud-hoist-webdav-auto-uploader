@@ -347,6 +347,58 @@ class EngineDaoTest {
     )
   }
 
+  @Test
+  fun sourceManagerCommitsARescannedSelectionAsOneSource() {
+    var nextId = 0
+    val discovered = discoveredFile("provider", "photo.jpg", 50, 100)
+    val manager = SourceDiscoveryManager(
+      accountRepository = storedAccountRepository(),
+      recorder = SourceRevisionRecorder(
+        dao,
+        newId = { "record-${nextId++}" },
+        now = { 20_000 },
+      ),
+      mediaDiscovery = MediaPresetDiscovery {
+        MediaDiscovery(listOf(discovered), MediaPermissionAccess.PARTIAL)
+      },
+      documentTreeDiscovery = DocumentTreeSourceDiscovery { emptyList() },
+      newId = { "created-source" },
+      now = { 20_000 },
+    )
+
+    val result = manager.commit(
+      SourceCommit(
+        name = "  Screenshots  ",
+        selection = SourceSelection(SourceType.SCREENSHOTS),
+        remotePathSegments = listOf("Auto Upload", "Screenshots"),
+        includeExisting = false,
+      ),
+    )
+
+    assertEquals("created-source", result.sourceId)
+    assertEquals(SourcePreview(1, 50L, MediaPermissionAccess.PARTIAL), result.preview)
+    assertEquals(0, result.jobsAdded)
+    assertEquals(1, dao.sourceCount("created-source"))
+  }
+
+  @Test
+  fun sourceManagerRefusesMediaWithoutRuntimeAccess() {
+    val manager = SourceDiscoveryManager(
+      accountRepository = storedAccountRepository(),
+      recorder = SourceRevisionRecorder(dao),
+      mediaDiscovery = MediaPresetDiscovery {
+        MediaDiscovery(emptyList(), MediaPermissionAccess.DENIED)
+      },
+      documentTreeDiscovery = DocumentTreeSourceDiscovery { emptyList() },
+    )
+
+    val error = org.junit.Assert.assertThrows(SourceAccessException::class.java) {
+      manager.preview(SourceSelection(SourceType.CAMERA))
+    }
+
+    assertEquals(SourceAccessBlocker.PERMISSION_REVOKED, error.blocker)
+  }
+
   private fun account() = AccountEntity(
     id = "account-1",
     serverUrl = "https://cloud.example.test",
@@ -422,4 +474,21 @@ class EngineDaoTest {
     modifiedAtEpochSeconds = modified,
     mimeType = "image/jpeg",
   )
+
+  private fun storedAccountRepository() = object : AccountRepository {
+    private val stored = StoredAccount(
+      id = "account-1",
+      serverUrl = "https://cloud.example.test",
+      loginName = "login",
+      davUserId = "dav-user",
+      displayName = "Domi",
+      checkedAt = "2026-09-04T12:00:00Z",
+      capabilities = AccountCapabilities("34.0.0", true, null),
+    )
+
+    override fun currentAccount() = stored
+    override fun credential(): StoredAccountCredential? = null
+    override fun save(credential: StoredAccountCredential) = Unit
+    override fun clear() = Unit
+  }
 }

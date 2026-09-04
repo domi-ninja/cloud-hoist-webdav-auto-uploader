@@ -186,6 +186,35 @@ export const selectedDocumentTreeSchema = z.object({
   treeUri: z.string().startsWith("content://"),
 });
 
+export const sourceSelectionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("camera") }),
+  z.object({ type: z.literal("screenshots") }),
+  z.object({
+    type: z.literal("document_tree"),
+    treeUri: z.string().startsWith("content://"),
+  }),
+]);
+
+export const sourcePreviewSchema = z.object({
+  eligibleFileCount: z.number().int().nonnegative(),
+  totalBytes: z.number().int().nonnegative(),
+  permissionAccess: z.enum(["full", "partial", "denied"]).nullable(),
+});
+
+export const sourceCommitSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().trim().min(1),
+  selection: sourceSelectionSchema,
+  remotePathSegments: remotePathSegmentsSchema,
+  includeExisting: z.boolean(),
+});
+
+export const sourceCommitResultSchema = z.object({
+  sourceId: z.string().uuid(),
+  preview: sourcePreviewSchema,
+  jobsAdded: z.number().int().nonnegative(),
+});
+
 export type AccountCapabilities = z.infer<typeof accountCapabilitiesSchema>;
 export type AccountSummary = z.infer<typeof accountSummarySchema>;
 export type AccountHealth = z.infer<typeof accountHealthSchema>;
@@ -205,36 +234,46 @@ export type LoginFlowStart = z.infer<typeof loginFlowStartSchema>;
 export type LoginFlowPoll = z.infer<typeof loginFlowPollSchema>;
 export type RemoteFolder = z.infer<typeof remoteFolderSchema>;
 export type SelectedDocumentTree = z.infer<typeof selectedDocumentTreeSchema>;
+export type SourceSelection = z.infer<typeof sourceSelectionSchema>;
+export type SourcePreview = z.infer<typeof sourcePreviewSchema>;
+export type SourceCommit = z.infer<typeof sourceCommitSchema>;
+export type SourceCommitResult = z.infer<typeof sourceCommitResultSchema>;
 
 export type WebDavUploadEngineModuleEvents = {
   onSnapshotInvalidated: (payload: SnapshotInvalidated) => void;
 };
 
-export type EngineError =
-  | { code: "source_not_found"; message: string }
-  | { code: "invalid_input"; message: string }
-  | { code: "invalid_server_url"; message: string }
-  | { code: "insecure_server_url"; message: string }
-  | { code: "invalid_credentials"; message: string }
-  | { code: "maintenance"; message: string }
-  | { code: "unsupported_response"; message: string }
-  | { code: "unexpected_redirect"; message: string }
-  | { code: "certificate"; message: string }
-  | { code: "network"; message: string }
-  | { code: "dns"; message: string }
-  | { code: "timeout"; message: string }
-  | { code: "connection_refused"; message: string }
-  | { code: "server"; message: string }
-  | { code: "login_expired"; message: string }
-  | { code: "login_cancelled"; message: string }
-  | { code: "account_already_configured"; message: string }
-  | { code: "account_not_configured"; message: string }
-  | { code: "account_storage"; message: string }
-  | { code: "dav_permission"; message: string }
-  | { code: "dav_not_found"; message: string }
-  | { code: "dav_invalid_path"; message: string }
-  | { code: "dav_quota"; message: string }
-  | { code: "native_failure"; message: string };
+export type EngineError = {
+  code:
+    | "source_not_found"
+    | "invalid_input"
+    | "invalid_server_url"
+    | "insecure_server_url"
+    | "invalid_credentials"
+    | "maintenance"
+    | "unsupported_response"
+    | "unexpected_redirect"
+    | "certificate"
+    | "network"
+    | "dns"
+    | "timeout"
+    | "connection_refused"
+    | "server"
+    | "login_expired"
+    | "login_cancelled"
+    | "account_already_configured"
+    | "account_not_configured"
+    | "account_storage"
+    | "dav_permission"
+    | "dav_not_found"
+    | "dav_invalid_path"
+    | "dav_quota"
+    | "source_permission_revoked"
+    | "source_folder_unavailable"
+    | "source_unreadable_document"
+    | "native_failure";
+  message: string;
+};
 
 export type EngineCommandResult = { ok: true } | { ok: false; error: EngineError };
 export type EngineValueResult<T> =

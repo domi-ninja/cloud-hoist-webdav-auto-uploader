@@ -15,6 +15,10 @@ import {
   sourceInputSchema,
   sourceSummarySchema,
   selectedDocumentTreeSchema,
+  sourceCommitResultSchema,
+  sourceCommitSchema,
+  sourcePreviewSchema,
+  sourceSelectionSchema,
   unresolvedFailureSchema,
   type ActivityEntry,
   type AccountSummary,
@@ -27,6 +31,10 @@ import {
   type ManualAccountInput,
   type RemoteFolder,
   type SelectedDocumentTree,
+  type SourceCommit,
+  type SourceCommitResult,
+  type SourcePreview,
+  type SourceSelection,
   type SourceInput,
   type SourceSummary,
   type UnresolvedFailure,
@@ -53,6 +61,8 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   listRemoteFoldersAsync(pathSegments: string[]): Promise<unknown>;
   createRemoteFolderAsync(parentPathSegments: string[], name: string): Promise<unknown>;
   pickDocumentTreeAsync(initialUri: string | null): Promise<unknown>;
+  previewSourceAsync(selection: SourceSelection): Promise<unknown>;
+  commitSourceAsync(source: SourceCommit): Promise<unknown>;
 }
 
 const nativeModule =
@@ -93,6 +103,9 @@ function normalizeError(error: unknown): EngineError {
     ERR_DAV_NOT_FOUND: "dav_not_found",
     ERR_DAV_INVALID_PATH: "dav_invalid_path",
     ERR_DAV_QUOTA: "dav_quota",
+    ERR_SOURCE_PERMISSION_REVOKED: "source_permission_revoked",
+    ERR_SOURCE_FOLDER_UNAVAILABLE: "source_folder_unavailable",
+    ERR_SOURCE_UNREADABLE_DOCUMENT: "source_unreadable_document",
   } as const satisfies Record<string, EngineError["code"]>;
   const code = knownCodes[parsed.data.code as keyof typeof knownCodes];
   if (code) {
@@ -199,6 +212,20 @@ export const webDavUploadEngine = {
       (value): SelectedDocumentTree | null =>
         selectedDocumentTreeSchema.nullable().parse(value),
     ),
+  previewSource: (selection: SourceSelection) => {
+    const input = sourceSelectionSchema.parse(selection);
+    return runValueCommand(
+      () => nativeModule.previewSourceAsync(input),
+      (value): SourcePreview => sourcePreviewSchema.parse(value),
+    );
+  },
+  commitSource: (source: SourceCommit) => {
+    const input = sourceCommitSchema.parse(source);
+    return runValueCommand(
+      () => nativeModule.commitSourceAsync(input),
+      (value): SourceCommitResult => sourceCommitResultSchema.parse(value),
+    );
+  },
 
   addSnapshotInvalidatedListener(
     listener: (revision: number) => void,
