@@ -83,6 +83,12 @@ interface EngineDao {
   fun source(sourceId: String): SourceEntity?
 
   @Query(
+    "SELECT * FROM sources WHERE enabled = 1 AND (:kind IS NULL OR kind = :kind) " +
+      "ORDER BY createdAt ASC, id ASC",
+  )
+  fun enabledSources(kind: String? = null): List<SourceEntity>
+
+  @Query(
     "UPDATE sources SET blockerCode = :blockerCode, lastScanAt = :scannedAt WHERE id = :sourceId",
   )
   fun markSourceBlocked(sourceId: String, blockerCode: String, scannedAt: Long): Int
