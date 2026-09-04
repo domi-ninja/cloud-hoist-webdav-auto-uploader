@@ -1,6 +1,6 @@
 # 078 Live acceptance stops after login
 
-Status: in progress
+Status: complete
 
 Found while working on: 014
 
