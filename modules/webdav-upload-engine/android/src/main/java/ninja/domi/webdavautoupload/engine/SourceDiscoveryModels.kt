@@ -38,6 +38,34 @@ data class SourcePreview(
   val permissionAccess: MediaPermissionAccess? = null,
 )
 
+data class DocumentTreeNode(
+  val providerId: String,
+  val displayName: String,
+  val localUri: String,
+  val isDirectory: Boolean,
+  val isReadable: Boolean,
+  val byteCount: Long?,
+  val modifiedAtEpochMillis: Long?,
+  val mimeType: String?,
+)
+
+interface DocumentTreeGateway {
+  fun root(treeUri: String): DocumentTreeNode
+  fun children(treeUri: String, directoryProviderId: String): List<DocumentTreeNode>
+}
+
+enum class SourceAccessBlocker {
+  PERMISSION_REVOKED,
+  FOLDER_UNAVAILABLE,
+  UNREADABLE_DOCUMENT,
+}
+
+class SourceAccessException(
+  val blocker: SourceAccessBlocker,
+  message: String,
+  cause: Throwable? = null,
+) : Exception(message, cause)
+
 fun Iterable<DiscoveredFile>.toSourcePreview(
   permissionAccess: MediaPermissionAccess? = null,
 ): SourcePreview = SourcePreview(
