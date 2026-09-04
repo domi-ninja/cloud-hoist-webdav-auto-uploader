@@ -145,6 +145,7 @@ class QueueDrainRunnerTest {
     },
     now = { clock },
     elapsed = { 0 },
+    retryJitter = { 0.5 },
     maxJobs = maxJobs,
   )
 

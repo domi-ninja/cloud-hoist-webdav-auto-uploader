@@ -21,6 +21,7 @@ class QueueDrainRunner(
   private val newId: () -> String = { UUID.randomUUID().toString() },
   private val now: () -> Long = System::currentTimeMillis,
   private val elapsed: () -> Long = android.os.SystemClock::elapsedRealtime,
+  private val retryJitter: () -> Double = Math::random,
   private val maxJobs: Int = DEFAULT_MAX_JOBS,
   private val maxRunMillis: Long = DEFAULT_MAX_RUN_MILLIS,
 ) {
@@ -72,7 +73,11 @@ class QueueDrainRunner(
           dao.retryClaim(
             job.id,
             claimToken,
-            finishedAt + retryDelayMillis(job.attemptCount),
+            finishedAt + retryDelayMillis(
+              job.attemptCount,
+              retryJitter(),
+              failure.retryAfterMillis,
+            ),
             failure.code,
           )
           return QueueDrainResult(completed, retryWorker = true)
@@ -137,6 +142,7 @@ data class TransferFailure(
   val code: String,
   val retryable: Boolean,
   val scope: BlockerScope? = null,
+  val retryAfterMillis: Long? = null,
 )
 
 enum class BlockerScope { ACCOUNT, SOURCE, JOB }
@@ -151,7 +157,11 @@ fun classifyTransferFailure(error: Exception): TransferFailure = when (error) {
   is DavQuotaException -> TransferFailure("quota", false, BlockerScope.JOB)
   is LocalContentMissingException -> TransferFailure("local_missing", false, BlockerScope.SOURCE)
   is LocalContentInvalidException -> TransferFailure("local_invalid", false, BlockerScope.JOB)
-  is DavRateLimitedException -> TransferFailure("rate_limited", true)
+  is DavRateLimitedException -> TransferFailure(
+    "rate_limited",
+    true,
+    retryAfterMillis = error.retryAfterMillis,
+  )
   is DavLockedException -> TransferFailure("remote_locked", true)
   is AccountDnsException -> TransferFailure("dns", true)
   is AccountTimeoutException -> TransferFailure("timeout", true)
@@ -161,7 +171,15 @@ fun classifyTransferFailure(error: Exception): TransferFailure = when (error) {
   else -> TransferFailure("unexpected", true)
 }
 
-fun retryDelayMillis(attemptCount: Int): Long {
+fun retryDelayMillis(
+  attemptCount: Int,
+  jitter: Double,
+  serverDelayMillis: Long? = null,
+): Long {
+  val cap = TimeUnit.HOURS.toMillis(6)
   val exponent = (attemptCount - 1).coerceIn(0, 10)
-  return (30_000L shl exponent).coerceAtMost(TimeUnit.HOURS.toMillis(6))
+  val base = (30_000L shl exponent).coerceAtMost(cap)
+  val factor = 0.9 + jitter.coerceIn(0.0, 1.0) * 0.2
+  val jittered = (base * factor).toLong().coerceIn(30_000L, cap)
+  return maxOf(jittered, serverDelayMillis?.coerceAtMost(cap) ?: 0L)
 }

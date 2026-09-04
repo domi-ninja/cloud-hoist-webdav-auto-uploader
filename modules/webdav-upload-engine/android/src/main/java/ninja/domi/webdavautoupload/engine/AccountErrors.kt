@@ -68,7 +68,7 @@ class DavQuotaException :
 class DavLockedException :
   CodedException("The remote destination is locked.")
 
-class DavRateLimitedException :
+class DavRateLimitedException(val retryAfterMillis: Long? = null) :
   CodedException("The Nextcloud server asked the upload to wait.")
 
 class LocalContentMissingException :

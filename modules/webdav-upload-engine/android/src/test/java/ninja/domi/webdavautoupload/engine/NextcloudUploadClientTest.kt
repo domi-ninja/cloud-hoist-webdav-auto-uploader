@@ -1,6 +1,7 @@
 package ninja.domi.webdavautoupload.engine
 
 import java.io.ByteArrayInputStream
+import java.time.Instant
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -103,6 +104,39 @@ class NextcloudUploadClientTest {
     assertThrows(LocalContentMissingException::class.java) {
       client.upload(CREDENTIAL, UPLOAD)
     }
+  }
+
+  @Test
+  fun rateLimitCarriesServerRetryDelay() {
+    val client = client { request ->
+      when (request.method) {
+        "MKCOL" -> response(request, 405)
+        "PUT" -> response(request, 429, mapOf("Retry-After" to "120"))
+        else -> error("Unexpected ${request.method}")
+      }
+    }
+
+    val error = assertThrows(DavRateLimitedException::class.java) {
+      client.upload(CREDENTIAL, UPLOAD)
+    }
+
+    assertEquals(120_000L, error.retryAfterMillis)
+  }
+
+  @Test
+  fun parsesHttpDateRetryAfterAndRejectsGarbage() {
+    val now = Instant.parse("2026-09-04T12:00:00Z")
+
+    assertEquals(60_000L, retryAfterMillis("Fri, 4 Sep 2026 12:01:00 GMT", now))
+    assertEquals(null, retryAfterMillis("later-ish", now))
+  }
+
+  @Test
+  fun retryDelayGrowsWithJitterAndHonorsServerMinimum() {
+    assertEquals(30_000L, retryDelayMillis(1, jitter = 0.0))
+    assertEquals(60_000L, retryDelayMillis(2, jitter = 0.5))
+    assertEquals(180_000L, retryDelayMillis(2, jitter = 0.5, serverDelayMillis = 180_000))
+    assertEquals(21_600_000L, retryDelayMillis(99, jitter = 1.0))
   }
 
   private fun client(respond: (Request) -> Response) = NextcloudUploadClient(

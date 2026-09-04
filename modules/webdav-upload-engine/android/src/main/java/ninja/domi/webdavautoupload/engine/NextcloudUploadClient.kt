@@ -6,6 +6,9 @@ import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.security.cert.CertificateException
+import java.time.Instant
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.net.ssl.SSLHandshakeException
 import javax.net.ssl.SSLPeerUnverifiedException
@@ -55,7 +58,7 @@ class NextcloudUploadClient(
         NextcloudDavUrl.folder(credential.account, pathSegments.take(index + 1)).toString(),
       ).method("MKCOL", null).build()
       execute(request) { response ->
-        if (response.code != 201 && response.code != 405) throwForStatus(response.code)
+        if (response.code != 201 && response.code != 405) throwForStatus(response)
       }
     }
   }
@@ -73,7 +76,7 @@ class NextcloudUploadClient(
       }
       .build()
     return execute(request) { response ->
-      if (response.code != 201 && response.code != 204) throwForStatus(response.code)
+      if (response.code != 201 && response.code != 204) throwForStatus(response)
       DavUploadResult(
         modificationTimeAccepted = response.header("X-OC-MTime") == "accepted",
         creationTimeAccepted = response.header("X-OC-CTime") == "accepted",
@@ -92,7 +95,7 @@ class NextcloudUploadClient(
       .header("Overwrite", "T")
       .build()
     execute(request) { response ->
-      if (response.code != 201 && response.code != 204) throwForStatus(response.code)
+      if (response.code != 201 && response.code != 204) throwForStatus(response)
     }
   }
 
@@ -115,13 +118,13 @@ class NextcloudUploadClient(
       )
       .header("User-Agent", "WebDAV Auto Upload/0.1 (Android)")
 
-  private fun throwForStatus(statusCode: Int): Nothing = when (statusCode) {
+  private fun throwForStatus(response: Response): Nothing = when (response.code) {
     401 -> throw AccountInvalidCredentialsException()
     403 -> throw DavPermissionException()
     404 -> throw DavNotFoundException()
     409, 412 -> throw DavInvalidPathException()
     423 -> throw DavLockedException()
-    429 -> throw DavRateLimitedException()
+    429 -> throw DavRateLimitedException(retryAfterMillis(response.header("Retry-After")))
     507 -> throw DavQuotaException()
     in 500..599 -> throw AccountServerException()
     else -> throw AccountUnsupportedResponseException()
@@ -166,4 +169,20 @@ class NextcloudUploadClient(
       input.use { sink.writeAll(it.source()) }
     }
   }
+}
+
+fun retryAfterMillis(
+  value: String?,
+  now: Instant = Instant.now(),
+): Long? {
+  if (value.isNullOrBlank()) return null
+  value.toLongOrNull()?.let { seconds ->
+    return seconds.coerceAtLeast(0).let { safeSeconds ->
+      runCatching { Math.multiplyExact(safeSeconds, 1_000L) }.getOrDefault(Long.MAX_VALUE)
+    }
+  }
+  val retryAt = runCatching {
+    ZonedDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant()
+  }.getOrNull() ?: return null
+  return (retryAt.toEpochMilli() - now.toEpochMilli()).coerceAtLeast(0)
 }
