@@ -16,7 +16,22 @@ object NextcloudDavUrl {
       .addPathSegment(fileName)
       .build()
 
+  fun uploadFolder(account: StoredAccount, uploadId: String): HttpUrl =
+    uploadBase(account, uploadId).addPathSegment("").build()
+
+  fun uploadChunk(account: StoredAccount, uploadId: String, chunkName: String): HttpUrl =
+    uploadBase(account, uploadId).addPathSegment(chunkName).build()
+
+  fun uploadAssembly(account: StoredAccount, uploadId: String): HttpUrl =
+    uploadBase(account, uploadId).addPathSegment(".file").build()
+
   private fun base(account: StoredAccount) = account.serverUrl.toHttpUrl().newBuilder()
     .addPathSegments("remote.php/dav/files")
     .addPathSegment(account.davUserId)
+
+  private fun uploadBase(account: StoredAccount, uploadId: String) =
+    account.serverUrl.toHttpUrl().newBuilder()
+      .addPathSegments("remote.php/dav/uploads")
+      .addPathSegment(account.davUserId)
+      .addPathSegment(uploadId)
 }
