@@ -51,11 +51,19 @@ class WebDavUploadEngineModule : Module() {
       appContext.permissions ?: throw Exceptions.PermissionsModuleNotFound(),
     )
   }
+  private val workScheduler by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    EngineWorkScheduler(context)
+  }
 
   override fun definition() = ModuleDefinition {
     Name("WebDavUploadEngine")
 
     Events("onSnapshotInvalidated")
+
+    OnCreate {
+      workScheduler.ensureScheduled()
+    }
 
     RegisterActivityContracts {
       documentTreePicker = registerForActivityResult(DocumentTreePickerContract())
@@ -79,10 +87,13 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("pauseAsync") {
       engine.pause()
+      workScheduler.pauseQueueDrain()
     }
 
     AsyncFunction("resumeAsync") {
       engine.resume()
+      workScheduler.ensureScheduled()
+      workScheduler.requestQueueDrain()
     }
 
     AsyncFunction("scanNowAsync") {
@@ -153,7 +164,9 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("commitSourceAsync") { source: SourceCommitRecord ->
-      sourceDiscoveryManager.commit(source.toCommit()).toMap()
+      sourceDiscoveryManager.commit(source.toCommit()).also { result ->
+        if (result.jobsAdded > 0) workScheduler.requestQueueDrain()
+      }.toMap()
     }
 
     AsyncFunction("getMediaPermissionAsync") { promise: Promise ->
@@ -165,7 +178,9 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("scanSourceAsync") { sourceId: String ->
-      sourceDiscoveryManager.scan(sourceId).toMap()
+      sourceDiscoveryManager.scan(sourceId).also { result ->
+        if (result.jobsAdded > 0) workScheduler.requestQueueDrain()
+      }.toMap()
     }
   }
 }

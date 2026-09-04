@@ -1,6 +1,6 @@
 # 009 Schedule scans and queue drains
 
-Status: blocked by 008
+Status: in progress
 
 Depends on: 006, 008
 
