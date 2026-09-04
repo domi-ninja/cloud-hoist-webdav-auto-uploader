@@ -77,7 +77,28 @@ class QueueDrainRunner(
           )
           return QueueDrainResult(completed, retryWorker = true)
         }
-        dao.blockClaim(job.id, claimToken, failure.code, failure.code)
+        when (failure.scope) {
+          BlockerScope.ACCOUNT -> dao.blockAccountClaim(
+            job.id,
+            claimToken,
+            job.accountId,
+            failure.code,
+            failure.code,
+          )
+          BlockerScope.SOURCE -> dao.blockSourceClaim(
+            job.id,
+            claimToken,
+            job.sourceId,
+            failure.code,
+            failure.code,
+          )
+          BlockerScope.JOB, null -> dao.blockClaim(
+            job.id,
+            claimToken,
+            failure.code,
+            failure.code,
+          )
+        }
       }
     }
 
@@ -115,17 +136,21 @@ class QueueDrainRunner(
 data class TransferFailure(
   val code: String,
   val retryable: Boolean,
+  val scope: BlockerScope? = null,
 )
 
+enum class BlockerScope { ACCOUNT, SOURCE, JOB }
+
 fun classifyTransferFailure(error: Exception): TransferFailure = when (error) {
-  is AccountInvalidCredentialsException -> TransferFailure("invalid_credentials", false)
-  is AccountCertificateException -> TransferFailure("certificate", false)
-  is DavPermissionException -> TransferFailure("remote_permission", false)
-  is DavNotFoundException -> TransferFailure("remote_missing", false)
-  is DavInvalidPathException -> TransferFailure("invalid_path", false)
-  is DavQuotaException -> TransferFailure("quota", false)
-  is LocalContentMissingException -> TransferFailure("local_missing", false)
-  is LocalContentInvalidException -> TransferFailure("local_invalid", false)
+  is AccountInvalidCredentialsException ->
+    TransferFailure("invalid_credentials", false, BlockerScope.ACCOUNT)
+  is AccountCertificateException -> TransferFailure("certificate", false, BlockerScope.ACCOUNT)
+  is DavPermissionException -> TransferFailure("remote_permission", false, BlockerScope.SOURCE)
+  is DavNotFoundException -> TransferFailure("remote_missing", false, BlockerScope.SOURCE)
+  is DavInvalidPathException -> TransferFailure("invalid_path", false, BlockerScope.JOB)
+  is DavQuotaException -> TransferFailure("quota", false, BlockerScope.JOB)
+  is LocalContentMissingException -> TransferFailure("local_missing", false, BlockerScope.SOURCE)
+  is LocalContentInvalidException -> TransferFailure("local_invalid", false, BlockerScope.JOB)
   is DavRateLimitedException -> TransferFailure("rate_limited", true)
   is DavLockedException -> TransferFailure("remote_locked", true)
   is AccountDnsException -> TransferFailure("dns", true)

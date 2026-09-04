@@ -200,6 +200,17 @@ class EngineDaoTest {
   }
 
   @Test
+  fun blockedAccountsCannotFeedClaims() {
+    dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
+    dao.upsertAccount(account().copy(blockerCode = "invalid_credentials"))
+
+    assertNull(dao.claimNext(2, "blocked-worker"))
+
+    dao.upsertAccount(account())
+    assertEquals("j1", dao.claimNext(3, "enabled-worker")?.id)
+  }
+
+  @Test
   fun migrationOneToTwoBackfillsAccountIdAndPreservesChildren() {
     val name = "engine-migration-test.db"
     migrationHelper.createDatabase(name, 1).apply {
@@ -247,6 +258,30 @@ class EngineDaoTest {
       migrated.query("SELECT COUNT(*) FROM chunk_checkpoints").use { cursor ->
         assertTrue(cursor.moveToFirst())
         assertEquals(1, cursor.getInt(0))
+      }
+    }
+  }
+
+  @Test
+  fun migrationTwoToThreeAddsAnEmptyAccountBlocker() {
+    val name = "engine-migration-two-three.db"
+    migrationHelper.createDatabase(name, 2).apply {
+      execSQL(
+        "INSERT INTO accounts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("account-1", "https://cloud.test", "login", "dav", "Domi", 1, "34", 1, null, "key"),
+      )
+      close()
+    }
+
+    migrationHelper.runMigrationsAndValidate(
+      name,
+      3,
+      true,
+      EngineRoomDatabase.MIGRATION_2_3,
+    ).use { migrated ->
+      migrated.query("SELECT blockerCode FROM accounts WHERE id = 'account-1'").use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertTrue(cursor.isNull(0))
       }
     }
   }

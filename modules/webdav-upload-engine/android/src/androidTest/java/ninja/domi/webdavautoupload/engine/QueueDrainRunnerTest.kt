@@ -94,6 +94,38 @@ class QueueDrainRunnerTest {
     assertEquals(JobState.COMPLETED, dao.job("good")?.state)
   }
 
+  @Test
+  fun credentialFailureBlocksTheAccountAndStopsNewClaims() {
+    enqueue("bad", "revision-bad", 10)
+    enqueue("waiting", "revision-waiting", 20)
+    val runner = runner(
+      davClient = DavClient { _, _ -> throw AccountInvalidCredentialsException() },
+    )
+
+    val result = runner.run()
+
+    assertFalse(result.retryWorker)
+    assertEquals("invalid_credentials", dao.account("account")?.blockerCode)
+    assertEquals(JobState.BLOCKED, dao.job("bad")?.state)
+    assertEquals(JobState.QUEUED, dao.job("waiting")?.state)
+    assertEquals(null, dao.claimNext(clock, "another-worker"))
+  }
+
+  @Test
+  fun missingContentBlocksItsSourceAndStopsNewClaims() {
+    enqueue("missing", "revision-missing", 10)
+    enqueue("waiting", "revision-waiting", 20)
+    val runner = runner(
+      davClient = DavClient { _, _ -> throw LocalContentMissingException() },
+    )
+
+    runner.run()
+
+    assertEquals("local_missing", dao.source("source")?.blockerCode)
+    assertEquals(JobState.BLOCKED, dao.job("missing")?.state)
+    assertEquals(JobState.QUEUED, dao.job("waiting")?.state)
+  }
+
   private fun runner(
     maxJobs: Int = 3,
     davClient: DavClient = DavClient { _, request ->

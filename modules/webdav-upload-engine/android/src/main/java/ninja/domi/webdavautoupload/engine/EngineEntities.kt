@@ -17,6 +17,7 @@ data class AccountEntity(
   val chunkingSupported: Boolean,
   val maxChunkSize: Long?,
   val credentialReference: String,
+  val blockerCode: String? = null,
 )
 
 @Entity(

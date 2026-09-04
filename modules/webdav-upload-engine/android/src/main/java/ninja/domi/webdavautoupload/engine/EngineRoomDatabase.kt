@@ -99,6 +99,9 @@ interface EngineDao {
   @Query("SELECT COUNT(*) FROM accounts")
   fun accountCount(): Int
 
+  @Query("SELECT * FROM accounts WHERE id = :accountId")
+  fun account(accountId: String): AccountEntity?
+
   @Query("SELECT COUNT(*) FROM local_revisions")
   fun revisionCount(): Int
 
@@ -111,7 +114,9 @@ interface EngineDao {
   @Query(
     "SELECT COUNT(*) FROM upload_jobs " +
       "INNER JOIN sources ON sources.id = upload_jobs.sourceId " +
-      "WHERE sources.enabled = 1 AND sources.blockerCode IS NULL AND " +
+      "INNER JOIN accounts ON accounts.id = upload_jobs.accountId " +
+      "WHERE sources.enabled = 1 AND sources.blockerCode IS NULL " +
+      "AND accounts.blockerCode IS NULL AND " +
       "(upload_jobs.state = 'queued' OR " +
       "(upload_jobs.state = 'retry_wait' AND upload_jobs.retryAt <= :now))",
   )
@@ -128,8 +133,10 @@ interface EngineDao {
     WHERE id = (
       SELECT upload_jobs.id FROM upload_jobs
       INNER JOIN sources ON sources.id = upload_jobs.sourceId
+      INNER JOIN accounts ON accounts.id = upload_jobs.accountId
       WHERE sources.enabled = 1
         AND sources.blockerCode IS NULL
+        AND accounts.blockerCode IS NULL
         AND (
           upload_jobs.state = 'queued'
           OR (upload_jobs.state = 'retry_wait' AND upload_jobs.retryAt <= :now)
@@ -182,6 +189,12 @@ interface EngineDao {
   )
   fun blockClaim(jobId: String, claimToken: String, blockerCode: String, errorCode: String): Int
 
+  @Query("UPDATE accounts SET blockerCode = :blockerCode WHERE id = :accountId")
+  fun markAccountBlocked(accountId: String, blockerCode: String): Int
+
+  @Query("UPDATE sources SET blockerCode = :blockerCode WHERE id = :sourceId")
+  fun markSourceBlocked(sourceId: String, blockerCode: String): Int
+
   @Query("DELETE FROM upload_jobs WHERE state = 'completed' AND completedAt < :cutoff")
   fun deleteCompletedBefore(cutoff: Long): Int
 
@@ -202,6 +215,30 @@ interface EngineDao {
   fun claimNext(now: Long, claimToken: String): UploadJobEntity? {
     if (markNextEligibleRunning(now, claimToken) != 1) return null
     return jobByClaimToken(claimToken)
+  }
+
+  @Transaction
+  fun blockAccountClaim(
+    jobId: String,
+    claimToken: String,
+    accountId: String,
+    blockerCode: String,
+    errorCode: String,
+  ): Boolean {
+    if (blockClaim(jobId, claimToken, blockerCode, errorCode) != 1) return false
+    return markAccountBlocked(accountId, blockerCode) == 1
+  }
+
+  @Transaction
+  fun blockSourceClaim(
+    jobId: String,
+    claimToken: String,
+    sourceId: String,
+    blockerCode: String,
+    errorCode: String,
+  ): Boolean {
+    if (blockClaim(jobId, claimToken, blockerCode, errorCode) != 1) return false
+    return markSourceBlocked(sourceId, blockerCode) == 1
   }
 
   @Transaction
@@ -241,7 +278,7 @@ interface EngineDao {
     UploadAttemptEntity::class,
     ChunkCheckpointEntity::class,
   ],
-  version = 2,
+  version = 3,
   exportSchema = true,
 )
 @TypeConverters(EngineTypeConverters::class)
@@ -257,7 +294,7 @@ abstract class EngineRoomDatabase : RoomDatabase() {
         context.applicationContext,
         EngineRoomDatabase::class.java,
         "webdav-upload-engine.db",
-      ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+      ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
     }
 
     val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -342,6 +379,12 @@ abstract class EngineRoomDatabase : RoomDatabase() {
         database.execSQL("CREATE INDEX index_upload_jobs_claimToken ON upload_jobs(claimToken)")
         database.execSQL("CREATE INDEX index_upload_attempts_jobId ON upload_attempts(jobId)")
         database.execSQL("CREATE UNIQUE INDEX index_chunk_checkpoints_jobId ON chunk_checkpoints(jobId)")
+      }
+    }
+
+    val MIGRATION_2_3 = object : Migration(2, 3) {
+      override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("ALTER TABLE accounts ADD COLUMN blockerCode TEXT")
       }
     }
   }
