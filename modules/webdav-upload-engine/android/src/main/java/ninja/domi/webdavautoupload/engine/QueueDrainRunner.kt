@@ -26,6 +26,7 @@ class QueueDrainRunner(
   private val mimeType: (String) -> String?,
   private val isPaused: () -> Boolean,
   private val isStopped: () -> Boolean = { false },
+  private val canStartNextFile: () -> Boolean = { true },
   private val newId: () -> String = { UUID.randomUUID().toString() },
   private val now: () -> Long = System::currentTimeMillis,
   private val elapsed: () -> Long = android.os.SystemClock::elapsedRealtime,
@@ -44,6 +45,9 @@ class QueueDrainRunner(
     while (completed < maxJobs && elapsed() - startedAt < maxRunMillis) {
       if (isPaused()) return QueueDrainResult(completed, retryWorker = false)
       if (isStopped()) return QueueDrainResult(completed, retryWorker = true)
+      if (!canStartNextFile()) {
+        return QueueDrainResult(completed, retryWorker = dao.eligibleJobCount(now()) > 0)
+      }
 
       val claimToken = newId()
       val claimedAt = now()
@@ -147,6 +151,7 @@ class QueueDrainRunner(
       val appContext = context.applicationContext
       val dao = EngineRoomDatabase.open(appContext).engineDao()
       val contentSource = AndroidLocalContentSource(appContext.contentResolver)
+      val preferences = EnginePreferences(appContext)
       return QueueDrainRunner(
         dao = dao,
         accountRepository = AndroidAccountRepository(appContext, dao),
@@ -158,8 +163,9 @@ class QueueDrainRunner(
         mimeType = { uri ->
           runCatching { appContext.contentResolver.getType(Uri.parse(uri)) }.getOrNull()
         },
-        isPaused = EnginePreferences(appContext)::isPaused,
+        isPaused = preferences::isPaused,
         isStopped = isStopped,
+        canStartNextFile = TransferConstraintChecker(appContext, preferences)::canStartNextFile,
         onProgress = onProgress,
       )
     }

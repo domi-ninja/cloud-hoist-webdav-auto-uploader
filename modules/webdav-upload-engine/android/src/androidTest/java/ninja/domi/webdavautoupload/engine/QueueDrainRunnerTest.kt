@@ -187,6 +187,28 @@ class QueueDrainRunnerTest {
     )
   }
 
+  @Test
+  fun stopsBeforeClaimingAnotherFileWhenConstraintsChange() {
+    enqueue("first", "revision-first", 10)
+    enqueue("second", "revision-second", 20)
+    var allowed = true
+    val runner = runner(
+      davClient = DavClient { _, request ->
+        uploaded += request
+        allowed = false
+        DavUploadResult(false, false)
+      },
+      canStartNextFile = { allowed },
+    )
+
+    val result = runner.run()
+
+    assertEquals(1, result.completedJobs)
+    assertTrue(result.retryWorker)
+    assertEquals(JobState.COMPLETED, dao.job("first")?.state)
+    assertEquals(JobState.QUEUED, dao.job("second")?.state)
+  }
+
   private fun runner(
     maxJobs: Int = 3,
     davClient: DavClient = DavClient { _, request ->
@@ -197,6 +219,7 @@ class QueueDrainRunnerTest {
     elapsed: () -> Long = { 0 },
     maxRunMillis: Long = 8 * 60 * 1_000,
     onProgress: (TransferProgress) -> Unit = {},
+    canStartNextFile: () -> Boolean = { true },
   ) = QueueDrainRunner(
     dao = dao,
     accountRepository = accountRepository(),
@@ -213,6 +236,7 @@ class QueueDrainRunnerTest {
     maxJobs = maxJobs,
     maxRunMillis = maxRunMillis,
     onProgress = onProgress,
+    canStartNextFile = canStartNextFile,
   )
 
   private fun enqueue(jobId: String, revisionId: String, createdAt: Long) {
