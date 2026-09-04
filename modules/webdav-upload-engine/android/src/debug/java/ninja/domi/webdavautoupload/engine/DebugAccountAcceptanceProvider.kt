@@ -7,10 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
 import expo.modules.kotlin.exception.CodedException
-import java.net.InetAddress
-import java.net.URI
 import java.time.Instant
-import okhttp3.Dns
 
 /** Debug-APK-only entry point for opaque host-driven live account checks. */
 class DebugAccountAcceptanceProvider : ContentProvider() {
@@ -20,10 +17,15 @@ class DebugAccountAcceptanceProvider : ContentProvider() {
     when (method) {
       "connect" -> connect(requireNotNull(extras))
       "verify" -> verify(requireNotNull(extras))
+      "prepareUpload" -> prepareUpload(requireNotNull(extras))
+      "seedAndUpload" -> seedAndUpload(requireNotNull(extras))
+      "cleanupMedia" -> cleanupMedia(requireNotNull(extras))
       "seed" -> seed()
       "clear" -> clear()
       else -> result("error", "ERR_ACCEPTANCE_UNKNOWN_METHOD")
     }
+  } catch (error: DebugUploadAcceptanceException) {
+    result("error", error.acceptanceCode)
   } catch (error: CodedException) {
     result("error", error.code)
   } catch (_: Exception) {
@@ -48,6 +50,30 @@ class DebugAccountAcceptanceProvider : ContentProvider() {
       decode(extras, "serverUrlB64"),
       decode(extras, "serverAddressB64"),
     ).verifyStoredAccount()
+    return result("ok")
+  }
+
+  private fun prepareUpload(extras: Bundle): Bundle {
+    uploadAcceptance(extras).prepare(decode(extras, "runFolderB64"))
+    return result("ok")
+  }
+
+  private fun seedAndUpload(extras: Bundle): Bundle {
+    val upload = uploadAcceptance(extras).seedAndUpload(decode(extras, "runFolderB64"))
+    return result("ok").apply {
+      putString("smallName", upload.smallName)
+      putString("smallSha256", upload.smallSha256)
+      putString("largeName", upload.largeName)
+      putString("largeSha256", upload.largeSha256)
+      putInt("completedJobs", upload.completedJobs)
+      putInt("directUploads", upload.directUploads)
+      putInt("chunkedUploads", upload.chunkedUploads)
+      putBoolean("chunkingExpected", upload.chunkingExpected)
+    }
+  }
+
+  private fun cleanupMedia(extras: Bundle): Bundle {
+    uploadAcceptance(extras).cleanupMedia(decode(extras, "runFolderB64"))
     return result("ok")
   }
 
@@ -93,16 +119,14 @@ class DebugAccountAcceptanceProvider : ContentProvider() {
     serverAddress: String,
   ) = AccountManager(
     repository = repository,
-    networkClient = NextcloudClient(object : Dns {
-      override fun lookup(hostname: String): List<InetAddress> =
-        if (hostname.equals(URI(serverUrl).host, ignoreCase = true)) {
-          listOf(InetAddress.getByName(serverAddress))
-        } else {
-          Dns.SYSTEM.lookup(hostname)
-        }
-      }
-    ),
+    networkClient = NextcloudClient(acceptanceDns(serverUrl, serverAddress)),
     onAccountChanged = {},
+  )
+
+  private fun uploadAcceptance(extras: Bundle) = DebugUploadAcceptance(
+    context = requireNotNull(context),
+    serverUrl = decode(extras, "serverUrlB64"),
+    serverAddress = decode(extras, "serverAddressB64"),
   )
 
   private fun decode(extras: Bundle, key: String): String =

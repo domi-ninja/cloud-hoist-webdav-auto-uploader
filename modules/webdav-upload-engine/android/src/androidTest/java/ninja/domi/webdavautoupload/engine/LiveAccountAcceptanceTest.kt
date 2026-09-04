@@ -57,6 +57,17 @@ class LiveAccountAcceptanceTest {
     assertTrue(device.wait(Until.hasObject(By.desc("Verify stored account")), UI_TIMEOUT))
   }
 
+  @Test
+  fun completedUploadsRenderAfterProcessDeath() {
+    val instrumentation = InstrumentationRegistry.getInstrumentation()
+    launchApp(instrumentation.context, launchUrlArgument())
+    val device = UiDevice.getInstance(instrumentation)
+    dismissDeveloperMenuOnboarding(device)
+
+    assertTrue(device.wait(Until.hasObject(By.text("Acceptance camera")), UI_TIMEOUT))
+    assertTrue(device.wait(Until.hasObject(By.textContains("2 uploaded")), UI_TIMEOUT))
+  }
+
   private fun decodedArgument(value: String?): String {
     require(!value.isNullOrBlank()) { "A required acceptance-test value is missing." }
     return try {

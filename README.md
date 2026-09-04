@@ -78,8 +78,12 @@ pnpm test:account:live
 ```
 
 The harness clears only WebDAV Auto Upload's emulator app data, drives the manual
-app-password form, force-stops the app, relaunches it, and verifies that Kotlin
-can authenticate again from Android Keystore-backed storage. The test harness is
+app-password form, force-stops the app, and verifies that Kotlin can authenticate
+again from Android Keystore-backed storage. It then creates two valid bitmap
+images in the emulator's Camera collection, discovers them through MediaStore,
+uploads one directly and the larger image through Nextcloud chunking when the
+server advertises it, and compares the downloaded SHA-256 hashes. Each run uses
+and removes its own remote folder and emulator media. The test harness is
 packaged separately from the application APK.
 
 ## License

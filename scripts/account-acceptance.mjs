@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
+import { createHash, randomUUID } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -178,6 +179,12 @@ async function verifyCredentialsFromHost(credentials) {
   if (response.status !== 200) {
     throw new Error(`The Nextcloud host preflight returned HTTP ${response.status}.`);
   }
+  const body = await response.json().catch(() => undefined);
+  const davUserId = body?.ocs?.data?.id;
+  if (typeof davUserId !== "string" || !davUserId || /[\r\n\0]/.test(davUserId)) {
+    throw new Error("The Nextcloud user preflight returned an invalid account ID.");
+  }
+  return { davUserId };
 }
 
 async function metroIsReady() {
@@ -198,7 +205,7 @@ async function waitForMetro() {
 }
 
 const credentials = parseCredentials(readFileSync(credentialPath, "utf8"));
-await verifyCredentialsFromHost(credentials);
+const hostAccount = await verifyCredentialsFromHost(credentials);
 const serverAddresses = await lookup(new URL(credentials.serverUrl).hostname, { all: true });
 const serverAddress =
   serverAddresses.find(({ family }) => family === 4)?.address ?? serverAddresses[0]?.address;
@@ -246,12 +253,14 @@ if (!(await metroIsReady())) {
 const launchUrl =
   "exp+webdav-auto-upload://expo-development-client/?url=" +
   encodeURIComponent("http://127.0.0.1:8081");
+const runFolder = `webdav-auto-upload-acceptance-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
 const encodedArguments = {
   serverUrlB64: Buffer.from(credentials.serverUrl).toString("base64url"),
   usernameB64: Buffer.from(credentials.username).toString("base64url"),
   appPasswordB64: Buffer.from(credentials.appPassword).toString("base64url"),
   serverAddressB64: Buffer.from(serverAddress).toString("base64url"),
   launchUrlB64: Buffer.from(launchUrl).toString("base64url"),
+  runFolderB64: Buffer.from(runFolder).toString("base64url"),
 };
 
 process.stdout.write("Running manual login, process-death, and encrypted-reload checks…\n");
@@ -262,6 +271,7 @@ const redactionValues = [
   credentials.serverUrl,
   credentials.username,
   credentials.appPassword,
+  hostAccount.davUserId,
   serverAddress,
   ...Object.values(encodedArguments),
 ];
@@ -293,6 +303,68 @@ function runProvider(method, extras = []) {
     process.stderr.write(safeResult);
     throw new Error(`The debug account ${method} check failed.`);
   }
+  return safeResult;
+}
+
+function providerValue(output, key) {
+  const match = new RegExp(`(?:\\[|\\{|,|\\s)${key}=([^,}\\]]+)`).exec(output);
+  if (!match) throw new Error(`The debug upload result omitted ${key}.`);
+  return match[1].trim();
+}
+
+function providerNetworkArguments() {
+  return [
+    "--extra",
+    `serverUrlB64:s:${encodedArguments.serverUrlB64}`,
+    "--extra",
+    `serverAddressB64:s:${encodedArguments.serverAddressB64}`,
+    "--extra",
+    `runFolderB64:s:${encodedArguments.runFolderB64}`,
+  ];
+}
+
+function davUrl(pathSegments, directory = false) {
+  const base = new URL(
+    credentials.serverUrl.endsWith("/") ? credentials.serverUrl : `${credentials.serverUrl}/`,
+  );
+  const encodedPath = [
+    "remote.php",
+    "dav",
+    "files",
+    hostAccount.davUserId,
+    ...pathSegments,
+  ]
+    .map(encodeURIComponent)
+    .join("/");
+  return new URL(`${encodedPath}${directory ? "/" : ""}`, base);
+}
+
+function authorizationHeader() {
+  return `Basic ${Buffer.from(`${credentials.username}:${credentials.appPassword}`).toString("base64")}`;
+}
+
+async function verifyRemoteFile(name, expectedSha256) {
+  const response = await fetch(davUrl([runFolder, name]), {
+    headers: { Authorization: authorizationHeader() },
+  });
+  if (response.status !== 200) {
+    throw new Error(`Remote fixture verification returned HTTP ${response.status}.`);
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  const actualSha256 = createHash("sha256").update(bytes).digest("hex");
+  if (actualSha256 !== expectedSha256) {
+    throw new Error("An uploaded fixture was not byte-identical to emulator media.");
+  }
+}
+
+async function deleteRemoteRunDirectory() {
+  const response = await fetch(davUrl([runFolder], true), {
+    method: "DELETE",
+    headers: { Authorization: authorizationHeader() },
+  });
+  if (response.status !== 204 && response.status !== 404) {
+    throw new Error(`Remote acceptance cleanup returned HTTP ${response.status}.`);
+  }
 }
 
 function runInstrumentation(testName, argumentsList) {
@@ -317,44 +389,118 @@ function runInstrumentation(testName, argumentsList) {
   }
 }
 
-runProvider("connect", [
-  "--extra",
-  `serverUrlB64:s:${encodedArguments.serverUrlB64}`,
-  "--extra",
-  `usernameB64:s:${encodedArguments.usernameB64}`,
-  "--extra",
-  `appPasswordB64:s:${encodedArguments.appPasswordB64}`,
-  "--extra",
-  `serverAddressB64:s:${encodedArguments.serverAddressB64}`,
-]);
-run("adb", ["-s", serial, "shell", "am", "force-stop", "ninja.domi.webdavautoupload"], {
-  stdio: "ignore",
-});
-run("adb", [
-  "-s",
-  serial,
-  "shell",
-  "am",
-  "start",
-  "-W",
-  "-a",
-  "android.intent.action.VIEW",
-  "-d",
-  launchUrl,
-  "-p",
-  "ninja.domi.webdavautoupload",
-], { stdio: "ignore" });
-runProvider("verify", [
-  "--extra",
-  `serverUrlB64:s:${encodedArguments.serverUrlB64}`,
-  "--extra",
-  `serverAddressB64:s:${encodedArguments.serverAddressB64}`,
-]);
-runInstrumentation("connectedAccountRendersAfterProcessDeath", [
-  "-e",
-  "launchUrlB64",
-  encodedArguments.launchUrlB64,
-]);
+let remoteCreated = false;
+let failure;
+try {
+  runProvider("connect", [
+    "--extra",
+    `serverUrlB64:s:${encodedArguments.serverUrlB64}`,
+    "--extra",
+    `usernameB64:s:${encodedArguments.usernameB64}`,
+    "--extra",
+    `appPasswordB64:s:${encodedArguments.appPasswordB64}`,
+    "--extra",
+    `serverAddressB64:s:${encodedArguments.serverAddressB64}`,
+  ]);
+  run("adb", ["-s", serial, "shell", "am", "force-stop", "ninja.domi.webdavautoupload"], {
+    stdio: "ignore",
+  });
+  run("adb", [
+    "-s",
+    serial,
+    "shell",
+    "am",
+    "start",
+    "-W",
+    "-a",
+    "android.intent.action.VIEW",
+    "-d",
+    launchUrl,
+    "-p",
+    "ninja.domi.webdavautoupload",
+  ], { stdio: "ignore" });
+  runProvider("verify", [
+    "--extra",
+    `serverUrlB64:s:${encodedArguments.serverUrlB64}`,
+    "--extra",
+    `serverAddressB64:s:${encodedArguments.serverAddressB64}`,
+  ]);
+  runInstrumentation("connectedAccountRendersAfterProcessDeath", [
+    "-e",
+    "launchUrlB64",
+    encodedArguments.launchUrlB64,
+  ]);
 
+  process.stdout.write("Creating emulator images and running direct and chunked upload checks…\n");
+  run("adb", [
+    "-s",
+    serial,
+    "shell",
+    "pm",
+    "grant",
+    "ninja.domi.webdavautoupload",
+    "android.permission.READ_MEDIA_IMAGES",
+  ], { stdio: "ignore" });
+  run("adb", [
+    "-s",
+    serial,
+    "shell",
+    "pm",
+    "grant",
+    "ninja.domi.webdavautoupload",
+    "android.permission.READ_MEDIA_VIDEO",
+  ], { stdio: "ignore" });
+  runProvider("prepareUpload", providerNetworkArguments());
+  remoteCreated = true;
+  const uploadOutput = runProvider("seedAndUpload", providerNetworkArguments());
+  const smallName = providerValue(uploadOutput, "smallName");
+  const largeName = providerValue(uploadOutput, "largeName");
+  const smallSha256 = providerValue(uploadOutput, "smallSha256");
+  const largeSha256 = providerValue(uploadOutput, "largeSha256");
+  const completedJobs = Number(providerValue(uploadOutput, "completedJobs"));
+  const directUploads = Number(providerValue(uploadOutput, "directUploads"));
+  const chunkedUploads = Number(providerValue(uploadOutput, "chunkedUploads"));
+  const chunkingExpected = providerValue(uploadOutput, "chunkingExpected") === "true";
+  if (
+    completedJobs !== 2 ||
+    directUploads + chunkedUploads !== 2 ||
+    chunkedUploads !== (chunkingExpected ? 1 : 0)
+  ) {
+    throw new Error("The live queue returned an invalid upload summary.");
+  }
+  await Promise.all([
+    verifyRemoteFile(smallName, smallSha256),
+    verifyRemoteFile(largeName, largeSha256),
+  ]);
+  run("adb", ["-s", serial, "shell", "am", "force-stop", "ninja.domi.webdavautoupload"], {
+    stdio: "ignore",
+  });
+  runInstrumentation("completedUploadsRenderAfterProcessDeath", [
+    "-e",
+    "launchUrlB64",
+    encodedArguments.launchUrlB64,
+  ]);
+  process.stdout.write(
+    `Verified 2 byte-identical uploads from emulator media (${directUploads} direct, ${chunkedUploads} chunked).\n`,
+  );
+} catch (error) {
+  failure = error;
+}
+
+try {
+  runProvider("cleanupMedia", providerNetworkArguments());
+} catch (error) {
+  failure ??= error;
+}
+if (remoteCreated) {
+  try {
+    await deleteRemoteRunDirectory();
+  } catch {
+    failure ??= new Error(`Remote cleanup failed for acceptance run ${runFolder}.`);
+  }
+}
 metro?.kill("SIGINT");
-process.stdout.write("Live account acceptance passed; no credential values were printed.\n");
+if (failure) throw failure;
+process.stdout.write(
+  "Live account and upload acceptance passed; local and remote fixtures were removed.\n",
+);
