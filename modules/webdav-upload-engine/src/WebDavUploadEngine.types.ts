@@ -169,6 +169,19 @@ export const loginFlowPollSchema = z.discriminatedUnion("status", [
   }),
 ]);
 
+export const remotePathSegmentSchema = z
+  .string()
+  .min(1)
+  .refine((segment) => segment !== "." && segment !== "..")
+  .refine((segment) => !segment.includes("/") && !segment.includes("\0"));
+
+export const remotePathSegmentsSchema = z.array(remotePathSegmentSchema);
+
+export const remoteFolderSchema = z.object({
+  name: remotePathSegmentSchema,
+  pathSegments: remotePathSegmentsSchema,
+});
+
 export type AccountCapabilities = z.infer<typeof accountCapabilitiesSchema>;
 export type AccountSummary = z.infer<typeof accountSummarySchema>;
 export type AccountHealth = z.infer<typeof accountHealthSchema>;
@@ -186,6 +199,7 @@ export type SnapshotInvalidated = z.infer<typeof snapshotInvalidatedSchema>;
 export type ManualAccountInput = z.infer<typeof manualAccountInputSchema>;
 export type LoginFlowStart = z.infer<typeof loginFlowStartSchema>;
 export type LoginFlowPoll = z.infer<typeof loginFlowPollSchema>;
+export type RemoteFolder = z.infer<typeof remoteFolderSchema>;
 
 export type WebDavUploadEngineModuleEvents = {
   onSnapshotInvalidated: (payload: SnapshotInvalidated) => void;
@@ -211,6 +225,10 @@ export type EngineError =
   | { code: "account_already_configured"; message: string }
   | { code: "account_not_configured"; message: string }
   | { code: "account_storage"; message: string }
+  | { code: "dav_permission"; message: string }
+  | { code: "dav_not_found"; message: string }
+  | { code: "dav_invalid_path"; message: string }
+  | { code: "dav_quota"; message: string }
   | { code: "native_failure"; message: string };
 
 export type EngineCommandResult = { ok: true } | { ok: false; error: EngineError };

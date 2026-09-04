@@ -7,13 +7,19 @@ class WebDavUploadEngineModule : Module() {
   private val engine = FixtureUploadEngine { revision ->
     sendEvent("onSnapshotInvalidated", mapOf("revision" to revision))
   }
-  private val accountManager by lazy {
+  private val accountRepository by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
+    AndroidAccountRepository(context)
+  }
+  private val accountManager by lazy {
     AccountManager(
-      repository = AndroidAccountRepository(context),
+      repository = accountRepository,
       networkClient = NextcloudClient(),
       onAccountChanged = engine::accountChanged,
     )
+  }
+  private val remoteFolderManager by lazy {
+    RemoteFolderManager(accountRepository, NextcloudDavClient())
   }
 
   override fun definition() = ModuleDefinition {
@@ -87,6 +93,15 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("verifyStoredAccountAsync") {
       accountManager.verifyStoredAccount().toMap()
+    }
+
+    AsyncFunction("listRemoteFoldersAsync") { pathSegments: List<String> ->
+      remoteFolderManager.list(pathSegments).map(RemoteFolder::toMap)
+    }
+
+    AsyncFunction("createRemoteFolderAsync") {
+        parentPathSegments: List<String>, name: String ->
+      remoteFolderManager.create(parentPathSegments, name).toMap()
     }
   }
 }

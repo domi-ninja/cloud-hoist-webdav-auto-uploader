@@ -9,6 +9,8 @@ import {
   jobStateSchema,
   loginFlowPollSchema,
   loginFlowStartSchema,
+  remoteFolderSchema,
+  remotePathSegmentsSchema,
   workerActivitySchema,
 } from "./WebDavUploadEngine.types";
 
@@ -120,5 +122,15 @@ describe("native engine contract", () => {
         expiresAt: now,
       }),
     ).toThrow();
+  });
+
+  it("decodes remote folders as path segments", () => {
+    const folder = {
+      name: "Photos #1",
+      pathSegments: ["Auto Upload", "Photos #1"],
+    };
+    expect(remoteFolderSchema.parse(folder)).toEqual(folder);
+    expect(() => remotePathSegmentsSchema.parse(["Auto Upload/Photos"])).toThrow();
+    expect(() => remotePathSegmentsSchema.parse([".."])).toThrow();
   });
 });

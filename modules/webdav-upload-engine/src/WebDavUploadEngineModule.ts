@@ -8,6 +8,9 @@ import {
   loginFlowPollSchema,
   loginFlowStartSchema,
   manualAccountInputSchema,
+  remoteFolderSchema,
+  remotePathSegmentSchema,
+  remotePathSegmentsSchema,
   snapshotInvalidatedSchema,
   sourceInputSchema,
   sourceSummarySchema,
@@ -21,6 +24,7 @@ import {
   type LoginFlowPoll,
   type LoginFlowStart,
   type ManualAccountInput,
+  type RemoteFolder,
   type SourceInput,
   type SourceSummary,
   type UnresolvedFailure,
@@ -44,6 +48,8 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   pollLoginFlowAsync(attemptId: string): Promise<unknown>;
   cancelLoginFlowAsync(attemptId: string): Promise<void>;
   verifyStoredAccountAsync(): Promise<unknown>;
+  listRemoteFoldersAsync(pathSegments: string[]): Promise<unknown>;
+  createRemoteFolderAsync(parentPathSegments: string[], name: string): Promise<unknown>;
 }
 
 const nativeModule =
@@ -80,6 +86,10 @@ function normalizeError(error: unknown): EngineError {
     ERR_ACCOUNT_ALREADY_CONFIGURED: "account_already_configured",
     ERR_ACCOUNT_NOT_CONFIGURED: "account_not_configured",
     ERR_ACCOUNT_STORAGE: "account_storage",
+    ERR_DAV_PERMISSION: "dav_permission",
+    ERR_DAV_NOT_FOUND: "dav_not_found",
+    ERR_DAV_INVALID_PATH: "dav_invalid_path",
+    ERR_DAV_QUOTA: "dav_quota",
   } as const satisfies Record<string, EngineError["code"]>;
   const code = knownCodes[parsed.data.code as keyof typeof knownCodes];
   if (code) {
@@ -165,6 +175,21 @@ export const webDavUploadEngine = {
       () => nativeModule.verifyStoredAccountAsync(),
       (value): AccountSummary => accountSummarySchema.parse(value),
     ),
+  listRemoteFolders: (pathSegments: string[]) => {
+    const path = remotePathSegmentsSchema.parse(pathSegments);
+    return runValueCommand(
+      () => nativeModule.listRemoteFoldersAsync(path),
+      (value): RemoteFolder[] => remoteFolderSchema.array().parse(value),
+    );
+  },
+  createRemoteFolder: (parentPathSegments: string[], name: string) => {
+    const parent = remotePathSegmentsSchema.parse(parentPathSegments);
+    const folderName = remotePathSegmentSchema.parse(name);
+    return runValueCommand(
+      () => nativeModule.createRemoteFolderAsync(parent, folderName),
+      (value): RemoteFolder => remoteFolderSchema.parse(value),
+    );
+  },
 
   addSnapshotInvalidatedListener(
     listener: (revision: number) => void,
