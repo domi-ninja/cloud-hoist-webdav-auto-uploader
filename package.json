@@ -29,6 +29,7 @@
     "android": "./scripts/android-run.sh",
     "android:setup": "./scripts/android-setup.sh",
     "android:seed-account": "./scripts/seed-debug-account.sh",
+    "test:android": "./scripts/test-android.sh",
     "prebuild": "expo prebuild --platform android",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",

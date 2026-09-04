@@ -1,6 +1,6 @@
 # 008 Discover media and selected folders
 
-Status: in progress
+Status: done
 
 Depends on: 002, 006
 
@@ -35,9 +35,13 @@ Users can configure Camera, Screenshots, and arbitrary folder sources. The Kotli
 
 ## Verification
 
-- Run source-classification and revision-detection unit tests.
-- Exercise Camera, Screenshots, and SAF sources on the emulator with seeded fixtures.
-- Revoke permissions and remove a selected directory, then confirm the configuration remains and shows the correct recovery action.
+- Source-classification, Android permission-branch, tree traversal, revision-detection, and Room transaction tests pass in the native unit suite.
+- The complete Android instrumentation suite passes on the API 36 / Android 16 emulator. Its MediaStore fixture verifies Camera and Screenshots classification without body reads; its document-provider fixture verifies nested SAF traversal.
+- The installed React Native app requests media access only after its explanation and returns from Android's full-access prompt with a Camera preview.
+- The installed app selected `Download/AutoUploadAcceptance` through the system folder picker and previewed a nested 35,149-byte fixture as one eligible file.
+- The selected tree's prefix grant remained present after both app process death and a full emulator reboot.
+- Room emulator tests verify new-files-only baselines, include-existing queue order, modified-file requeueing, and recoverable source blockers without deleting source or queue state.
+- The merged release manifest declares scoped media permissions and contains neither `MANAGE_EXTERNAL_STORAGE` nor any fixture provider.
 
 ## Not in this ticket
 
