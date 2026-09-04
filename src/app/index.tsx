@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { project } from "@/config/project";
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
@@ -13,6 +13,7 @@ export default function HomeScreen() {
   const { data: snapshot, error: snapshotError, refetch } = useEngineSnapshot();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [addingSource, setAddingSource] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   const togglePaused = async () => {
     if (!snapshot) {
@@ -30,8 +31,32 @@ export default function HomeScreen() {
   };
 
   const scanNow = async () => {
-    const result = await webDavUploadEngine.scanNow();
-    if (!result.ok) setErrorMessage(result.error.message);
+    setScanning(true);
+    setErrorMessage(undefined);
+
+    try {
+      const result = await webDavUploadEngine.scanNow();
+      if (!result.ok) {
+        setErrorMessage(result.error.message);
+      }
+      await refetch();
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const refresh = async () => {
+    if (snapshot?.account.status === "connected") {
+      await scanNow();
+      return;
+    }
+
+    setScanning(true);
+    try {
+      await refetch();
+    } finally {
+      setScanning(false);
+    }
   };
 
   return (
@@ -40,6 +65,9 @@ export default function HomeScreen() {
         className="flex-1"
         contentContainerClassName="flex-grow justify-between gap-4 p-4"
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl refreshing={scanning} onRefresh={() => void refresh()} />
+        }
       >
         <View className="gap-4">
           <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
@@ -100,12 +128,14 @@ export default function HomeScreen() {
         {snapshot?.account.status === "connected" ? (
           <View className="gap-4">
             <Pressable
+              accessibilityLabel="Scan now"
               accessibilityRole="button"
               className="border border-accent p-4"
+              disabled={scanning}
               onPress={() => void scanNow()}
             >
               <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                Scan now
+                {scanning ? "Scanning…" : "Scan now"}
               </Text>
             </Pressable>
             <Pressable

@@ -14,6 +14,7 @@ The three-tab interface exposes source health, upload history, global controls, 
 - Show one status line per source: uploading, waiting for network, paused, blocked, or last scanned at a concrete time.
 - Show queued and failed counts without inventing a guaranteed next-run time.
 - Add source enable or disable, scan now, edit destination, restore permission, reset history, and remove actions.
+- Run a global scan when the user pulls the Sources screen to refresh. Keep the Scan now button as an explicit alternative.
 - Build Activity with active, queued, blocked, failed, and completed items. Paginate the 30-day completed history instead of loading it all.
 - Make blockers actionable. Account, source, and job blockers should open the correct repair flow.
 - Add Retry failed from Activity. Do not add arbitrary per-item deletion or queue reordering.
@@ -26,6 +27,7 @@ The three-tab interface exposes source health, upload history, global controls, 
 
 - Every engine and blocker state has a clear representation and a relevant next action.
 - Pause, resume, scan, retry, source enable, and source disable update native state and invalidate the right queries.
+- Pull-to-refresh and the global Scan now button use the same scan command and reload the engine snapshot before their progress state ends.
 - Activity retains unresolved failures and shows only the retained 30-day completed window.
 - Settings changes replace WorkManager constraints without deleting jobs.
 - Cold-start deep links from notifications open the intended repair view.
