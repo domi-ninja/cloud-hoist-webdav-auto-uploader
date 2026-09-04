@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -94,6 +97,70 @@ class EngineDaoTest {
     assertTrue(dao.removeSource("source-1"))
     assertEquals(0, dao.sourceCount("source-1"))
     assertNull(dao.job("queued"))
+  }
+
+  @Test
+  fun competingClaimsReturnOneJobToOneWorker() {
+    dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
+    val start = CountDownLatch(1)
+    val finished = CountDownLatch(8)
+    val executor = Executors.newFixedThreadPool(8)
+    val claims = java.util.Collections.synchronizedList(mutableListOf<UploadJobEntity>())
+    repeat(8) { index ->
+      executor.execute {
+        start.await()
+        dao.claimNext(10, "worker-$index")?.let(claims::add)
+        finished.countDown()
+      }
+    }
+
+    start.countDown()
+    assertTrue(finished.await(10, TimeUnit.SECONDS))
+    executor.shutdownNow()
+    assertEquals(listOf("j1"), claims.map(UploadJobEntity::id))
+  }
+
+  @Test
+  fun completedRevisionDoesNotRequeueAfterHistoryCleanup() {
+    val revision = revision("r1")
+    dao.enqueueRevision(revision, job("j1", "r1", 1))
+    dao.claimNext(2, "worker")
+    dao.completeClaim("j1", "worker", 3)
+    dao.deleteCompletedBefore(4)
+
+    assertFalse(dao.enqueueRevision(revision.copy(id = "duplicate"), job("j2", "duplicate", 5)))
+    assertEquals(1, dao.revisionCount())
+    assertEquals(0, dao.jobCount())
+  }
+
+  @Test
+  fun fileBackedDatabaseSurvivesReopenAndWipeCascadesEverything() {
+    database.close()
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val name = "engine-reopen-test.db"
+    context.deleteDatabase(name)
+    database = Room.databaseBuilder(context, EngineRoomDatabase::class.java, name)
+      .allowMainThreadQueries()
+      .build()
+    dao = database.engineDao()
+    dao.upsertAccount(account())
+    dao.upsertSource(source())
+    dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
+    database.close()
+
+    database = Room.databaseBuilder(context, EngineRoomDatabase::class.java, name)
+      .allowMainThreadQueries()
+      .build()
+    dao = database.engineDao()
+    assertEquals(1, dao.accountCount())
+    assertEquals(1, dao.jobCount())
+    dao.wipe()
+    assertEquals(0, dao.accountCount())
+    assertEquals(0, dao.sourceCount("source-1"))
+    assertEquals(0, dao.revisionCount())
+    assertEquals(0, dao.jobCount())
+    database.close()
+    context.deleteDatabase(name)
   }
 
   private fun account() = AccountEntity(

@@ -9,7 +9,11 @@ class WebDavUploadEngineModule : Module() {
   }
   private val accountRepository by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
-    AndroidAccountRepository(context)
+    AndroidAccountRepository(context, engineDatabase.engineDao())
+  }
+  private val engineDatabase by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    EngineRoomDatabase.open(context)
   }
   private val accountManager by lazy {
     AccountManager(

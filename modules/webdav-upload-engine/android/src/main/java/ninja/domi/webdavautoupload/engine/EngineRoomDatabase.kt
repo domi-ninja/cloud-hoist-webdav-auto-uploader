@@ -1,11 +1,13 @@
 package ninja.domi.webdavautoupload.engine
 
+import android.content.Context
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Transaction
 import androidx.room.TypeConverter
@@ -63,6 +65,15 @@ interface EngineDao {
 
   @Query("SELECT COUNT(*) FROM sources WHERE id = :sourceId")
   fun sourceCount(sourceId: String): Int
+
+  @Query("SELECT COUNT(*) FROM accounts")
+  fun accountCount(): Int
+
+  @Query("SELECT COUNT(*) FROM local_revisions")
+  fun revisionCount(): Int
+
+  @Query("SELECT COUNT(*) FROM upload_jobs")
+  fun jobCount(): Int
 
   @Query(
     """
@@ -166,4 +177,12 @@ interface EngineDao {
 @TypeConverters(EngineTypeConverters::class)
 abstract class EngineRoomDatabase : RoomDatabase() {
   abstract fun engineDao(): EngineDao
+
+  companion object {
+    fun open(context: Context): EngineRoomDatabase = Room.databaseBuilder(
+      context.applicationContext,
+      EngineRoomDatabase::class.java,
+      "webdav-upload-engine.db",
+    ).build()
+  }
 }

@@ -10,7 +10,10 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-class AndroidAccountRepository(context: Context) : AccountRepository {
+class AndroidAccountRepository(
+  context: Context,
+  private val engineDao: EngineDao? = null,
+) : AccountRepository {
   private val metadata = context.getSharedPreferences(METADATA_PREFERENCES, Context.MODE_PRIVATE)
   private val secrets = context.getSharedPreferences(SECRET_PREFERENCES, Context.MODE_PRIVATE)
 
@@ -96,6 +99,7 @@ class AndroidAccountRepository(context: Context) : AccountRepository {
       secrets.edit().clear().commit()
       throw AccountStorageException()
     }
+    engineDao?.upsertAccount(account.toEntity())
   }
 
   @Synchronized
@@ -103,6 +107,7 @@ class AndroidAccountRepository(context: Context) : AccountRepository {
     if (!metadata.edit().clear().commit() || !secrets.edit().clear().commit()) {
       throw AccountStorageException()
     }
+    engineDao?.deleteAllAccounts()
   }
 
   private fun encryptionKey(): SecretKey {
@@ -135,3 +140,16 @@ class AndroidAccountRepository(context: Context) : AccountRepository {
     const val GCM_TAG_LENGTH_BITS = 128
   }
 }
+
+private fun StoredAccount.toEntity() = AccountEntity(
+  id = id,
+  serverUrl = serverUrl,
+  loginName = loginName,
+  davUserId = davUserId,
+  displayName = displayName,
+  checkedAt = java.time.Instant.parse(checkedAt).toEpochMilli(),
+  serverVersion = capabilities.serverVersion,
+  chunkingSupported = capabilities.chunkingSupported,
+  maxChunkSize = capabilities.maxChunkSize,
+  credentialReference = "android-keystore-v1",
+)
