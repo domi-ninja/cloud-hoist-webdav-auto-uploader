@@ -1,0 +1,2 @@
+# Local acceptance-test credentials. Never commit or package this file.
+test-creds.tct
