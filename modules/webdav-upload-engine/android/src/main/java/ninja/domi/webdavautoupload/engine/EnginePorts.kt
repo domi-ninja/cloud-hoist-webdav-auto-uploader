@@ -54,7 +54,7 @@ interface AccountRepository {
   fun clear()
 }
 
-interface DavClient {
+fun interface DavClient {
   fun upload(credential: StoredAccountCredential, request: DavUploadRequest): DavUploadResult
 }
 

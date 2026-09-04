@@ -70,6 +70,9 @@ interface EngineDao {
   @Query("SELECT * FROM upload_jobs WHERE id = :id")
   fun job(id: String): UploadJobEntity?
 
+  @Query("SELECT * FROM local_revisions WHERE id = :id")
+  fun revision(id: String): LocalRevisionEntity?
+
   @Query("SELECT * FROM upload_jobs WHERE claimToken = :claimToken LIMIT 1")
   fun jobByClaimToken(claimToken: String): UploadJobEntity?
 
@@ -104,6 +107,15 @@ interface EngineDao {
 
   @Query("SELECT COUNT(*) FROM upload_attempts WHERE jobId = :jobId")
   fun attemptCount(jobId: String): Int
+
+  @Query(
+    "SELECT COUNT(*) FROM upload_jobs " +
+      "INNER JOIN sources ON sources.id = upload_jobs.sourceId " +
+      "WHERE sources.enabled = 1 AND sources.blockerCode IS NULL AND " +
+      "(upload_jobs.state = 'queued' OR " +
+      "(upload_jobs.state = 'retry_wait' AND upload_jobs.retryAt <= :now))",
+  )
+  fun eligibleJobCount(now: Long): Int
 
   @Query("SELECT * FROM chunk_checkpoints WHERE jobId = :jobId")
   fun chunkCheckpoint(jobId: String): ChunkCheckpointEntity?

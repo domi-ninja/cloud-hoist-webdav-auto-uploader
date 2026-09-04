@@ -71,5 +71,8 @@ class QueueDrainWorker(
   context: Context,
   parameters: WorkerParameters,
 ) : Worker(context, parameters) {
-  override fun doWork(): Result = Result.success()
+  override fun doWork(): Result {
+    val drain = QueueDrainRunner.create(applicationContext) { isStopped }.run()
+    return if (drain.retryWorker) Result.retry() else Result.success()
+  }
 }
