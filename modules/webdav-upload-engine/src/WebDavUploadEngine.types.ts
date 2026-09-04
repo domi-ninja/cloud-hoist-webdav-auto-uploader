@@ -215,6 +215,11 @@ export const sourceCommitResultSchema = z.object({
   jobsAdded: z.number().int().nonnegative(),
 });
 
+export const mediaPermissionStateSchema = z.object({
+  access: z.enum(["full", "partial", "denied"]),
+  canAskAgain: z.boolean(),
+});
+
 export type AccountCapabilities = z.infer<typeof accountCapabilitiesSchema>;
 export type AccountSummary = z.infer<typeof accountSummarySchema>;
 export type AccountHealth = z.infer<typeof accountHealthSchema>;
@@ -238,6 +243,7 @@ export type SourceSelection = z.infer<typeof sourceSelectionSchema>;
 export type SourcePreview = z.infer<typeof sourcePreviewSchema>;
 export type SourceCommit = z.infer<typeof sourceCommitSchema>;
 export type SourceCommitResult = z.infer<typeof sourceCommitResultSchema>;
+export type MediaPermissionState = z.infer<typeof mediaPermissionStateSchema>;
 
 export type WebDavUploadEngineModuleEvents = {
   onSnapshotInvalidated: (payload: SnapshotInvalidated) => void;

@@ -8,6 +8,7 @@ import {
   loginFlowPollSchema,
   loginFlowStartSchema,
   manualAccountInputSchema,
+  mediaPermissionStateSchema,
   remoteFolderSchema,
   remotePathSegmentSchema,
   remotePathSegmentsSchema,
@@ -29,6 +30,7 @@ import {
   type LoginFlowPoll,
   type LoginFlowStart,
   type ManualAccountInput,
+  type MediaPermissionState,
   type RemoteFolder,
   type SelectedDocumentTree,
   type SourceCommit,
@@ -63,6 +65,8 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   pickDocumentTreeAsync(initialUri: string | null): Promise<unknown>;
   previewSourceAsync(selection: SourceSelection): Promise<unknown>;
   commitSourceAsync(source: SourceCommit): Promise<unknown>;
+  getMediaPermissionAsync(): Promise<unknown>;
+  requestMediaPermissionAsync(): Promise<unknown>;
 }
 
 const nativeModule =
@@ -226,6 +230,16 @@ export const webDavUploadEngine = {
       (value): SourceCommitResult => sourceCommitResultSchema.parse(value),
     );
   },
+  getMediaPermission: () =>
+    runValueCommand(
+      () => nativeModule.getMediaPermissionAsync(),
+      (value): MediaPermissionState => mediaPermissionStateSchema.parse(value),
+    ),
+  requestMediaPermission: () =>
+    runValueCommand(
+      () => nativeModule.requestMediaPermissionAsync(),
+      (value): MediaPermissionState => mediaPermissionStateSchema.parse(value),
+    ),
 
   addSnapshotInvalidatedListener(
     listener: (revision: number) => void,

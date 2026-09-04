@@ -4,6 +4,8 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
 import expo.modules.kotlin.functions.Coroutine
+import expo.modules.kotlin.Promise
+import expo.modules.kotlin.exception.Exceptions
 
 class WebDavUploadEngineModule : Module() {
   private lateinit var documentTreePicker:
@@ -40,6 +42,13 @@ class WebDavUploadEngineModule : Module() {
       recorder = SourceRevisionRecorder(engineDatabase.engineDao()),
       mediaDiscovery = AndroidMediaStoreDiscovery(context),
       documentTreeDiscovery = DocumentTreeDiscovery(documentTreeGateway),
+    )
+  }
+  private val mediaPermissionController by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    MediaPermissionController(
+      context,
+      appContext.permissions ?: throw Exceptions.PermissionsModuleNotFound(),
     )
   }
 
@@ -145,6 +154,14 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("commitSourceAsync") { source: SourceCommitRecord ->
       sourceDiscoveryManager.commit(source.toCommit()).toMap()
+    }
+
+    AsyncFunction("getMediaPermissionAsync") { promise: Promise ->
+      mediaPermissionController.get(promise::resolve)
+    }
+
+    AsyncFunction("requestMediaPermissionAsync") { promise: Promise ->
+      mediaPermissionController.request(promise::resolve)
     }
   }
 }
