@@ -9,6 +9,7 @@ import android.util.Base64
 import expo.modules.kotlin.exception.CodedException
 import java.net.InetAddress
 import java.net.URI
+import java.time.Instant
 import okhttp3.Dns
 
 /** Debug-APK-only entry point for opaque host-driven live account checks. */
@@ -19,6 +20,8 @@ class DebugAccountAcceptanceProvider : ContentProvider() {
     when (method) {
       "connect" -> connect(requireNotNull(extras))
       "verify" -> verify(requireNotNull(extras))
+      "seed" -> seed()
+      "clear" -> clear()
       else -> result("error", "ERR_ACCEPTANCE_UNKNOWN_METHOD")
     }
   } catch (error: CodedException) {
@@ -28,7 +31,7 @@ class DebugAccountAcceptanceProvider : ContentProvider() {
   }
 
   private fun connect(extras: Bundle): Bundle {
-    val repository = AndroidAccountRepository(requireNotNull(context))
+    val repository = repository()
     val serverUrl = decode(extras, "serverUrlB64")
     repository.clear()
     manager(repository, serverUrl, decode(extras, "serverAddressB64")).connectManual(
@@ -41,11 +44,47 @@ class DebugAccountAcceptanceProvider : ContentProvider() {
 
   private fun verify(extras: Bundle): Bundle {
     manager(
-      AndroidAccountRepository(requireNotNull(context)),
+      repository(),
       decode(extras, "serverUrlB64"),
       decode(extras, "serverAddressB64"),
     ).verifyStoredAccount()
     return result("ok")
+  }
+
+  /** Creates non-networked account state so emulator UI tests can reach source setup. */
+  private fun seed(): Bundle {
+    repository().save(
+      StoredAccountCredential(
+        account = StoredAccount(
+          id = "5e6f70aa-4ba2-4d1d-a084-e8917c417d31",
+          serverUrl = "https://acceptance.invalid",
+          loginName = "acceptance",
+          davUserId = "acceptance",
+          displayName = "Emulator acceptance",
+          checkedAt = Instant.EPOCH.toString(),
+          capabilities = AccountCapabilities(
+            serverVersion = "acceptance",
+            chunkingSupported = false,
+            maxChunkSize = null,
+          ),
+        ),
+        appPassword = "not-a-real-secret",
+      ),
+    )
+    return result("ok")
+  }
+
+  private fun clear(): Bundle {
+    repository().clear()
+    return result("ok")
+  }
+
+  private fun repository(): AndroidAccountRepository {
+    val providerContext = requireNotNull(context)
+    return AndroidAccountRepository(
+      providerContext,
+      EngineRoomDatabase.open(providerContext).engineDao(),
+    )
   }
 
   private fun manager(
