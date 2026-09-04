@@ -15,6 +15,7 @@ The app can connect one Nextcloud account through Login Flow v2 or manual app cr
 - Implement the fallback form for server URL, username, and app password. Label it as an app password and reject an empty value. Never ask for a main account password.
 - Call the OCS user endpoint after authentication to resolve the DAV user ID rather than assuming `loginName` is the ID.
 - Query OCS capabilities and persist the fields needed by transfer code, including chunk support and advertised limits.
+- Verify a stored account once when the app process opens. Show progress automatically and offer a retry action only after a failed check.
 - Store the app password in Kotlin-owned encrypted storage backed by Android Keystore so a worker can authenticate while React Native is not running.
 - Keep account metadata separate from the secret. Never return the app password over the Expo module after storage.
 - Use Android's TLS trust store. Surface certificate failures as a blocker and provide no bypass.
@@ -28,6 +29,8 @@ The app can connect one Nextcloud account through Login Flow v2 or manual app cr
 - The stored account uses the resolved DAV user ID and authoritative server URL.
 - Invalid credentials, maintenance mode, unsupported response bodies, redirects, and certificate errors produce distinct safe error codes.
 - Logs and module responses contain no password, token, authorization header, or login polling token.
+- Opening any app route checks a stored account without asking the user to press a verification button.
+- A failed automatic check keeps the account details visible and offers a manual retry.
 - After the React Native process dies, a Kotlin test path can still load the account credential and make an authenticated capability request.
 
 ## Verification

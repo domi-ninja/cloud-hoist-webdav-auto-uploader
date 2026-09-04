@@ -7,7 +7,9 @@ import {
 } from "@tanstack/react-query";
 import { useEffect, type PropsWithChildren } from "react";
 
-import webDavUploadEngine from "../../modules/webdav-upload-engine";
+import webDavUploadEngine, {
+  type AccountHealth,
+} from "../../modules/webdav-upload-engine";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -19,6 +21,7 @@ const queryClient = new QueryClient({
 });
 
 const engineKey = ["engine"] as const;
+const accountVerificationKey = ["account-verification"] as const;
 
 function NativeInvalidationBridge() {
   const client = useQueryClient();
@@ -33,10 +36,18 @@ function NativeInvalidationBridge() {
   return null;
 }
 
+function AutomaticAccountVerification() {
+  const { data: snapshot } = useEngineSnapshot();
+
+  useStoredAccountVerification(snapshot?.account);
+  return null;
+}
+
 export function EngineQueryProvider({ children }: PropsWithChildren) {
   return (
     <QueryClientProvider client={queryClient}>
       <NativeInvalidationBridge />
+      <AutomaticAccountVerification />
       {children}
     </QueryClientProvider>
   );
@@ -46,6 +57,28 @@ export function useEngineSnapshot() {
   return useQuery({
     queryKey: [...engineKey, "snapshot"],
     queryFn: () => webDavUploadEngine.getSnapshot(),
+  });
+}
+
+export function useStoredAccountVerification(account: AccountHealth | undefined) {
+  const accountId = account?.status === "connected" ? account.id : null;
+
+  return useQuery({
+    queryKey: [...accountVerificationKey, accountId],
+    queryFn: async () => {
+      const result = await webDavUploadEngine.verifyStoredAccount();
+      if (!result.ok) {
+        throw new Error(result.error.message);
+      }
+      return result.value;
+    },
+    enabled: accountId !== null,
+    retry: false,
+    retryOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 }
 

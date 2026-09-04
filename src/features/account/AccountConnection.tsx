@@ -5,6 +5,7 @@ import webDavUploadEngine, {
   type AccountHealth,
   type EngineError,
 } from "../../../modules/webdav-upload-engine";
+import { useStoredAccountVerification } from "@/lib/engine-query";
 
 type AccountConnectionProps = {
   account: AccountHealth;
@@ -22,6 +23,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
   const [loginAttemptId, setLoginAttemptId] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
+  const accountVerification = useStoredAccountVerification(account);
 
   const pollLogin = useCallback(async () => {
     if (!loginAttemptId) {
@@ -99,37 +101,38 @@ export function AccountConnection({ account }: AccountConnectionProps) {
     }
   };
 
-  const verifyStoredAccount = async () => {
-    setBusy(true);
-    const result = await webDavUploadEngine.verifyStoredAccount();
-    setBusy(false);
-    setMessage(result.ok ? "Account verified from encrypted storage." : errorText(result.error));
-  };
-
   if (account.status === "connected") {
     return (
       <View className="gap-4 border border-accent p-4">
+        <Text className="text-base text-muted-light dark:text-muted-dark">
+          Connected account
+        </Text>
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           {account.displayName}
         </Text>
         <Text className="text-base text-muted-light dark:text-muted-dark">
           {account.serverUrl} · DAV user {account.davUserId}
         </Text>
-        <Pressable
-          accessibilityLabel="Verify stored account"
-          accessibilityRole="button"
-          className="border border-accent p-4"
-          disabled={busy}
-          onPress={() => void verifyStoredAccount()}
-        >
-          <Text className="text-base text-ink-light dark:text-ink-dark">
-            Verify stored account
-          </Text>
-        </Pressable>
-        {message ? (
+        {accountVerification.isFetching ? (
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            {message}
+            Checking account…
           </Text>
+        ) : accountVerification.error ? (
+          <>
+            <Text className="text-base text-red-700 dark:text-red-300">
+              {accountVerification.error.message}
+            </Text>
+            <Pressable
+              accessibilityLabel="Retry account check"
+              accessibilityRole="button"
+              className="border border-accent p-4"
+              onPress={() => void accountVerification.refetch()}
+            >
+              <Text className="text-base text-ink-light dark:text-ink-dark">
+                Retry account check
+              </Text>
+            </Pressable>
+          </>
         ) : null}
       </View>
     );

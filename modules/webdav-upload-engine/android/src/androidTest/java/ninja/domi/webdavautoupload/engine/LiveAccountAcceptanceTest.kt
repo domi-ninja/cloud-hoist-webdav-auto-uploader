@@ -54,7 +54,7 @@ class LiveAccountAcceptanceTest {
     launchApp(instrumentation.context, launchUrl)
     val device = UiDevice.getInstance(instrumentation)
     dismissDeveloperMenuOnboarding(device)
-    assertTrue(device.wait(Until.hasObject(By.desc("Verify stored account")), UI_TIMEOUT))
+    assertTrue(device.wait(Until.hasObject(By.text("Connected account")), UI_TIMEOUT))
   }
 
   @Test
