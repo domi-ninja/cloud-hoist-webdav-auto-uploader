@@ -75,6 +75,35 @@ class NextcloudChunkTransportTest {
     assertNull(transport.listChunks(CREDENTIAL, "id", UPLOAD))
   }
 
+  @Test
+  fun abortRemovesBothTheSessionAndAnAssembledStagingFile() {
+    val deleted = mutableListOf<String>()
+    val transport = transport { request ->
+      deleted += request.url.encodedPath
+      response(request, 204)
+    }
+
+    transport.abort(CREDENTIAL, "id", UPLOAD)
+
+    assertTrue(deleted.first().endsWith("/uploads/user/id/"))
+    assertTrue(deleted.last().endsWith("/.large%20file.bin.webdav-auto-upload-id.part"))
+  }
+
+  @Test
+  fun abortStillRemovesTheStagingFileWhenSessionDeletionFails() {
+    val deleted = mutableListOf<String>()
+    val transport = transport { request ->
+      deleted += request.url.encodedPath
+      response(request, if (deleted.size == 1) 500 else 204)
+    }
+
+    val failure = runCatching { transport.abort(CREDENTIAL, "id", UPLOAD) }.exceptionOrNull()
+
+    assertTrue(failure is AccountServerException)
+    assertEquals(2, deleted.size)
+    assertTrue(deleted.last().contains(".webdav-auto-upload-id.part"))
+  }
+
   private fun transport(respond: (Request) -> Response) = NextcloudChunkTransport(
     contentSource = LocalContentSource { ByteArrayInputStream(ByteArray(UPLOAD.byteCount.toInt())) },
     httpClient = OkHttpClient.Builder().addInterceptor { chain -> respond(chain.request()) }.build(),

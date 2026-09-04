@@ -167,15 +167,22 @@ class NextcloudChunkTransport(
     uploadId: String,
     request: DavUploadRequest,
   ) {
-    val networkRequest = authenticatedRequest(
-      credential,
-      NextcloudDavUrl.uploadFolder(credential.account, uploadId),
-    ).delete()
-      .header("Destination", stagingUrl(credential.account, uploadId, request).toString())
-      .build()
-    execute(networkRequest) { response ->
-      if (response.code !in listOf(204, 404)) throwForStatus(response)
+    val staged = stagingUrl(credential.account, uploadId, request)
+    var failure: Exception? = null
+    listOf(NextcloudDavUrl.uploadFolder(credential.account, uploadId), staged).forEach { url ->
+      try {
+        val networkRequest = authenticatedRequest(credential, url)
+          .delete()
+          .header("Destination", staged.toString())
+          .build()
+        execute(networkRequest) { response ->
+          if (response.code !in listOf(204, 404)) throwForStatus(response)
+        }
+      } catch (error: Exception) {
+        failure = failure ?: error
+      }
     }
+    failure?.let { throw it }
   }
 
   private fun createParentFolders(
