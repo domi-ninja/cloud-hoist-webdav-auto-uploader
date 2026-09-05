@@ -345,6 +345,34 @@ class EngineDaoTest {
   }
 
   @Test
+  fun migrationFourToFiveDefaultsExistingSourcesToReplace() {
+    val name = "engine-migration-four-five.db"
+    migrationHelper.createDatabase(name, 4).apply {
+      execSQL(
+        "INSERT INTO accounts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("account-1", "https://cloud.test", "login", "dav", "Domi", 1, "34", 1, null, "key", null),
+      )
+      execSQL(
+        "INSERT INTO sources VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("source-1", "account-1", "Camera", "media_store", "content://media", "[]", 1, 1, null, null),
+      )
+      close()
+    }
+
+    migrationHelper.runMigrationsAndValidate(
+      name,
+      5,
+      true,
+      EngineRoomDatabase.MIGRATION_4_5,
+    ).use { migrated ->
+      migrated.query("SELECT collisionPolicy FROM sources WHERE id = 'source-1'").use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertEquals("replace", cursor.getString(0))
+      }
+    }
+  }
+
+  @Test
   fun blockerAttemptAndChunkCheckpointRemainAttachedToTheJob() {
     dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
     dao.claimNext(2, "worker")
@@ -413,7 +441,7 @@ class EngineDaoTest {
   }
 
   @Test
-  fun includeExistingQueuesOldestFirstAndKeepsSelectedTreeFolders() {
+  fun discoveryQueuesOldestFirstAndKeepsSelectedTreeFolders() {
     var nextId = 0
     val recorder = SourceRevisionRecorder(
       dao,
@@ -448,7 +476,7 @@ class EngineDaoTest {
   }
 
   @Test
-  fun sourceManagerCommitsARescannedSelectionAsOneSource() {
+  fun sourceManagerQueuesExistingFilesOnFirstCommit() {
     var nextId = 0
     val discovered = discoveredFile("provider", "photo.jpg", 50, 100)
     val manager = SourceDiscoveryManager(
@@ -471,13 +499,13 @@ class EngineDaoTest {
         name = "  Screenshots  ",
         selection = SourceSelection(SourceType.SCREENSHOTS),
         remotePathSegments = listOf("Auto Upload", "Screenshots"),
-        includeExisting = false,
+        collisionPolicy = CollisionPolicy.REPLACE,
       ),
     )
 
     assertEquals("created-source", result.sourceId)
     assertEquals(SourcePreview(1, 50L, MediaPermissionAccess.PARTIAL), result.preview)
-    assertEquals(0, result.jobsAdded)
+    assertEquals(1, result.jobsAdded)
     assertEquals(1, dao.sourceCount("created-source"))
   }
 

@@ -40,12 +40,17 @@ class NextcloudUploadClient(
 
     val temporaryName = ".$fileName.webdav-auto-upload-${uploadId()}"
     val temporaryUrl = NextcloudDavUrl.file(credential.account, remotePath, temporaryName)
-    val destinationUrl = NextcloudDavUrl.file(credential.account, remotePath, fileName)
     try {
       val uploadResponse = putTemporary(credential, request, temporaryUrl)
       if (request.isCancelled()) throw TransferCancelledException()
-      moveIntoPlace(credential, temporaryUrl.toString(), destinationUrl.toString())
-      return uploadResponse
+      val finalName = moveIntoPlace(
+        credential,
+        temporaryUrl.toString(),
+        remotePath,
+        fileName,
+        request.collisionPolicy,
+      )
+      return uploadResponse.copy(remoteFileName = finalName)
     } catch (error: CodedException) {
       if (error.isDefiniteFailure()) deleteBestEffort(credential, temporaryUrl.toString())
       throw error
@@ -95,15 +100,33 @@ class NextcloudUploadClient(
   private fun moveIntoPlace(
     credential: StoredAccountCredential,
     temporaryUrl: String,
-    destinationUrl: String,
-  ) {
-    val request = authenticatedRequest(credential, temporaryUrl)
-      .method("MOVE", null)
-      .header("Destination", destinationUrl)
-      .header("Overwrite", "T")
-      .build()
-    execute(request) { response ->
-      if (response.code != 201 && response.code != 204) throwForStatus(response)
+    remotePath: List<String>,
+    fileName: String,
+    collisionPolicy: CollisionPolicy,
+  ): String {
+    var copyNumber = 0
+    while (true) {
+      val candidate = if (copyNumber == 0) fileName else keepBothFileName(fileName, copyNumber)
+      val destinationUrl = NextcloudDavUrl.file(credential.account, remotePath, candidate)
+      val overwrite = if (copyNumber == 0 && collisionPolicy == CollisionPolicy.REPLACE) {
+        "T"
+      } else {
+        "F"
+      }
+      val request = authenticatedRequest(credential, temporaryUrl)
+        .method("MOVE", null)
+        .header("Destination", destinationUrl.toString())
+        .header("Overwrite", overwrite)
+        .build()
+      val moved = execute(request) { response ->
+        when {
+          response.code == 201 || response.code == 204 -> true
+          response.code == 412 && collisionPolicy == CollisionPolicy.KEEP_BOTH -> false
+          else -> throwForStatus(response)
+        }
+      }
+      if (moved) return candidate
+      copyNumber += 1
     }
   }
 

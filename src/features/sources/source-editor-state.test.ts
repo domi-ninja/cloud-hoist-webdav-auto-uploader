@@ -15,6 +15,7 @@ const source: SourceSummary = {
   localUri: "content://receipts",
   remotePath: "/Archive/Receipts",
   enabled: false,
+  collisionPolicy: "replace",
   lastScanAt: null,
 };
 
@@ -25,6 +26,7 @@ describe("source editor state", () => {
       selection: { type: "document_tree", treeUri: "content://receipts" },
       remotePathSegments: ["Archive", "Receipts"],
       enabled: false,
+      collisionPolicy: "replace",
     });
   });
 
@@ -49,6 +51,7 @@ describe("source editor state", () => {
       localUri: "content://receipts",
       remotePath: "/Archive/Receipts",
       enabled: false,
+      collisionPolicy: "replace",
     });
   });
 });

@@ -21,4 +21,7 @@ class SourceInputRecord : Record {
 
   @Field
   val enabled: Boolean = true
+
+  @Field
+  val collisionPolicy: String = CollisionPolicy.REPLACE.value
 }

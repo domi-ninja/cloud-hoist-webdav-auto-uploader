@@ -43,6 +43,7 @@ data class SourceEntity(
   val createdAt: Long,
   val lastScanAt: Long?,
   val blockerCode: String?,
+  val collisionPolicy: String = CollisionPolicy.REPLACE.value,
 )
 
 @Entity(

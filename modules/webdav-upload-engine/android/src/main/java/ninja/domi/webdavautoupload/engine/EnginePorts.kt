@@ -29,6 +29,7 @@ data class DavUploadRequest(
   val mimeType: String?,
   val modifiedAtEpochSeconds: Long?,
   val createdAtEpochSeconds: Long?,
+  val collisionPolicy: CollisionPolicy = CollisionPolicy.REPLACE,
   val isCancelled: () -> Boolean = { false },
   val onProgress: (uploadedBytes: Long) -> Unit = {},
 )
@@ -36,7 +37,24 @@ data class DavUploadRequest(
 data class DavUploadResult(
   val modificationTimeAccepted: Boolean,
   val creationTimeAccepted: Boolean,
+  val remoteFileName: String? = null,
 )
+
+enum class CollisionPolicy(val value: String) {
+  REPLACE("replace"),
+  KEEP_BOTH("keep_both");
+
+  companion object {
+    fun fromValue(value: String): CollisionPolicy = entries.find { it.value == value }
+      ?: throw EngineInvalidInputException("Collision policy is invalid.")
+  }
+}
+
+internal fun keepBothFileName(fileName: String, copyNumber: Int): String {
+  require(copyNumber > 0)
+  val dot = fileName.lastIndexOf('.').takeIf { it > 0 } ?: fileName.length
+  return "${fileName.substring(0, dot)} ($copyNumber)${fileName.substring(dot)}"
+}
 
 data class QueuedUpload(
   val id: String,

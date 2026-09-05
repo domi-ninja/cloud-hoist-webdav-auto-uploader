@@ -35,14 +35,14 @@ class SourceCommitRecord : Record {
   val remotePathSegments: List<String> = emptyList()
 
   @Field
-  val includeExisting: Boolean = false
+  val collisionPolicy: String = CollisionPolicy.REPLACE.value
 
   fun toCommit() = SourceCommit(
     id = id,
     name = name,
     selection = selection.toSelection(),
     remotePathSegments = remotePathSegments,
-    includeExisting = includeExisting,
+    collisionPolicy = CollisionPolicy.fromValue(collisionPolicy),
   )
 }
 

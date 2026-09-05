@@ -15,6 +15,8 @@ import {
   remotePathSegmentsSchema,
   schedulerStatusSchema,
   workerActivitySchema,
+  sourceCommitSchema,
+  sourceSummarySchema,
 } from "./WebDavUploadEngine.types";
 
 const now = "2026-09-04T12:00:00.000Z";
@@ -176,5 +178,27 @@ describe("native engine contract", () => {
 
     expect(activityPageSchema.parse(page)).toEqual(page);
     expect(() => activityPageSchema.parse({ ...page, nextOffset: -1 })).toThrow();
+  });
+
+  it("requires an explicit source collision policy", () => {
+    const source = {
+      id: "source-1",
+      name: "Camera",
+      kind: "media_store",
+      localUri: "mediastore://camera",
+      remotePath: "/Photos",
+      enabled: true,
+      collisionPolicy: "replace",
+      lastScanAt: null,
+    };
+    expect(sourceSummarySchema.parse(source)).toEqual(source);
+    expect(
+      sourceCommitSchema.parse({
+        name: "Camera",
+        selection: { type: "camera" },
+        remotePathSegments: ["Photos"],
+        collisionPolicy: "keep_both",
+      }),
+    ).toHaveProperty("collisionPolicy", "keep_both");
   });
 });

@@ -51,13 +51,22 @@ export function SourceEditor({ source, visible, onClose, onSaved }: SourceEditor
     initialValue.remotePathSegments,
   );
   const [enabled, setEnabled] = useState(initialValue.enabled);
+  const [collisionPolicy, setCollisionPolicy] = useState(
+    initialValue.collisionPolicy,
+  );
   const [preview, setPreview] = useState<SourcePreview>();
   const [choosingLocal, setChoosingLocal] = useState(!source);
   const [choosingRemote, setChoosingRemote] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
 
-  const currentValue = { name, selection, remotePathSegments, enabled };
+  const currentValue = {
+    name,
+    selection,
+    remotePathSegments,
+    enabled,
+    collisionPolicy,
+  };
   const dirty = sourceEditorValueKey(currentValue) !== initialKey;
   const canSave = Boolean(name.trim() && selection) && !busy;
 
@@ -94,13 +103,14 @@ export function SourceEditor({ source, visible, onClose, onSaved }: SourceEditor
             selection,
             remotePathSegments: destination.value,
             enabled,
+            collisionPolicy,
           }),
         )
       : await webDavUploadEngine.commitSource({
           name,
           selection,
           remotePathSegments: destination.value,
-          includeExisting: false,
+          collisionPolicy,
         });
 
     if (!result.ok) {
@@ -143,6 +153,35 @@ export function SourceEditor({ source, visible, onClose, onSaved }: SourceEditor
           contentContainerClassName="gap-4 p-4"
           keyboardShouldPersistTaps="handled"
         >
+          <Panel>
+            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+              If a file already exists on Nextcloud
+            </Text>
+            <Pressable
+              accessibilityLabel="Replace file on Nextcloud"
+              accessibilityRole="radio"
+              accessibilityState={{ checked: collisionPolicy === "replace" }}
+              className="flex-row items-center gap-4 p-4"
+              disabled={busy}
+              onPress={() => setCollisionPolicy("replace")}
+            >
+              <Text className="text-base text-ink-light dark:text-ink-dark">
+                {collisionPolicy === "replace" ? "●" : "○"} Replace on Nextcloud
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Keep both files"
+              accessibilityRole="radio"
+              accessibilityState={{ checked: collisionPolicy === "keep_both" }}
+              className="flex-row items-center gap-4 p-4"
+              disabled={busy}
+              onPress={() => setCollisionPolicy("keep_both")}
+            >
+              <Text className="text-base text-ink-light dark:text-ink-dark">
+                {collisionPolicy === "keep_both" ? "●" : "○"} Keep both
+              </Text>
+            </Pressable>
+          </Panel>
           <Panel>
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
               Local folder

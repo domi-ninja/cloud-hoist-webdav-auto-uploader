@@ -8,6 +8,7 @@ export type SourceEditorValue = {
   selection: SourceSelection | undefined;
   remotePathSegments: string[];
   enabled: boolean;
+  collisionPolicy: "replace" | "keep_both";
 };
 
 export function selectionForSource(source: SourceSummary): SourceSelection {
@@ -41,6 +42,7 @@ export function sourceEditorInitialValue(
       ? source.remotePath.split("/").filter(Boolean)
       : ["WebDAV Auto Upload"],
     enabled: source?.enabled ?? true,
+    collisionPolicy: source?.collisionPolicy ?? "replace",
   };
 }
 
@@ -63,5 +65,6 @@ export function sourceInputFromEditor(
         : `mediastore://${selection.type}`,
     remotePath: `/${value.remotePathSegments.join("/")}`,
     enabled: value.enabled,
+    collisionPolicy: value.collisionPolicy,
   } as const;
 }

@@ -124,11 +124,8 @@ class NextcloudChunkTransport(
   ): DavUploadResult {
     val account = credential.account
     val staged = stagingUrl(account, uploadId, request)
-    val destination = NextcloudDavUrl.file(
-      account,
-      DavPath.validate(request.remotePathSegments),
-      DavPath.validateName(request.fileName),
-    )
+    val remotePath = DavPath.validate(request.remotePathSegments)
+    val fileName = DavPath.validateName(request.fileName)
     val assemble = authenticatedRequest(
       credential,
       NextcloudDavUrl.uploadAssembly(account, uploadId),
@@ -154,15 +151,28 @@ class NextcloudChunkTransport(
     }
     if (request.isCancelled()) throw TransferCancelledException()
 
-    val replace = authenticatedRequest(credential, staged)
-      .method("MOVE", null)
-      .header("Destination", destination.toString())
-      .header("Overwrite", "T")
-      .build()
-    execute(replace) { response ->
-      if (response.code != 201 && response.code != 204) throwForStatus(response)
+    var copyNumber = 0
+    while (true) {
+      val candidate = if (copyNumber == 0) fileName else keepBothFileName(fileName, copyNumber)
+      val destination = NextcloudDavUrl.file(account, remotePath, candidate)
+      val overwrite = if (
+        copyNumber == 0 && request.collisionPolicy == CollisionPolicy.REPLACE
+      ) "T" else "F"
+      val replace = authenticatedRequest(credential, staged)
+        .method("MOVE", null)
+        .header("Destination", destination.toString())
+        .header("Overwrite", overwrite)
+        .build()
+      val moved = execute(replace) { response ->
+        when {
+          response.code == 201 || response.code == 204 -> true
+          response.code == 412 && request.collisionPolicy == CollisionPolicy.KEEP_BOTH -> false
+          else -> throwForStatus(response)
+        }
+      }
+      if (moved) return timestamps.copy(remoteFileName = candidate)
+      copyNumber += 1
     }
-    return timestamps
   }
 
   override fun abort(

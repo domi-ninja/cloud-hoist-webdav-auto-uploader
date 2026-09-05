@@ -39,6 +39,7 @@ export const sourceSummarySchema = z.object({
   localUri: z.string().min(1),
   remotePath: z.string().startsWith("/"),
   enabled: z.boolean(),
+  collisionPolicy: z.enum(["replace", "keep_both"]),
   lastScanAt: z.string().datetime().nullable(),
 });
 
@@ -170,6 +171,7 @@ export const sourceInputSchema = z.object({
   localUri: z.string().min(1),
   remotePath: z.string().startsWith("/"),
   enabled: z.boolean(),
+  collisionPolicy: z.enum(["replace", "keep_both"]),
 });
 
 export const snapshotInvalidatedSchema = z.object({
@@ -233,7 +235,7 @@ export const sourceCommitSchema = z.object({
   name: z.string().trim().min(1),
   selection: sourceSelectionSchema,
   remotePathSegments: remotePathSegmentsSchema,
-  includeExisting: z.boolean(),
+  collisionPolicy: z.enum(["replace", "keep_both"]),
 });
 
 export const sourceCommitResultSchema = z.object({

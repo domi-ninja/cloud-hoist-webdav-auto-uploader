@@ -18,7 +18,7 @@ data class SourceCommit(
   val name: String,
   val selection: SourceSelection,
   val remotePathSegments: List<String>,
-  val includeExisting: Boolean,
+  val collisionPolicy: CollisionPolicy = CollisionPolicy.REPLACE,
 )
 
 data class SourceCommitResult(
@@ -62,11 +62,12 @@ class SourceDiscoveryManager(
       createdAt = now(),
       lastScanAt = null,
       blockerCode = null,
+      collisionPolicy = input.collisionPolicy.value,
     )
     val recorded = recorder.record(
       source,
       discovery.files,
-      queueNewRevisions = input.includeExisting,
+      queueNewRevisions = true,
       permissionAccess = discovery.permissionAccess,
     )
     return SourceCommitResult(sourceId, recorded.preview, recorded.jobsAdded)

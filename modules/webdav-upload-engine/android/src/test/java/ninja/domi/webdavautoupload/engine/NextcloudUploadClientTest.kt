@@ -50,6 +50,34 @@ class NextcloudUploadClientTest {
     assertEquals("1600000000", put.createdAt)
     assertTrue(result.modificationTimeAccepted)
     assertTrue(result.creationTimeAccepted)
+    assertEquals("photo #1.jpg", result.remoteFileName)
+  }
+
+  @Test
+  fun keepBothUsesTheFirstAvailableNumericSuffix() {
+    val moves = mutableListOf<CapturedRequest>()
+    val client = client { request ->
+      when (request.method) {
+        "MKCOL" -> response(request, 405)
+        "PUT" -> response(request, 201)
+        "MOVE" -> {
+          moves += capture(request)
+          response(request, if (moves.size < 3) 412 else 201)
+        }
+        else -> error("Unexpected ${request.method}")
+      }
+    }
+
+    val result = client.upload(
+      CREDENTIAL,
+      UPLOAD.copy(collisionPolicy = CollisionPolicy.KEEP_BOTH),
+    )
+
+    assertEquals(listOf("F", "F", "F"), moves.map(CapturedRequest::overwrite))
+    assertTrue(moves[0].destination.orEmpty().endsWith("/photo%20%231.jpg"))
+    assertTrue(moves[1].destination.orEmpty().endsWith("/photo%20%231%20(1).jpg"))
+    assertTrue(moves[2].destination.orEmpty().endsWith("/photo%20%231%20(2).jpg"))
+    assertEquals("photo #1 (2).jpg", result.remoteFileName)
   }
 
   @Test

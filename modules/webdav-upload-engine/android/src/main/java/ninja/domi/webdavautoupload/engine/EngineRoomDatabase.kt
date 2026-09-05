@@ -85,6 +85,9 @@ interface EngineDao {
   @Query("SELECT * FROM upload_jobs WHERE id = :id")
   fun job(id: String): UploadJobEntity?
 
+  @Query("UPDATE upload_jobs SET remoteFileName = :fileName WHERE id = :jobId")
+  fun updateJobRemoteFileName(jobId: String, fileName: String): Int
+
   @Query("SELECT * FROM local_revisions WHERE id = :id")
   fun revision(id: String): LocalRevisionEntity?
 
@@ -381,7 +384,7 @@ interface EngineDao {
     UploadAttemptEntity::class,
     ChunkCheckpointEntity::class,
   ],
-  version = 4,
+  version = 5,
   exportSchema = true,
 )
 @TypeConverters(EngineTypeConverters::class)
@@ -397,7 +400,8 @@ abstract class EngineRoomDatabase : RoomDatabase() {
         context.applicationContext,
         EngineRoomDatabase::class.java,
         "webdav-upload-engine.db",
-      ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { instance = it }
+      ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+        .also { instance = it }
     }
 
     val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -495,6 +499,14 @@ abstract class EngineRoomDatabase : RoomDatabase() {
       override fun migrate(database: SupportSQLiteDatabase) {
         database.execSQL("ALTER TABLE local_revisions ADD COLUMN mimeType TEXT")
         database.execSQL("ALTER TABLE local_revisions ADD COLUMN createdAt INTEGER")
+      }
+    }
+
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+      override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+          "ALTER TABLE sources ADD COLUMN collisionPolicy TEXT NOT NULL DEFAULT 'replace'",
+        )
       }
     }
   }

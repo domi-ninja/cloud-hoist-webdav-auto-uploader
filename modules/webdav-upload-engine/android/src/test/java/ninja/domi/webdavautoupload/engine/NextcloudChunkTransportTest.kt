@@ -55,6 +55,31 @@ class NextcloudChunkTransportTest {
     assertTrue(moves.last().destination.orEmpty().endsWith("/large%20file.bin"))
     assertEquals("T", moves.last().overwrite)
     assertTrue(result.modificationTimeAccepted)
+    assertEquals("large file.bin", result.remoteFileName)
+  }
+
+  @Test
+  fun keepBothFinalizationRetriesWithANumericSuffix() {
+    val finalMoves = mutableListOf<Captured>()
+    val transport = transport { request ->
+      val captured = capture(request)
+      if (request.method == "MOVE" && !request.url.encodedPath.endsWith("/.file")) {
+        finalMoves += captured
+        response(request, if (finalMoves.size == 1) 412 else 201)
+      } else {
+        response(request, 201)
+      }
+    }
+
+    val result = transport.finalize(
+      CREDENTIAL,
+      "upload-id",
+      UPLOAD.copy(collisionPolicy = CollisionPolicy.KEEP_BOTH),
+    )
+
+    assertEquals(listOf("F", "F"), finalMoves.map(Captured::overwrite))
+    assertTrue(finalMoves.last().destination.orEmpty().endsWith("/large%20file%20(1).bin"))
+    assertEquals("large file (1).bin", result.remoteFileName)
   }
 
   @Test

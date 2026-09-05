@@ -92,7 +92,7 @@ class DebugUploadAcceptance(
         name = SOURCE_NAME,
         selection = SourceSelection(SourceType.CAMERA),
         remotePathSegments = listOf(runFolder),
-        includeExisting = false,
+        collisionPolicy = CollisionPolicy.REPLACE,
       ),
     )
   }

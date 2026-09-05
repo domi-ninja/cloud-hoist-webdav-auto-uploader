@@ -56,6 +56,7 @@ class RoomEngineView(
       "localUri" to source.localUri,
       "remotePath" to source.remotePathSegments.joinToString("/", prefix = "/"),
       "enabled" to source.enabled,
+      "collisionPolicy" to source.collisionPolicy,
       "lastScanAt" to source.lastScanAt?.let(::instant),
     )
   }
@@ -108,6 +109,7 @@ class RoomEngineView(
         createdAt = existing?.createdAt ?: now(),
         lastScanAt = existing?.lastScanAt,
         blockerCode = existing?.blockerCode,
+        collisionPolicy = CollisionPolicy.fromValue(input.collisionPolicy).value,
       ),
     )
     invalidate()

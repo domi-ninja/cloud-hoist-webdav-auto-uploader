@@ -70,6 +70,9 @@ class QueueDrainRunner(
           mimeType = revision.mimeType ?: mimeType(revision.localUri),
           modifiedAtEpochSeconds = revision.modifiedAt,
           createdAtEpochSeconds = revision.createdAt,
+          collisionPolicy = CollisionPolicy.fromValue(
+            dao.source(job.sourceId)?.collisionPolicy ?: CollisionPolicy.REPLACE.value,
+          ),
           isCancelled = {
             isPaused() || isStopped() || elapsed() - startedAt >= maxRunMillis
           },
@@ -84,9 +87,12 @@ class QueueDrainRunner(
             )
           },
         )
-        chunkedDavClient?.upload(credential, job.id, request)
+        val uploadResult = chunkedDavClient?.upload(credential, job.id, request)
           ?: davClient.upload(credential, request)
         val finishedAt = now()
+        uploadResult.remoteFileName?.let { remoteFileName ->
+          check(dao.updateJobRemoteFileName(job.id, remoteFileName) == 1)
+        }
         dao.insertAttempt(UploadAttemptEntity(attemptId, job.id, claimedAt, finishedAt, "completed"))
         check(dao.completeClaim(job.id, claimToken, finishedAt) == 1)
         onAttemptFinished("completed")

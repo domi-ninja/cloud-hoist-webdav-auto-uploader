@@ -16,6 +16,7 @@ internal data class FixtureSource(
   val localUri: String,
   val remotePath: String,
   val enabled: Boolean,
+  val collisionPolicy: String,
   val lastScanAt: String?,
 ) {
   fun toMap() = mapOf(
@@ -25,6 +26,7 @@ internal data class FixtureSource(
     "localUri" to localUri,
     "remotePath" to remotePath,
     "enabled" to enabled,
+    "collisionPolicy" to collisionPolicy,
     "lastScanAt" to lastScanAt,
   )
 }
@@ -47,6 +49,7 @@ internal class FixtureUploadEngine(
         localUri = "content://media/external/images/media",
         remotePath = "/Photos/Camera",
         enabled = true,
+        collisionPolicy = CollisionPolicy.REPLACE.value,
         lastScanAt = null,
       ),
     )
@@ -155,6 +158,7 @@ internal class FixtureUploadEngine(
       localUri = input.localUri,
       remotePath = input.remotePath,
       enabled = input.enabled,
+      collisionPolicy = input.collisionPolicy,
       lastScanAt = sourceRecords[sourceId]?.lastScanAt,
     )
     addActivity("source_changed", "Source '${input.name.trim()}' saved.")
@@ -188,6 +192,7 @@ internal class FixtureUploadEngine(
     if (!input.remotePath.startsWith("/")) {
       throw EngineInvalidInputException("Remote path must start with '/'.")
     }
+    CollisionPolicy.fromValue(input.collisionPolicy)
   }
 
   private fun addActivity(type: String, message: String) {
