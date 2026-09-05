@@ -17,8 +17,4 @@ the current app ux is shit, and here is a rough outline of how we will fix it.
 # general
 
 - top right hamburger should be THE CONNECTED NEXTCLOUDS icon instead of this shitty hamburger menu
-  - and then when clicking, open a dedicated modal page where we can edit account settings in-place
-
-----
-
-make subtickets based on 37,
+  - and then when clicking, open a dedicated modal page where we can edit account settings in-place. Have a link to this modal in settings as well.
