@@ -1,6 +1,7 @@
 package ninja.domi.webdavautoupload.engine
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -75,6 +76,7 @@ data class LocalRevisionEntity(
   val discoveredAt: Long,
   val mimeType: String? = null,
   val createdAt: Long? = null,
+  @ColumnInfo(defaultValue = "0") val lastSeenAt: Long = discoveredAt,
 )
 
 @Entity(

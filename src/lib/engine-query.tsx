@@ -94,6 +94,37 @@ export function useActivityPages() {
   });
 }
 
+export function useFileInventoryPages() {
+  return useInfiniteQuery({
+    queryKey: [...engineKey, "file-inventory"],
+    queryFn: ({ pageParam }) => webDavUploadEngine.getFileInventoryPage(pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
+  });
+}
+
+export function useRemoteThumbnail(
+  sourceId: string,
+  relativePath: string,
+  version: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: [...engineKey, "thumbnail", sourceId, relativePath, version],
+    queryFn: async () => {
+      const result = await webDavUploadEngine.getRemoteThumbnail(
+        sourceId,
+        relativePath,
+        version,
+      );
+      if (!result.ok) throw new Error(result.error.message);
+      return result.value;
+    },
+    enabled,
+    staleTime: Infinity,
+  });
+}
+
 export function useUnresolvedFailures() {
   return useQuery({
     queryKey: [...engineKey, "failures"],

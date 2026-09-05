@@ -38,6 +38,17 @@ class WebDavUploadEngineModule : Module() {
   private val remoteFolderManager by lazy {
     RemoteFolderManager(accountRepository, NextcloudDavClient())
   }
+  private val fileInventoryManager by lazy {
+    FileInventoryManager(
+      engineDatabase.engineDao(),
+      accountRepository,
+      NextcloudInventoryClient(),
+    )
+  }
+  private val remoteThumbnailManager by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    RemoteThumbnailManager(context, engineDatabase.engineDao(), accountRepository)
+  }
   private val documentTreeGateway by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
     AndroidDocumentTreeGateway(context)
@@ -142,6 +153,15 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("getActivityPageAsync") { offset: Int ->
       engine.activityPage(offset)
+    }
+
+    AsyncFunction("getFileInventoryPageAsync") Coroutine { offset: Int ->
+      fileInventoryManager.page(offset).toMap()
+    }
+
+    AsyncFunction("getRemoteThumbnailAsync") Coroutine {
+        sourceId: String, relativePath: String, version: String? ->
+      remoteThumbnailManager.thumbnail(sourceId, relativePath, version)
     }
 
     AsyncFunction("getUnresolvedFailuresAsync") {

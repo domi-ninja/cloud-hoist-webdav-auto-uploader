@@ -1,5 +1,7 @@
 # 093 Make Activity a file inventory
 
+Status: done
+
 Parent: 037
 
 Depends on: 004, 008, 091

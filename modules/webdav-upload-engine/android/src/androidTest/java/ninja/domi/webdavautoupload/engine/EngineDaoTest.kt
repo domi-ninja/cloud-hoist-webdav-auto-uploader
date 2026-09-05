@@ -373,6 +373,38 @@ class EngineDaoTest {
   }
 
   @Test
+  fun migrationFiveToSixMarksExistingRevisionsAsSeen() {
+    val name = "engine-migration-five-six.db"
+    migrationHelper.createDatabase(name, 5).apply {
+      execSQL(
+        "INSERT INTO accounts VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("account-1", "https://cloud.test", "login", "dav", "Domi", 1, "34", 1, null, "key", null),
+      )
+      execSQL(
+        "INSERT INTO sources VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("source-1", "account-1", "Camera", "media_store", "content://media", "[]", 1, 1, 100, null, "replace"),
+      )
+      execSQL(
+        "INSERT INTO local_revisions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        arrayOf("revision-1", "source-1", "provider", "content://photo", "photo.jpg", 10, 1, 100, "image/jpeg", 1),
+      )
+      close()
+    }
+
+    migrationHelper.runMigrationsAndValidate(
+      name,
+      6,
+      true,
+      EngineRoomDatabase.MIGRATION_5_6,
+    ).use { migrated ->
+      migrated.query("SELECT lastSeenAt FROM local_revisions WHERE id = 'revision-1'").use { cursor ->
+        assertTrue(cursor.moveToFirst())
+        assertEquals(100L, cursor.getLong(0))
+      }
+    }
+  }
+
+  @Test
   fun blockerAttemptAndChunkCheckpointRemainAttachedToTheJob() {
     dao.enqueueRevision(revision("r1"), job("j1", "r1", 1))
     dao.claimNext(2, "worker")
@@ -473,6 +505,25 @@ class EngineDaoTest {
       listOf("Auto Upload", "Camera", "Archive"),
       first?.remotePathSegments,
     )
+  }
+
+  @Test
+  fun localInventoryOnlyIncludesFilesSeenByTheLatestScan() {
+    var scannedAt = 100L
+    var nextId = 0
+    val recorder = SourceRevisionRecorder(
+      dao,
+      newId = { "inventory-${nextId++}" },
+      now = { scannedAt },
+    )
+    val first = discoveredFile("first", "first.jpg", 10, 1)
+    val missing = discoveredFile("missing", "missing.jpg", 10, 1)
+
+    recorder.record(source(), listOf(first, missing), queueNewRevisions = true)
+    scannedAt = 200L
+    recorder.record(source(), listOf(first), queueNewRevisions = true)
+
+    assertEquals(listOf("first.jpg"), dao.localInventory().map(LocalInventoryView::localRelativePath))
   }
 
   @Test

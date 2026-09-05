@@ -17,6 +17,7 @@ import {
   workerActivitySchema,
   sourceCommitSchema,
   sourceSummarySchema,
+  fileInventoryPageSchema,
 } from "./WebDavUploadEngine.types";
 
 const now = "2026-09-04T12:00:00.000Z";
@@ -200,5 +201,36 @@ describe("native engine contract", () => {
         collisionPolicy: "keep_both",
       }),
     ).toHaveProperty("collisionPolicy", "keep_both");
+  });
+
+  it("decodes a paged file inventory with presence and transfer state", () => {
+    const page = {
+      items: [
+        {
+          id: "source:photo.jpg",
+          sourceId: "source",
+          sourceName: "Camera",
+          fileName: "photo.jpg",
+          relativePath: "photo.jpg",
+          remotePath: "/Photos/photo.jpg",
+          localUri: "content://photo",
+          mimeType: "image/jpeg",
+          byteCount: 42,
+          modifiedAt: now,
+          presence: "both",
+          transfer: { status: "uploaded", uploadedAt: now },
+        },
+      ],
+      errors: [],
+      nextOffset: null,
+    };
+
+    expect(fileInventoryPageSchema.parse(page)).toEqual(page);
+    expect(() =>
+      fileInventoryPageSchema.parse({
+        ...page,
+        items: [{ ...page.items[0], presence: "somewhere" }],
+      }),
+    ).toThrow();
   });
 });

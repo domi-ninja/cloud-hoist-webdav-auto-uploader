@@ -51,6 +51,24 @@ data class UploadJobView(
   val confirmedChunks: List<String>?,
 )
 
+data class LocalInventoryView(
+  val sourceId: String,
+  val sourceName: String,
+  val sourceRemotePathSegments: List<String>,
+  val localUri: String,
+  val localRelativePath: String,
+  val mimeType: String?,
+  val byteCount: Long,
+  val modifiedAt: Long,
+  val jobId: String?,
+  val jobRemotePathSegments: List<String>?,
+  val jobRemoteFileName: String?,
+  val jobState: String?,
+  val jobCompletedAt: Long?,
+  val jobRetryAt: Long?,
+  val jobLastErrorCode: String?,
+)
+
 class EngineTypeConverters {
   @TypeConverter
   fun encodeStringList(values: List<String>): String = JSONArray(values).toString()
@@ -72,6 +90,22 @@ interface EngineDao {
 
   @Insert(onConflict = OnConflictStrategy.IGNORE)
   fun insertRevision(revision: LocalRevisionEntity): Long
+
+  @Query(
+    """
+    UPDATE local_revisions SET lastSeenAt = :lastSeenAt
+    WHERE sourceId = :sourceId AND providerId = :providerId
+      AND relativePath = :relativePath AND byteCount = :byteCount AND modifiedAt = :modifiedAt
+    """,
+  )
+  fun touchRevision(
+    sourceId: String,
+    providerId: String,
+    relativePath: String,
+    byteCount: Long,
+    modifiedAt: Long,
+    lastSeenAt: Long,
+  ): Int
 
   @Insert
   fun insertJob(job: UploadJobEntity)
@@ -130,6 +164,26 @@ interface EngineDao {
     """,
   )
   fun recentJobViews(limit: Int = 100): List<UploadJobView>
+
+  @Query(
+    """
+    SELECT local_revisions.sourceId, sources.name AS sourceName,
+      sources.remotePathSegments AS sourceRemotePathSegments,
+      local_revisions.localUri, local_revisions.relativePath AS localRelativePath,
+      local_revisions.mimeType, local_revisions.byteCount, local_revisions.modifiedAt,
+      upload_jobs.id AS jobId, upload_jobs.remotePathSegments AS jobRemotePathSegments,
+      upload_jobs.remoteFileName AS jobRemoteFileName, upload_jobs.state AS jobState,
+      upload_jobs.completedAt AS jobCompletedAt, upload_jobs.retryAt AS jobRetryAt,
+      upload_jobs.lastErrorCode AS jobLastErrorCode
+    FROM local_revisions
+    INNER JOIN sources ON sources.id = local_revisions.sourceId
+    LEFT JOIN upload_jobs ON upload_jobs.revisionId = local_revisions.id
+    WHERE sources.lastScanAt IS NOT NULL
+      AND local_revisions.lastSeenAt = sources.lastScanAt
+    ORDER BY local_revisions.modifiedAt DESC, local_revisions.id DESC
+    """,
+  )
+  fun localInventory(): List<LocalInventoryView>
 
   @Query(
     "SELECT * FROM upload_attempts WHERE startedAt >= :cutoff " +
@@ -355,7 +409,18 @@ interface EngineDao {
     var revisionsAdded = 0
     var jobsAdded = 0
     for (write in writes) {
-      if (insertRevision(write.revision) == -1L) continue
+      if (insertRevision(write.revision) == -1L) {
+        val revision = write.revision
+        touchRevision(
+          revision.sourceId,
+          revision.providerId,
+          revision.relativePath,
+          revision.byteCount,
+          revision.modifiedAt,
+          revision.lastSeenAt,
+        )
+        continue
+      }
       revisionsAdded += 1
       write.job?.let {
         insertJob(it)
@@ -384,7 +449,7 @@ interface EngineDao {
     UploadAttemptEntity::class,
     ChunkCheckpointEntity::class,
   ],
-  version = 5,
+  version = 6,
   exportSchema = true,
 )
 @TypeConverters(EngineTypeConverters::class)
@@ -400,7 +465,13 @@ abstract class EngineRoomDatabase : RoomDatabase() {
         context.applicationContext,
         EngineRoomDatabase::class.java,
         "webdav-upload-engine.db",
-      ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5).build()
+      ).addMigrations(
+        MIGRATION_1_2,
+        MIGRATION_2_3,
+        MIGRATION_3_4,
+        MIGRATION_4_5,
+        MIGRATION_5_6,
+      ).build()
         .also { instance = it }
     }
 
@@ -507,6 +578,15 @@ abstract class EngineRoomDatabase : RoomDatabase() {
         database.execSQL(
           "ALTER TABLE sources ADD COLUMN collisionPolicy TEXT NOT NULL DEFAULT 'replace'",
         )
+      }
+    }
+
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+      override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL(
+          "ALTER TABLE local_revisions ADD COLUMN lastSeenAt INTEGER NOT NULL DEFAULT 0",
+        )
+        database.execSQL("UPDATE local_revisions SET lastSeenAt = discoveredAt")
       }
     }
   }

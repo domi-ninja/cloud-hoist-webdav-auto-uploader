@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import {
   activityPageSchema,
+  fileInventoryPageSchema,
   accountSummarySchema,
   engineSnapshotSchema,
   loginFlowPollSchema,
@@ -25,6 +26,7 @@ import {
   transferConstraintsSchema,
   unresolvedFailureSchema,
   type ActivityPage,
+  type FileInventoryPage,
   type AccountSummary,
   type EngineCommandResult,
   type EngineError,
@@ -53,6 +55,12 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   getSnapshotAsync(): Promise<unknown>;
   getSourcesAsync(): Promise<unknown>;
   getActivityPageAsync(offset: number): Promise<unknown>;
+  getFileInventoryPageAsync(offset: number): Promise<unknown>;
+  getRemoteThumbnailAsync(
+    sourceId: string,
+    relativePath: string,
+    version: string | null,
+  ): Promise<unknown>;
   getUnresolvedFailuresAsync(): Promise<unknown>;
   getDiagnosticReportAsync(): Promise<unknown>;
   pauseAsync(): Promise<void>;
@@ -165,6 +173,23 @@ export const webDavUploadEngine = {
     const parsedOffset = z.number().int().nonnegative().parse(offset);
     return activityPageSchema.parse(await nativeModule.getActivityPageAsync(parsedOffset));
   },
+
+  async getFileInventoryPage(offset = 0): Promise<FileInventoryPage> {
+    const parsedOffset = z.number().int().nonnegative().parse(offset);
+    return fileInventoryPageSchema.parse(
+      await nativeModule.getFileInventoryPageAsync(parsedOffset),
+    );
+  },
+
+  getRemoteThumbnail: (
+    sourceId: string,
+    relativePath: string,
+    version: string | null,
+  ) =>
+    runValueCommand(
+      () => nativeModule.getRemoteThumbnailAsync(sourceId, relativePath, version),
+      (value): string | null => z.string().startsWith("file:").nullable().parse(value),
+    ),
 
   async getUnresolvedFailures(): Promise<UnresolvedFailure[]> {
     return unresolvedFailureSchema

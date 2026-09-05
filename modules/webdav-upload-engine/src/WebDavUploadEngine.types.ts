@@ -143,6 +143,34 @@ export const activityPageSchema = z.object({
   nextOffset: z.number().int().nonnegative().nullable(),
 });
 
+export const filePresenceSchema = z.enum(["local_only", "remote_only", "both"]);
+
+export const fileInventoryEntrySchema = z.object({
+  id: z.string().min(1),
+  sourceId: z.string().min(1),
+  sourceName: z.string().min(1),
+  fileName: z.string().min(1),
+  relativePath: z.string().min(1),
+  remotePath: z.string().startsWith("/"),
+  localUri: z.string().nullable(),
+  mimeType: z.string().nullable(),
+  byteCount: z.number().int().nonnegative().nullable(),
+  modifiedAt: z.string().datetime().nullable(),
+  presence: filePresenceSchema,
+  transfer: jobStateSchema.nullable(),
+});
+
+export const inventoryErrorSchema = z.object({
+  sourceId: z.string().min(1),
+  message: z.string().min(1),
+});
+
+export const fileInventoryPageSchema = z.object({
+  items: fileInventoryEntrySchema.array(),
+  errors: inventoryErrorSchema.array(),
+  nextOffset: z.number().int().nonnegative().nullable(),
+});
+
 export const unresolvedFailureSchema = z.object({
   id: z.string().min(1),
   code: z.string().min(1),
@@ -277,6 +305,8 @@ export type TransferConstraints = z.infer<typeof transferConstraintsSchema>;
 export type SchedulerStatus = z.infer<typeof schedulerStatusSchema>;
 export type ActivityEntry = z.infer<typeof activityEntrySchema>;
 export type ActivityPage = z.infer<typeof activityPageSchema>;
+export type FileInventoryEntry = z.infer<typeof fileInventoryEntrySchema>;
+export type FileInventoryPage = z.infer<typeof fileInventoryPageSchema>;
 export type UnresolvedFailure = z.infer<typeof unresolvedFailureSchema>;
 export type EngineSnapshot = z.infer<typeof engineSnapshotSchema>;
 export type SourceInput = z.infer<typeof sourceInputSchema>;
