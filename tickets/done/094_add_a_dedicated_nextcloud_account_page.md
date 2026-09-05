@@ -1,5 +1,7 @@
 # 094 Add a dedicated Nextcloud account page
 
+Status: done
+
 Parent: 037
 
 ## Outcome

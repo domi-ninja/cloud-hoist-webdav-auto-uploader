@@ -73,6 +73,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   removeSourceAsync(sourceId: string): Promise<void>;
   resetSourceHistoryAsync(sourceId: string): Promise<void>;
   connectManualAsync(input: ManualAccountInput): Promise<unknown>;
+  replaceManualAccountAsync(input: ManualAccountInput): Promise<unknown>;
   startLoginFlowAsync(serverUrl: string): Promise<unknown>;
   pollLoginFlowAsync(attemptId: string): Promise<unknown>;
   cancelLoginFlowAsync(attemptId: string): Promise<void>;
@@ -226,6 +227,13 @@ export const webDavUploadEngine = {
     const parsedInput = manualAccountInputSchema.parse(input);
     return runValueCommand(
       () => nativeModule.connectManualAsync(parsedInput),
+      (value): AccountSummary => accountSummarySchema.parse(value),
+    );
+  },
+  replaceManualAccount: (input: ManualAccountInput) => {
+    const parsedInput = manualAccountInputSchema.parse(input);
+    return runValueCommand(
+      () => nativeModule.replaceManualAccountAsync(parsedInput),
       (value): AccountSummary => accountSummarySchema.parse(value),
     );
   },

@@ -40,6 +40,29 @@ class AccountManagerTest {
   }
 
   @Test
+  fun manualReplacementKeepsTheAccountIdentity() {
+    val repository = FakeAccountRepository()
+    val manager = AccountManager(
+      repository = repository,
+      networkClient = FakeAccountNetworkClient(),
+      clock = Clock.fixed(now, ZoneOffset.UTC),
+      onAccountChanged = {},
+    )
+    val original = manager.connectManual("https://old.example.test", "old", "old-secret")
+
+    val replacement = manager.replaceManual(
+      "https://new.example.test",
+      "new",
+      "new-secret",
+    )
+
+    assertEquals(original.id, replacement.id)
+    assertEquals("https://new.example.test", replacement.serverUrl)
+    assertEquals("new", repository.stored?.account?.loginName)
+    assertEquals("new-secret", repository.stored?.appPassword)
+  }
+
+  @Test
   fun browserLoginUsesAuthoritativeServerAndNeverExposesSecret() {
     val repository = FakeAccountRepository()
     val network = FakeAccountNetworkClient().apply {

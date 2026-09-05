@@ -239,6 +239,14 @@ class WebDavUploadEngineModule : Module() {
       ).toMap()
     }
 
+    AsyncFunction("replaceManualAccountAsync") { input: ManualAccountInputRecord ->
+      accountManager.replaceManual(
+        serverUrl = input.serverUrl,
+        username = input.username,
+        appPassword = input.appPassword,
+      ).toMap()
+    }
+
     AsyncFunction("startLoginFlowAsync") { serverUrl: String ->
       accountManager.startLoginFlow(serverUrl).toMap()
     }

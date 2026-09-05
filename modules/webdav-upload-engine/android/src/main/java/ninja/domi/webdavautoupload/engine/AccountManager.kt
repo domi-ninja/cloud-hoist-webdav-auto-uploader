@@ -50,6 +50,32 @@ class AccountManager(
     )
   }
 
+  fun replaceManual(
+    serverUrl: String,
+    username: String,
+    appPassword: String,
+  ): StoredAccount {
+    val existing = repository.currentAccount() ?: throw AccountNotConfiguredException()
+    val loginName = username.trim()
+    if (loginName.isBlank() || appPassword.isBlank()) {
+      throw AccountInvalidCredentialsException()
+    }
+    val normalizedUrl = ServerUrlNormalizer.normalize(serverUrl)
+    val user = networkClient.resolveUser(normalizedUrl, loginName, appPassword)
+    val capabilities = networkClient.capabilities(normalizedUrl, loginName, appPassword)
+    val replacement = existing.copy(
+      serverUrl = normalizedUrl,
+      loginName = loginName,
+      davUserId = user.id,
+      displayName = user.displayName,
+      checkedAt = clock.instant().toString(),
+      capabilities = capabilities,
+    )
+    repository.save(StoredAccountCredential(replacement, appPassword))
+    onAccountChanged()
+    return replacement
+  }
+
   @Synchronized
   fun startLoginFlow(serverUrl: String): LoginFlowStart {
     ensureNoAccount()

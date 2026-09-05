@@ -1,16 +1,16 @@
 import { Fragment, useState } from "react";
 import { useRouter } from "expo-router";
-import { Alert, ScrollView, Share, Switch, Text, View } from "react-native";
+import { ScrollView, Share, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { project } from "@/config/project";
 import { useEngineSnapshot } from "@/lib/engine-query";
-import { formatRelativeTime } from "@/lib/format";
-import { useNow } from "@/lib/use-now";
 import webDavUploadEngine, {
   type TransferConstraints,
 } from "../../modules/webdav-upload-engine";
 import { ActionButton, Panel, Separator } from "@/components/ui";
+import { AccountSettingsModal } from "@/features/account/AccountSettingsModal";
+import { InstanceIcon } from "@/features/account/InstanceIcon";
 
 type ConstraintKey = keyof TransferConstraints;
 
@@ -20,7 +20,7 @@ export default function SettingsScreen() {
   const [saving, setSaving] = useState<ConstraintKey>();
   const [sharing, setSharing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
-  const now = useNow();
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const toggle = async (key: ConstraintKey) => {
     if (!snapshot) return;
@@ -39,29 +39,6 @@ export default function SettingsScreen() {
     { key: "batteryNotLow", label: "Wait when battery is low" },
     { key: "requiresCharging", label: "Upload only while charging" },
   ];
-
-  const signOut = () => {
-    Alert.alert(
-      "Sign out and remove local data?",
-      "This removes the account, sources, queue, and local history. Local files and files already uploaded to Nextcloud stay untouched.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Sign out",
-          style: "destructive",
-          onPress: () => {
-            void webDavUploadEngine.signOut().then((result) => {
-              if (!result.ok) {
-                setErrorMessage(result.error.message);
-                return;
-              }
-              router.navigate("/");
-            });
-          },
-        },
-      ],
-    );
-  };
 
   const shareDiagnostics = async () => {
     setSharing(true);
@@ -140,20 +117,15 @@ export default function SettingsScreen() {
           : null}
         {snapshot?.account.status === "connected" ? (
           <Panel>
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Account
-            </Text>
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              {snapshot.account.displayName} · {snapshot.account.serverUrl}
-            </Text>
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              Checked {formatRelativeTime(snapshot.account.checkedAt, now)}
-            </Text>
+            <View className="flex-row items-center gap-4">
+              <InstanceIcon compact serverUrl={snapshot.account.serverUrl} />
+              <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
+                {snapshot.account.displayName}
+              </Text>
+            </View>
             <ActionButton
-              accessibilityLabel="Sign out and remove local data"
-              label="Sign out and remove local data"
-              onPress={signOut}
-              tone="danger"
+              label="Account settings"
+              onPress={() => setAccountOpen(true)}
             />
           </Panel>
         ) : null}
@@ -185,6 +157,18 @@ export default function SettingsScreen() {
           </Text>
         </Panel>
       </ScrollView>
+      {accountOpen && snapshot?.account.status === "connected" ? (
+        <AccountSettingsModal
+          account={snapshot.account}
+          key={snapshot.account.id}
+          onClose={() => setAccountOpen(false)}
+          onSignedOut={() => {
+            setAccountOpen(false);
+            router.navigate("/");
+          }}
+          visible
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
