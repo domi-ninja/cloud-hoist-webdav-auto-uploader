@@ -1,0 +1,1 @@
+- show make clear warning message when waiting due to whatever of the 3 factors in settings, show it in an appropriate place
