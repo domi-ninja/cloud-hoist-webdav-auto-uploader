@@ -7,13 +7,13 @@ import webDavUploadEngine, {
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
 import { formatRelativeTime } from "@/lib/format";
-import { RemoteFolderPicker } from "./RemoteFolderPicker";
 import { ActionButton, Panel, Separator } from "@/components/ui";
 
 type SourceCardProps = {
   snapshot: EngineSnapshot;
   source: SourceSummary;
   now: number;
+  onEdit: () => void;
 };
 
 function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary, now: number) {
@@ -45,8 +45,7 @@ function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary, now: numb
   return "Ready to scan";
 }
 
-export function SourceCard({ snapshot, source, now }: SourceCardProps) {
-  const [editingDestination, setEditingDestination] = useState(false);
+export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
   const [showMaintenance, setShowMaintenance] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
@@ -140,27 +139,6 @@ export function SourceCard({ snapshot, source, now }: SourceCardProps) {
     );
   };
 
-  if (editingDestination) {
-    return (
-      <View className="gap-4">
-        <RemoteFolderPicker
-          onSelect={(pathSegments) => {
-            const remotePath = pathSegments.length ? `/${pathSegments.join("/")}` : "/";
-            void updateSource({ remotePath }).then((saved) => {
-              if (saved) setEditingDestination(false);
-            });
-          }}
-        />
-        <ActionButton
-          accessibilityLabel={`Cancel editing ${source.name}`}
-          disabled={busy}
-          label="Cancel"
-          onPress={() => setEditingDestination(false)}
-        />
-      </View>
-    );
-  }
-
   return (
     <Panel>
       <View className="flex-row items-center justify-between gap-4">
@@ -216,10 +194,10 @@ export function SourceCard({ snapshot, source, now }: SourceCardProps) {
           tone={permissionBlocker ? "secondary" : "primary"}
         />
         <ActionButton
-          accessibilityLabel={`Edit destination for ${source.name}`}
+          accessibilityLabel={`Edit ${source.name}`}
           disabled={busy}
-          label="Change destination"
-          onPress={() => setEditingDestination(true)}
+          label="Edit source"
+          onPress={onEdit}
         />
       </View>
       <Separator />

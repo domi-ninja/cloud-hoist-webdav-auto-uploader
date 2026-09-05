@@ -8,10 +8,7 @@ import webDavUploadEngine, {
 } from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
 import { SourceCard } from "@/features/sources/SourceCard";
-import {
-  SourceSetup,
-  type SourceSetupMode,
-} from "@/features/sources/SourceSetup";
+import { SourceEditor } from "@/features/sources/SourceEditor";
 import { useEngineSnapshot } from "@/lib/engine-query";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 import { useNow } from "@/lib/use-now";
@@ -52,8 +49,7 @@ function queueSummary(snapshot: EngineSnapshot) {
 export default function HomeScreen() {
   const { data: snapshot, error: snapshotError, refetch } = useEngineSnapshot();
   const [errorMessage, setErrorMessage] = useState<string>();
-  const [addingSource, setAddingSource] =
-    useState<Exclude<SourceSetupMode, "all">>();
+  const [editingSourceId, setEditingSourceId] = useState<string | "new">();
   const [scanning, setScanning] = useState(false);
   const now = useNow();
 
@@ -102,9 +98,11 @@ export default function HomeScreen() {
   };
 
   const connected = snapshot?.account.status === "connected";
-  const showingSetup =
-    connected && (snapshot.sources.length === 0 || Boolean(addingSource));
-  const visibleSources = connected && !showingSetup ? snapshot.sources : [];
+  const visibleSources = connected ? snapshot.sources : [];
+  const editingSource =
+    editingSourceId && editingSourceId !== "new"
+      ? snapshot?.sources.find((source) => source.id === editingSourceId)
+      : undefined;
 
   return (
     <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
@@ -148,20 +146,6 @@ export default function HomeScreen() {
             {snapshot && snapshot.account.status !== "connected" ? (
               <AccountConnection account={snapshot.account} />
             ) : null}
-            {showingSetup ? (
-              <SourceSetup
-                mode={addingSource ?? "all"}
-                onCancel={
-                  snapshot.sources.length
-                    ? () => setAddingSource(undefined)
-                    : undefined
-                }
-                onComplete={() => {
-                  setAddingSource(undefined);
-                  void refetch();
-                }}
-              />
-            ) : null}
             {visibleSources.length ? (
               <View className="gap-4">
                 <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
@@ -177,17 +161,12 @@ export default function HomeScreen() {
           </View>
         }
         ListFooterComponent={
-          connected && !showingSetup ? (
+          connected ? (
             <View className="mt-4 gap-4">
               <ActionButton
-                accessibilityLabel="Add watch folder"
-                label="Add watch folder"
-                onPress={() => setAddingSource("folder")}
-              />
-              <ActionButton
-                accessibilityLabel="Add Camera or Screenshots source"
-                label="Add Camera or Screenshots"
-                onPress={() => setAddingSource("media")}
+                accessibilityLabel="Add upload source"
+                label="Add source"
+                onPress={() => setEditingSourceId("new")}
               />
               <ActionButton
                 disabled={scanning}
@@ -215,10 +194,27 @@ export default function HomeScreen() {
         }
         renderItem={({ item: source }) =>
           snapshot ? (
-            <SourceCard now={now} snapshot={snapshot} source={source} />
+            <SourceCard
+              now={now}
+              onEdit={() => setEditingSourceId(source.id)}
+              snapshot={snapshot}
+              source={source}
+            />
           ) : null
         }
       />
+      {connected && editingSourceId ? (
+        <SourceEditor
+          key={editingSourceId}
+          onClose={() => setEditingSourceId(undefined)}
+          onSaved={() => {
+            setEditingSourceId(undefined);
+            void refetch();
+          }}
+          source={editingSource}
+          visible
+        />
+      ) : null}
     </SafeAreaView>
   );
 }

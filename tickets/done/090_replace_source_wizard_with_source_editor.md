@@ -1,5 +1,7 @@
 # 090 Replace the source wizard with a source editor
 
+Status: done
+
 Parent: 037
 
 ## Outcome
