@@ -207,11 +207,13 @@ export default function HomeScreen() {
         <SourceEditor
           key={editingSourceId}
           onClose={() => setEditingSourceId(undefined)}
+          onEditExisting={setEditingSourceId}
           onSaved={() => {
             setEditingSourceId(undefined);
             void refetch();
           }}
           source={editingSource}
+          sources={snapshot.sources}
           visible
         />
       ) : null}

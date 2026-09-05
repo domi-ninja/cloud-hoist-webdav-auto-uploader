@@ -1,5 +1,7 @@
 # 092 Turn media folders into source presets
 
+Status: done
+
 Parent: 037
 
 Depends on: 090

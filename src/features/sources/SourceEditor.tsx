@@ -23,6 +23,7 @@ import { ensureRemoteDestination } from "./default-destination";
 import { LocalSourcePicker } from "./LocalSourcePicker";
 import { RemoteFolderPicker } from "./RemoteFolderPicker";
 import {
+  existingPresetSource,
   sourceEditorInitialValue,
   sourceEditorValueKey,
   sourceInputFromEditor,
@@ -31,8 +32,10 @@ import {
 
 type SourceEditorProps = {
   source?: SourceSummary;
+  sources: SourceSummary[];
   visible: boolean;
   onClose: () => void;
+  onEditExisting: (sourceId: string) => void;
   onSaved: () => void;
 };
 
@@ -40,7 +43,14 @@ function displayPath(pathSegments: string[]) {
   return pathSegments.length ? `/${pathSegments.join("/")}` : "/";
 }
 
-export function SourceEditor({ source, visible, onClose, onSaved }: SourceEditorProps) {
+export function SourceEditor({
+  source,
+  sources,
+  visible,
+  onClose,
+  onEditExisting,
+  onSaved,
+}: SourceEditorProps) {
   const initialValue = useMemo(() => sourceEditorInitialValue(source), [source]);
   const initialKey = sourceEditorValueKey(initialValue);
   const [name, setName] = useState(initialValue.name);
@@ -196,13 +206,20 @@ export function SourceEditor({ source, visible, onClose, onSaved }: SourceEditor
             ) : null}
             <ActionButton
               disabled={busy}
-              label={choosingLocal ? "Hide choices" : "Change local folder"}
+              label={choosingLocal ? "Hide choices" : "Change source"}
               onPress={() => setChoosingLocal((open) => !open)}
             />
           </Panel>
           {choosingLocal ? (
             <LocalSourcePicker
               onSelect={(nextSelection, nextPreview) => {
+                const existing = !source
+                  ? existingPresetSource(sources, nextSelection)
+                  : undefined;
+                if (existing) {
+                  onEditExisting(existing.id);
+                  return;
+                }
                 setSelection(nextSelection);
                 setPreview(nextPreview);
                 if (!name.trim()) setName(sourceSelectionLabel(nextSelection));

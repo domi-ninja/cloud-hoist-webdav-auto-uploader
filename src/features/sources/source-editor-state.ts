@@ -32,6 +32,17 @@ export function sourceSelectionLabel(selection: SourceSelection | undefined) {
   }
 }
 
+export function existingPresetSource(
+  sources: SourceSummary[],
+  selection: SourceSelection,
+) {
+  if (selection.type === "document_tree") return undefined;
+  const localUri = `mediastore://${selection.type}`;
+  return sources.find(
+    (source) => source.kind === "media_store" && source.localUri === localUri,
+  );
+}
+
 export function sourceEditorInitialValue(
   source: SourceSummary | undefined,
 ): SourceEditorValue {

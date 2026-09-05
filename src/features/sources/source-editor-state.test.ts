@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 
 import type { SourceSummary } from "../../../modules/webdav-upload-engine";
 import {
+  existingPresetSource,
   selectionForSource,
   sourceEditorInitialValue,
   sourceEditorValueKey,
@@ -53,5 +54,21 @@ describe("source editor state", () => {
       enabled: false,
       collisionPolicy: "replace",
     });
+  });
+
+  it("finds an existing media preset without deduplicating picked folders", () => {
+    const camera = {
+      ...source,
+      id: "camera",
+      kind: "media_store" as const,
+      localUri: "mediastore://camera",
+    };
+    expect(existingPresetSource([camera], { type: "camera" })?.id).toBe("camera");
+    expect(
+      existingPresetSource([camera], {
+        type: "document_tree",
+        treeUri: camera.localUri,
+      }),
+    ).toBeUndefined();
   });
 });
