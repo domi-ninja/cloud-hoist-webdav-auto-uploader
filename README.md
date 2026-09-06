@@ -38,6 +38,17 @@ pnpm android phone
 
 The `phone` and `emu` selectors also work with `pnpm android:seed-account`, `pnpm test:android`, `pnpm test:deep-links`, `pnpm test:account:live`, and `pnpm check`. Set `ANDROID_SERIAL` instead when you need an exact target among multiple phones or emulators. Device tests install builds on the selected target, and the live account test also clears this app's data there.
 
+Fill the emulator's Camera and Screenshots collections with random JPEGs from
+[Lorem Picsum](https://picsum.photos/):
+
+```sh
+pnpm android:seed-photos
+PHOTO_COUNT=20 pnpm android:seed-photos
+```
+
+The script targets emulators only and waits until Android MediaStore indexes
+every downloaded image.
+
 Project automation is grouped by purpose: `scripts/setup.sh` prepares the project, `scripts/android/` contains Android environment, targeting, and launch helpers, `scripts/test/` contains test and verification runners, and `scripts/assets/` contains generated-asset tooling. Each script starts with its purpose, command, prerequisites, and material side effects.
 
 Run every required check with one command:
