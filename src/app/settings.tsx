@@ -72,6 +72,20 @@ export default function SettingsScreen() {
             {errorMessage ?? "Settings could not be loaded."}
           </Text>
         ) : null}
+        {snapshot?.account.status === "connected" ? (
+          <Panel>
+            <View className="flex-row items-center gap-4">
+              <InstanceIcon compact serverUrl={snapshot.account.serverUrl} />
+              <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
+                {snapshot.account.displayName}
+              </Text>
+            </View>
+            <ActionButton
+              label="Account settings"
+              onPress={() => setAccountOpen(true)}
+            />
+          </Panel>
+        ) : null}
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Transfer rules
         </Text>
@@ -115,20 +129,6 @@ export default function SettingsScreen() {
               </Panel>
             )
           : null}
-        {snapshot?.account.status === "connected" ? (
-          <Panel>
-            <View className="flex-row items-center gap-4">
-              <InstanceIcon compact serverUrl={snapshot.account.serverUrl} />
-              <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
-                {snapshot.account.displayName}
-              </Text>
-            </View>
-            <ActionButton
-              label="Account settings"
-              onPress={() => setAccountOpen(true)}
-            />
-          </Panel>
-        ) : null}
         <Panel>
           <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
             Diagnostics
