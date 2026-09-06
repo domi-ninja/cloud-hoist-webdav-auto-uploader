@@ -1,3 +1,7 @@
+// Drives the live Nextcloud acceptance flow invoked by `pnpm test:account:live`.
+// It validates local credentials, builds and installs debug APKs, clears the selected target's
+// app data, verifies direct and chunked uploads, and removes its local and remote fixtures.
+
 import { readFileSync, readdirSync } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
@@ -5,8 +9,9 @@ import { lookup } from "node:dns/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const projectRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const credentialPath = join(projectRoot, "test-creds.tct");
+const resolveDeviceScript = join(projectRoot, "scripts", "android", "resolve-device.sh");
 
 function stripQuotes(value) {
   const trimmed = String(value).trim();
@@ -212,16 +217,9 @@ const serverAddress =
 if (!serverAddress) {
   throw new Error("The development host could not resolve the Nextcloud server.");
 }
-const deviceOutput = run("adb", ["devices"]);
-const serial = deviceOutput
-  .split("\n")
-  .map((line) => line.split(/\s+/))
-  .find(([candidate, state]) => candidate?.startsWith("emulator-") && state === "device")?.[0];
-if (!serial) {
-  throw new Error("Start the configured Android emulator before the live account test.");
-}
+const serial = run(resolveDeviceScript, []).trim();
 
-process.stdout.write("Building the app and debug-only account acceptance test…\n");
+process.stdout.write(`Building the app and debug-only account acceptance test for ${serial}…\n`);
 run(
   join(projectRoot, "android", "gradlew"),
   [":app:assembleDebug", ":webdav-upload-engine:assembleDebugAndroidTest"],
@@ -353,7 +351,7 @@ async function verifyRemoteFile(name, expectedSha256) {
   const bytes = Buffer.from(await response.arrayBuffer());
   const actualSha256 = createHash("sha256").update(bytes).digest("hex");
   if (actualSha256 !== expectedSha256) {
-    throw new Error("An uploaded fixture was not byte-identical to emulator media.");
+    throw new Error("An uploaded fixture was not byte-identical to the target's media.");
   }
 }
 
@@ -431,7 +429,7 @@ try {
     encodedArguments.launchUrlB64,
   ]);
 
-  process.stdout.write("Creating emulator images and running direct and chunked upload checks…\n");
+  process.stdout.write("Creating target images and running direct and chunked upload checks…\n");
   run("adb", [
     "-s",
     serial,
@@ -481,7 +479,7 @@ try {
     encodedArguments.launchUrlB64,
   ]);
   process.stdout.write(
-    `Verified 2 byte-identical uploads from emulator media (${directUploads} direct, ${chunkedUploads} chunked).\n`,
+    `Verified 2 byte-identical uploads from target media (${directUploads} direct, ${chunkedUploads} chunked).\n`,
   );
 } catch (error) {
   failure = error;

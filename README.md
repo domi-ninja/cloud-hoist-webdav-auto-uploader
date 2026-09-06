@@ -35,14 +35,30 @@ pnpm android:setup
 
 `android:setup` installs Android SDK Platform 36, Build Tools 36.0.0 and 35.0.0, NDK 27.1.12297006, CMake 3.22.1, and creates Google's `medium_phone` API 36 emulator if it does not exist. Build Tools 35 and CMake are explicit React Native transitive requirements.
 
-## Run on the emulator
+## Run on Android
 
 ```sh
 nvm use
 pnpm android
 ```
 
-The command resolves Google's user-local SDK, starts `medium_phone` if no emulator is ready, generates the Android project through Expo prebuild when needed, builds the development client, installs it, and launches it.
+The command resolves Google's user-local SDK, generates the Android project through Expo prebuild when needed, builds the development client, installs it, and launches it. If no Android target is online, it starts the `medium_phone` emulator.
+
+When one target is online, the scripts use it automatically. When a real phone and an emulator are online together, list their serials and select exactly one:
+
+```sh
+adb devices -l
+
+# Emulator example
+ANDROID_SERIAL=emulator-5554 pnpm android
+
+# Real-phone example; use the serial shown in the first column
+ANDROID_SERIAL=PHONE_SERIAL pnpm android
+```
+
+Use the same `ANDROID_SERIAL=...` prefix with `pnpm android:seed-account`, `pnpm test:android`, `pnpm test:deep-links`, and `pnpm test:account:live`. These commands refuse to guess when multiple targets are online. Device tests install builds on the selected target, and the live account test also clears this app's data there.
+
+Project automation is grouped by purpose: `scripts/android/` contains Android setup, environment, targeting, and launch helpers; `scripts/test/` contains test and verification runners; and `scripts/assets/` contains generated-asset tooling. Each script starts with its purpose, command, prerequisites, and material side effects.
 
 Use these checks before committing application changes:
 
@@ -70,20 +86,20 @@ permissions while preserving the permissions the upload engine requires.
 
 `test-creds.tct` is ignored and reserved for live acceptance tests. Never commit, bundle, print, or copy it into ordinary test output.
 
-With the configured emulator running, the debug-only account acceptance path can
+With an Android target selected, the debug-only account acceptance path can
 consume that file without printing its values:
 
 ```sh
 pnpm test:account:live
 ```
 
-The harness clears only WebDAV Auto Upload's emulator app data, drives the manual
+The harness clears only WebDAV Auto Upload's app data on the selected target, drives the manual
 app-password form, force-stops the app, and verifies that Kotlin can authenticate
 again from Android Keystore-backed storage. It then creates two valid bitmap
-images in the emulator's Camera collection, discovers them through MediaStore,
+images in the target's Camera collection, discovers them through MediaStore,
 uploads one directly and the larger image through Nextcloud chunking when the
 server advertises it, and compares the downloaded SHA-256 hashes. Each run uses
-and removes its own remote folder and emulator media. The test harness is
+and removes its own remote folder and target media. The test harness is
 packaged separately from the application APK.
 
 ## License

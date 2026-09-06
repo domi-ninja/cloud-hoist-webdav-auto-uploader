@@ -1,6 +1,12 @@
 #!/usr/bin/env sh
 
+# Installs the pinned Android SDK components, JDK, and medium_phone emulator used by this project.
+# Run once with `pnpm android:setup`; repeated runs keep already installed components.
+# This writes to user-local Android SDK and JDK directories outside the repository.
+
 set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 if ! command -v android >/dev/null 2>&1; then
   printf '%s\n' "Install Google's Android CLI first. See README.md." >&2
@@ -9,7 +15,7 @@ fi
 
 PROJECT_JDK="${XDG_DATA_HOME:-$HOME/.local/share}/jdks/temurin-21.0.12.1+1"
 if ! command -v javac >/dev/null 2>&1 && [ ! -x "$PROJECT_JDK/bin/javac" ]; then
-  "$(dirname "$0")/install-jdk.sh"
+  "$SCRIPT_DIR/install-jdk.sh"
 fi
 
 android sdk install platforms/android-36
@@ -25,7 +31,7 @@ if ! android emulator list | grep -Fxq medium_phone; then
   android emulator create medium_phone
 fi
 
-. "$(dirname "$0")/android-env.sh"
+. "$SCRIPT_DIR/env.sh"
 
 printf '%s\n' "Android SDK: $ANDROID_HOME"
 printf '%s\n' "Java: $JAVA_HOME"

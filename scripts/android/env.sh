@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+# Resolves the Android SDK and a complete JDK, then exports the build environment.
+# Source this file from Android build and test scripts. Run `pnpm android:setup` if it fails.
+
 set -eu
 
 resolve_android_sdk() {

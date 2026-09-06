@@ -1,11 +1,15 @@
 #!/usr/bin/env sh
 
+# Checks dependencies and a release APK for prohibited telemetry, advertising, and permissions.
+# Use `pnpm test:privacy`; this builds generated Android files but does not use a device.
+# The allowlist preserves the network, notification, and foreground-service permissions the app needs.
+
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-PROJECT_ROOT=$(dirname "$SCRIPT_DIR")
+PROJECT_ROOT=$(dirname "$(dirname "$SCRIPT_DIR")")
 
-. "$SCRIPT_DIR/android-env.sh"
+. "$SCRIPT_DIR/../android/env.sh"
 
 cd "$PROJECT_ROOT"
 

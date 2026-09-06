@@ -1,7 +1,11 @@
+// Renders all PNG app-icon variants from assets/icon.svg.
+// Use `pnpm icons` to update generated files or `pnpm icons:check` to verify they are current.
+// Layer markers in the SVG determine which artwork appears in adaptive and monochrome variants.
+
 import { readFile, writeFile } from "node:fs/promises";
 import { Resvg } from "@resvg/resvg-js";
 
-const sourcePath = new URL("../assets/icon.svg", import.meta.url);
+const sourcePath = new URL("../../assets/icon.svg", import.meta.url);
 const checkOnly = process.argv.includes("--check");
 
 const stripLayer = (svg, layer) =>
@@ -36,7 +40,7 @@ const render = (svg) =>
 let stale = false;
 
 for (const [relativePath, svg] of outputs) {
-  const outputPath = new URL(`../${relativePath}`, import.meta.url);
+  const outputPath = new URL(`../../${relativePath}`, import.meta.url);
   const png = render(svg);
 
   if (checkOnly) {

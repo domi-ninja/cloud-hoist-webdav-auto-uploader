@@ -1,5 +1,9 @@
 #!/usr/bin/env sh
 
+# Downloads and verifies the pinned Temurin JDK when the project cannot find a compiler.
+# `pnpm android:setup` calls this automatically; direct use supports Linux x86-64 only.
+# The archive is cached and the JDK is installed under the user's local data directory.
+
 set -eu
 
 JDK_VERSION='21.0.12.1+1'
