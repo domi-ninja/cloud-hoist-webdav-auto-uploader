@@ -53,7 +53,8 @@ enum class CollisionPolicy(val value: String) {
 internal fun keepBothFileName(fileName: String, copyNumber: Int): String {
   require(copyNumber > 0)
   val dot = fileName.lastIndexOf('.').takeIf { it > 0 } ?: fileName.length
-  return "${fileName.substring(0, dot)} ($copyNumber)${fileName.substring(dot)}"
+  val numberedSuffix = copyNumber.toString().padStart(3, '0')
+  return "${fileName.substring(0, dot)}.$numberedSuffix${fileName.substring(dot)}"
 }
 
 data class QueuedUpload(

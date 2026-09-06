@@ -98,3 +98,10 @@ export function sourceInputFromEditor(
     collisionPolicy: value.collisionPolicy,
   } as const;
 }
+
+export function keepBothPreviewName(fileName: string, copyNumber = 1) {
+  const dot = fileName.lastIndexOf(".");
+  const extensionStart = dot > 0 ? dot : fileName.length;
+  const suffix = copyNumber.toString().padStart(3, "0");
+  return `${fileName.slice(0, extensionStart)}.${suffix}${fileName.slice(extensionStart)}`;
+}

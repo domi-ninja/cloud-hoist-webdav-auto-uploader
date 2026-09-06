@@ -3,6 +3,7 @@ import { describe, expect, it } from "@jest/globals";
 import type { SourceSummary } from "../../../modules/webdav-upload-engine";
 import {
   existingPresetSource,
+  keepBothPreviewName,
   selectionForSource,
   sourceEditorInitialValue,
   sourceEditorValueKey,
@@ -22,6 +23,11 @@ const source: SourceSummary = {
 };
 
 describe("source editor state", () => {
+  it("previews numbered copies using the uploader naming format", () => {
+    expect(keepBothPreviewName("example.txt")).toBe("example.001.txt");
+    expect(keepBothPreviewName("archive", 12)).toBe("archive.012");
+  });
+
   it("hydrates every persisted source field", () => {
     expect(sourceEditorInitialValue(source)).toEqual({
       name: "Documents/Receipts",

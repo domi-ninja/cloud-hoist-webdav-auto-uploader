@@ -75,9 +75,9 @@ class NextcloudUploadClientTest {
 
     assertEquals(listOf("F", "F", "F"), moves.map(CapturedRequest::overwrite))
     assertTrue(moves[0].destination.orEmpty().endsWith("/photo%20%231.jpg"))
-    assertTrue(moves[1].destination.orEmpty().endsWith("/photo%20%231%20(1).jpg"))
-    assertTrue(moves[2].destination.orEmpty().endsWith("/photo%20%231%20(2).jpg"))
-    assertEquals("photo #1 (2).jpg", result.remoteFileName)
+    assertTrue(moves[1].destination.orEmpty().endsWith("/photo%20%231.001.jpg"))
+    assertTrue(moves[2].destination.orEmpty().endsWith("/photo%20%231.002.jpg"))
+    assertEquals("photo #1.002.jpg", result.remoteFileName)
   }
 
   @Test

@@ -78,8 +78,8 @@ class NextcloudChunkTransportTest {
     )
 
     assertEquals(listOf("F", "F"), finalMoves.map(Captured::overwrite))
-    assertTrue(finalMoves.last().destination.orEmpty().endsWith("/large%20file%20(1).bin"))
-    assertEquals("large file (1).bin", result.remoteFileName)
+    assertTrue(finalMoves.last().destination.orEmpty().endsWith("/large%20file.001.bin"))
+    assertEquals("large file.001.bin", result.remoteFileName)
   }
 
   @Test

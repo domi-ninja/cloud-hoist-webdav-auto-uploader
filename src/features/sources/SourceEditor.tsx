@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Modal, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,6 +21,7 @@ import { RemoteFolderPicker } from "./RemoteFolderPicker";
 import { SourcePreviewThumbnails } from "./SourcePreviewThumbnails";
 import {
   existingPresetSource,
+  keepBothPreviewName,
   sourceEditorInitialValue,
   sourceEditorValueKey,
   sourceInputFromEditor,
@@ -74,6 +75,26 @@ export function SourceEditor({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
+  const sourceId = source?.id;
+  const sourceKind = source?.kind;
+  const sourceLocalUri = source?.localUri;
+
+  useEffect(() => {
+    if (!sourceId || !sourceKind || !sourceLocalUri) return;
+    const existingSelection: SourceSelection =
+      sourceKind === "saf"
+        ? { type: "document_tree", treeUri: sourceLocalUri }
+        : sourceLocalUri === "mediastore://camera"
+          ? { type: "camera" }
+          : { type: "screenshots" };
+    let cancelled = false;
+    void webDavUploadEngine.previewSource(existingSelection).then((result) => {
+      if (!cancelled && result.ok) setPreview(result.value);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sourceId, sourceKind, sourceLocalUri]);
 
   const currentValue = {
     name: selection ? sourceSelectionLabel(selection) : "",
@@ -84,6 +105,8 @@ export function SourceEditor({
   };
   const dirty = sourceEditorValueKey(currentValue) !== initialKey;
   const canSave = Boolean(selection) && !busy;
+  const previewFileName = preview?.files[0]?.fileName ?? "example.txt";
+  const keepBothLabel = `Add a number to the name. Preview: ${previewFileName} -> ${keepBothPreviewName(previewFileName)}`;
 
   const close = () => {
     if (!dirty) {
@@ -311,11 +334,11 @@ export function SourceEditor({
           ) : null}
           <Panel>
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Existing files on Nextcloud
+              What to do with files that you change on the phone?
             </Text>
             <View>
               <RadioButton.Item
-                label="Replace on Nextcloud"
+                label="Update files"
                 value="replace"
                 status={collisionPolicy === "replace" ? "checked" : "unchecked"}
                 labelStyle={{ fontSize: 16 }}
@@ -324,12 +347,12 @@ export function SourceEditor({
                   paddingVertical: 0,
                   paddingHorizontal: 8,
                 }}
-                accessibilityLabel="Replace file on Nextcloud"
+                accessibilityLabel="Update files on Nextcloud"
                 disabled={busy}
                 onPress={() => setCollisionPolicy("replace")}
               />
               <RadioButton.Item
-                label="Keep both"
+                label={keepBothLabel}
                 value="keep_both"
                 status={
                   collisionPolicy === "keep_both" ? "checked" : "unchecked"
@@ -340,7 +363,7 @@ export function SourceEditor({
                   paddingVertical: 0,
                   paddingHorizontal: 8,
                 }}
-                accessibilityLabel="Keep both files"
+                accessibilityLabel={keepBothLabel}
                 disabled={busy}
                 onPress={() => setCollisionPolicy("keep_both")}
               />
