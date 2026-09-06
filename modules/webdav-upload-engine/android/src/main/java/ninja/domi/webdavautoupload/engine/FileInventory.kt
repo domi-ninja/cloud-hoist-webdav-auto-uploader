@@ -2,6 +2,8 @@ package ninja.domi.webdavautoupload.engine
 
 import android.content.Context
 import android.net.Uri
+import expo.modules.kotlin.records.Field
+import expo.modules.kotlin.records.Record
 import java.io.File
 import java.io.IOException
 import java.security.MessageDigest
@@ -183,12 +185,12 @@ class FileInventoryManager(
   private val accountRepository: AccountRepository,
   private val remoteClient: RemoteInventoryClient,
 ) {
-  fun page(offset: Int, pageSize: Int = PAGE_SIZE): InventoryPage {
+  fun page(offset: Int, pageSize: Int = PAGE_SIZE, filter: InventoryFilter = InventoryFilter()): InventoryPage {
     require(offset >= 0)
     val credential = accountRepository.credential() ?: throw AccountNotConfiguredException()
     val locals = dao.localInventory().groupBy(LocalInventoryView::sourceId)
     val errors = mutableListOf<InventoryError>()
-    val items = dao.allSources().flatMap { source ->
+    val items = dao.allSources().filter { filter.sourceId == null || it.id == filter.sourceId }.flatMap { source ->
       val remote = try {
         remoteClient.listFiles(credential, source.remotePathSegments)
       } catch (error: Exception) {
@@ -203,7 +205,32 @@ class FileInventoryManager(
       compareByDescending<Map<String, Any?>> { it["modifiedAt"] as? String }
         .thenBy { it["relativePath"] as String },
     )
-    return inventoryPage(items, errors, offset, pageSize)
+    return inventoryPage(items, errors, offset, pageSize, filter)
+  }
+}
+
+class InventoryFilterRecord : Record {
+  @Field val sourceId: String? = null
+  @Field val status: String = "all"
+
+  fun toFilter(): InventoryFilter {
+    if (status !in setOf("all", "pending", "failed", "uploaded")) {
+      throw EngineInvalidInputException("File status filter is invalid.")
+    }
+    return InventoryFilter(sourceId, status)
+  }
+}
+
+data class InventoryFilter(val sourceId: String? = null, val status: String = "all") {
+  fun matches(item: Map<String, Any?>): Boolean {
+    if (sourceId != null && item["sourceId"] != sourceId) return false
+    val transfer = (item["transfer"] as? Map<*, *>)?.get("status")
+    return when (status) {
+      "pending" -> transfer == "queued" || transfer == "uploading"
+      "failed" -> transfer == "failed"
+      "uploaded" -> transfer == "uploaded"
+      else -> true
+    }
   }
 }
 
@@ -212,12 +239,15 @@ internal fun inventoryPage(
   errors: List<InventoryError>,
   offset: Int,
   pageSize: Int,
+  filter: InventoryFilter = InventoryFilter(),
 ): InventoryPage {
-  val pageItems = items.drop(offset).take(pageSize)
+  require(offset >= 0 && pageSize > 0)
+  val matching = items.filter(filter::matches)
+  val pageItems = matching.drop(offset).take(pageSize)
   return InventoryPage(
     items = pageItems,
     errors = errors,
-    nextOffset = if (offset + pageItems.size < items.size) offset + pageItems.size else null,
+    nextOffset = if (offset + pageItems.size < matching.size) offset + pageItems.size else null,
   )
 }
 

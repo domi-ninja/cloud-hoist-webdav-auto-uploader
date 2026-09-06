@@ -4,6 +4,8 @@ import { z } from "zod";
 import {
   activityPageSchema,
   fileInventoryPageSchema,
+  fileInventoryFilterSchema,
+  type FileInventoryFilter,
   accountSummarySchema,
   engineSnapshotSchema,
   loginFlowPollSchema,
@@ -55,7 +57,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   getSnapshotAsync(): Promise<unknown>;
   getSourcesAsync(): Promise<unknown>;
   getActivityPageAsync(offset: number): Promise<unknown>;
-  getFileInventoryPageAsync(offset: number): Promise<unknown>;
+  getFileInventoryPageAsync(offset: number, filter: FileInventoryFilter): Promise<unknown>;
   getRemoteThumbnailAsync(
     sourceId: string,
     relativePath: string,
@@ -175,10 +177,13 @@ export const webDavUploadEngine = {
     return activityPageSchema.parse(await nativeModule.getActivityPageAsync(parsedOffset));
   },
 
-  async getFileInventoryPage(offset = 0): Promise<FileInventoryPage> {
+  async getFileInventoryPage(
+    offset = 0,
+    filter: FileInventoryFilter = { sourceId: null, status: "all" },
+  ): Promise<FileInventoryPage> {
     const parsedOffset = z.number().int().nonnegative().parse(offset);
     return fileInventoryPageSchema.parse(
-      await nativeModule.getFileInventoryPageAsync(parsedOffset),
+      await nativeModule.getFileInventoryPageAsync(parsedOffset, fileInventoryFilterSchema.parse(filter)),
     );
   },
 

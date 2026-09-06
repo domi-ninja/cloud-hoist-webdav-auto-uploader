@@ -145,6 +145,13 @@ export const activityPageSchema = z.object({
 
 export const filePresenceSchema = z.enum(["local_only", "remote_only", "both"]);
 
+export const fileInventoryFilterSchema = z.object({
+  sourceId: z.string().uuid().nullable(),
+  status: z.enum(["all", "pending", "failed", "uploaded"]),
+});
+
+export type FileInventoryFilter = z.infer<typeof fileInventoryFilterSchema>;
+
 export const fileInventoryEntrySchema = z.object({
   id: z.string().min(1),
   sourceId: z.string().min(1),

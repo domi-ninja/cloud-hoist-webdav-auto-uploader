@@ -9,6 +9,7 @@ import { useEffect, type PropsWithChildren } from "react";
 
 import webDavUploadEngine, {
   type AccountHealth,
+  type FileInventoryFilter,
 } from "../../modules/webdav-upload-engine";
 import { enginePollInterval } from "./engine-polling";
 
@@ -94,10 +95,14 @@ export function useActivityPages() {
   });
 }
 
-export function useFileInventoryPages() {
+export function useFileInventoryPages(
+  filter: FileInventoryFilter = { sourceId: null, status: "all" },
+  enabled = true,
+) {
   return useInfiniteQuery({
-    queryKey: [...engineKey, "file-inventory"],
-    queryFn: ({ pageParam }) => webDavUploadEngine.getFileInventoryPage(pageParam),
+    queryKey: [...engineKey, "file-inventory", filter],
+    queryFn: ({ pageParam }) => webDavUploadEngine.getFileInventoryPage(pageParam, filter),
+    enabled,
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
   });

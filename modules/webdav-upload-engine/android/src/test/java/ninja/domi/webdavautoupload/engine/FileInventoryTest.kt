@@ -58,6 +58,36 @@ class FileInventoryTest {
   }
 
   @Test
+  fun filtersBeforePagination() {
+    val items = List(45) { index ->
+      mapOf<String, Any?>(
+        "sourceId" to if (index % 2 == 0) "camera" else "screenshots",
+        "transfer" to mapOf("status" to if (index >= 40) "failed" else "uploaded"),
+      )
+    }
+
+    val failed = inventoryPage(
+      items,
+      emptyList(),
+      offset = 0,
+      pageSize = 20,
+      filter = InventoryFilter(status = "failed"),
+    )
+    val camera = inventoryPage(
+      items,
+      emptyList(),
+      offset = 0,
+      pageSize = 20,
+      filter = InventoryFilter(sourceId = "camera"),
+    )
+
+    assertEquals(5, failed.items.size)
+    assertNull(failed.nextOffset)
+    assertEquals(20, camera.items.size)
+    assertEquals(20, camera.nextOffset)
+  }
+
+  @Test
   fun decodesImmediateWebDavChildrenAndMetadata() {
     val xml = """
       <d:multistatus xmlns:d="DAV:">

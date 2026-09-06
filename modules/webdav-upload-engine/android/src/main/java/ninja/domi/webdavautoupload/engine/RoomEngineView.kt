@@ -22,6 +22,7 @@ class RoomEngineView(
   fun snapshot(
     account: Map<String, Any?>,
     scheduler: SchedulerStatus,
+    waitingReason: String? = null,
   ): Map<String, Any?> {
     val jobs = dao.recentJobViews()
     val blockers = blockers(account, jobs)
@@ -43,7 +44,7 @@ class RoomEngineView(
       ),
       "recentJobs" to jobs.map(::jobMap),
       "blockers" to blockers,
-      "worker" to workerMap(running, scheduler),
+      "worker" to workerMap(running, scheduler, waitingReason),
       "scheduler" to scheduler.toMap(),
     )
   }
@@ -76,8 +77,7 @@ class RoomEngineView(
     )
   }
 
-  fun unresolvedFailures(): List<Map<String, Any?>> = dao.recentJobViews()
-    .filter { it.state == JobState.BLOCKED || it.state == JobState.RETRY_WAIT }
+  fun unresolvedFailures(): List<Map<String, Any?>> = dao.unresolvedJobs()
     .map { job ->
       val code = job.lastErrorCode ?: "unknown"
       mapOf(
@@ -228,6 +228,7 @@ class RoomEngineView(
   private fun workerMap(
     running: UploadJobView?,
     scheduler: SchedulerStatus,
+    waitingReason: String?,
   ): Map<String, Any?> = when {
     running != null -> mapOf(
       "state" to "uploading",
@@ -242,6 +243,8 @@ class RoomEngineView(
         "scope" to scheduler.workerScope,
         "startedAt" to scheduler.lastScanRequestedAt,
       )
+    scheduler.pausedAt == null && waitingReason != null && dao.eligibleJobCount(now()) > 0 ->
+      mapOf("state" to "waiting", "reason" to waitingReason)
     else -> mapOf("state" to "idle")
   }
 

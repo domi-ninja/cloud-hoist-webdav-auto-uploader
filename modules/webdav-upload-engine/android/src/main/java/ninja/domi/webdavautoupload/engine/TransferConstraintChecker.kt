@@ -15,30 +15,35 @@ class TransferConstraintChecker(
   private val appContext = context.applicationContext
   private val connectivity = appContext.getSystemService(ConnectivityManager::class.java)
 
-  fun canStartNextFile(): Boolean {
+  fun canStartNextFile(): Boolean = waitingReason() == null
+
+  fun waitingReason(): String? {
     val constraints = preferences.constraints()
-    val capabilities = connectivity.getNetworkCapabilities(connectivity.activeNetwork) ?: return false
-    if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return false
+    val capabilities = connectivity.getNetworkCapabilities(connectivity.activeNetwork)
+      ?: return "Waiting for a network connection"
+    if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+      return "Waiting for a network connection"
+    }
     if (
       constraints.unmeteredOnly &&
       !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-    ) return false
+    ) return "Waiting for an unmetered network"
 
-    if (!constraints.batteryNotLow && !constraints.requiresCharging) return true
+    if (!constraints.batteryNotLow && !constraints.requiresCharging) return null
     val battery = appContext.registerReceiver(
       null,
       IntentFilter(Intent.ACTION_BATTERY_CHANGED),
-    ) ?: return false
+    ) ?: return "Waiting for battery status"
     if (
       constraints.batteryNotLow &&
       battery.getBooleanExtra(BatteryManager.EXTRA_BATTERY_LOW, false)
-    ) return false
+    ) return "Waiting for the battery to recover"
     if (constraints.requiresCharging) {
       val status = battery.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
       if (status != BatteryManager.BATTERY_STATUS_CHARGING &&
         status != BatteryManager.BATTERY_STATUS_FULL
-      ) return false
+      ) return "Waiting for charging"
     }
-    return true
+    return null
   }
 }

@@ -124,6 +124,22 @@ class RoomEngineViewTest {
   }
 
   @Test
+  fun queuedWorkReportsWhyItCannotStart() {
+    enqueue("queued", JobState.QUEUED, 10, 10)
+    val view = RoomEngineView(dao, onInvalidated = {})
+
+    val snapshot = view.snapshot(
+      CONNECTED_ACCOUNT,
+      SchedulerStatus(),
+      waitingReason = "Waiting for charging",
+    )
+
+    val worker = snapshot["worker"] as Map<*, *>
+    assertEquals("waiting", worker["state"])
+    assertEquals("Waiting for charging", worker["reason"])
+  }
+
+  @Test
   fun activityPagesExcludeEntriesOlderThanThirtyDays() {
     val day = TimeUnit.DAYS.toMillis(1)
     enqueue("activity", JobState.COMPLETED, 35 * day, 20, completedAt = 39 * day)

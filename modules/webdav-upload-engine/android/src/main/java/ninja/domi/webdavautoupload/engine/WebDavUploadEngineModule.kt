@@ -84,6 +84,9 @@ class WebDavUploadEngineModule : Module() {
     val context = appContext.reactContext ?: throw AccountStorageException()
     EnginePreferences(context)
   }
+  private val constraintChecker by lazy {
+    TransferConstraintChecker(appContext.reactContext ?: throw AccountStorageException())
+  }
   private val diagnosticLog by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
     DiagnosticEventLog(context)
@@ -144,7 +147,7 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("getSnapshotAsync") {
-      engine.snapshot(accountManager.accountHealth(), enginePreferences.status())
+      engine.snapshot(accountManager.accountHealth(), enginePreferences.status(), constraintChecker.waitingReason())
     }
 
     AsyncFunction("getSourcesAsync") {
@@ -155,8 +158,8 @@ class WebDavUploadEngineModule : Module() {
       engine.activityPage(offset)
     }
 
-    AsyncFunction("getFileInventoryPageAsync") Coroutine { offset: Int ->
-      fileInventoryManager.page(offset).toMap()
+    AsyncFunction("getFileInventoryPageAsync") Coroutine { offset: Int, filter: InventoryFilterRecord ->
+      fileInventoryManager.page(offset, filter = filter.toFilter()).toMap()
     }
 
     AsyncFunction("getRemoteThumbnailAsync") Coroutine {

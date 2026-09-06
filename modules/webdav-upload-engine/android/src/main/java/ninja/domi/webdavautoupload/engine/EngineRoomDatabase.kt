@@ -165,6 +165,9 @@ interface EngineDao {
   )
   fun recentJobViews(limit: Int = 100): List<UploadJobView>
 
+  @Query("SELECT * FROM upload_jobs WHERE state IN ('blocked', 'retry_wait') ORDER BY createdAt ASC, id ASC")
+  fun unresolvedJobs(): List<UploadJobEntity>
+
   @Query(
     """
     SELECT local_revisions.sourceId, sources.name AS sourceName,
