@@ -86,12 +86,21 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
         <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
           {source.name}
         </Text>
-        <Switch
-          accessibilityLabel={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
-          disabled={busy}
-          onValueChange={(enabled) => void updateSource({ enabled })}
-          value={source.enabled}
-        />
+        <View className="flex-row items-center gap-2">
+          <IconAction
+            icon="pencil-outline"
+            accessibilityLabel={`Edit ${source.name}`}
+            disabled={busy}
+            label="Edit"
+            onPress={onEdit}
+          />
+          <Switch
+            accessibilityLabel={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
+            disabled={busy}
+            onValueChange={(enabled) => void updateSource({ enabled })}
+            value={source.enabled}
+          />
+        </View>
       </View>
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {sourceStatus(snapshot, source, now)}
@@ -118,25 +127,6 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
           Working…
         </Text>
       ) : null}
-      <View className="flex-row flex-wrap items-center gap-2">
-        <IconAction
-          icon="folder-search-outline"
-          accessibilityLabel={`Scan ${source.name}`}
-          disabled={busy || !source.enabled}
-          label="Scan"
-          onPress={() =>
-            void run(() => webDavUploadEngine.scanSource(source.id))
-          }
-          tone={permissionBlocker ? "secondary" : "primary"}
-        />
-        <IconAction
-          icon="pencil-outline"
-          accessibilityLabel={`Edit ${source.name}`}
-          disabled={busy}
-          label="Edit"
-          onPress={onEdit}
-        />
-      </View>
     </Panel>
   );
 }
