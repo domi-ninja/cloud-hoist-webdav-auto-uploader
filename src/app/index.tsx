@@ -103,9 +103,11 @@ export default function HomeScreen() {
                 <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                   {engineStatus(snapshot, now)}
                 </Text>
-                <Text className="text-base text-muted-light dark:text-muted-dark">
-                  {queueSummary(snapshot)}
-                </Text>
+                {Object.values(snapshot.queue).some((count) => count > 0) ? (
+                  <Text className="text-base text-muted-light dark:text-muted-dark">
+                    {queueSummary(snapshot)}
+                  </Text>
+                ) : null}
                 {connected && visibleSources.length ? (
                   <View className="flex-row flex-wrap items-center gap-2">
                     <IconAction
@@ -166,28 +168,22 @@ export default function HomeScreen() {
                   />
                 </View>
                 {!visibleSources.length ? (
-                  <View className="gap-2">
-                    <Text className="text-base text-muted-light dark:text-muted-dark">
-                      New files are scanned automatically, though Android may
-                      delay background work.
-                    </Text>
-                    <View className="flex-row flex-wrap gap-2">
-                      <ActionButton
-                        icon="camera-outline"
-                        label="Camera"
-                        onPress={() => addSource("camera")}
-                      />
-                      <ActionButton
-                        icon="cellphone-screenshot"
-                        label="Screenshots"
-                        onPress={() => addSource("screenshots")}
-                      />
-                      <ActionButton
-                        icon="folder-outline"
-                        label="Choose folder"
-                        onPress={() => addSource("folder")}
-                      />
-                    </View>
+                  <View className="flex-row flex-wrap gap-2">
+                    <ActionButton
+                      icon="camera-outline"
+                      label="Backup camera"
+                      onPress={() => addSource("camera")}
+                    />
+                    <ActionButton
+                      icon="cellphone-screenshot"
+                      label="Backup screenshots"
+                      onPress={() => addSource("screenshots")}
+                    />
+                    <ActionButton
+                      icon="folder-outline"
+                      label="Backup other directory"
+                      onPress={() => addSource("folder")}
+                    />
                   </View>
                 ) : null}
               </View>
