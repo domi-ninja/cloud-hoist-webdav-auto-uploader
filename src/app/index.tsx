@@ -155,37 +155,26 @@ export default function HomeScreen() {
             ) : null}
             {connected ? (
               <View className="gap-2">
-                <View className="flex-row items-center justify-between gap-2">
-                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                    Sources
-                  </Text>
-                  <IconAction
-                    icon="plus"
-                    accessibilityLabel="Add backup folder"
-                    label="Add backup folder"
-                    onPress={() => addSource()}
-                    tone="primary"
+                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                  Backup folders
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  <ActionButton
+                    icon="camera-outline"
+                    label="Backup camera"
+                    onPress={() => addSource("camera")}
+                  />
+                  <ActionButton
+                    icon="cellphone-screenshot"
+                    label="Backup screenshots"
+                    onPress={() => addSource("screenshots")}
+                  />
+                  <ActionButton
+                    icon="folder-outline"
+                    label="Backup other directory"
+                    onPress={() => addSource("folder")}
                   />
                 </View>
-                {!visibleSources.length ? (
-                  <View className="flex-row flex-wrap gap-2">
-                    <ActionButton
-                      icon="camera-outline"
-                      label="Backup camera"
-                      onPress={() => addSource("camera")}
-                    />
-                    <ActionButton
-                      icon="cellphone-screenshot"
-                      label="Backup screenshots"
-                      onPress={() => addSource("screenshots")}
-                    />
-                    <ActionButton
-                      icon="folder-outline"
-                      label="Backup other directory"
-                      onPress={() => addSource("folder")}
-                    />
-                  </View>
-                ) : null}
               </View>
             ) : null}
           </View>

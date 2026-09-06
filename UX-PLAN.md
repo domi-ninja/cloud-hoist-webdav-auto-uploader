@@ -37,7 +37,7 @@ Acceptance checks:
 ## Phase 2: simplify Sources
 
 - [x] Move global Scan and Pause/Resume into a compact group with the global status, above the source list.
-- [x] Place Add source beside the Sources heading.
+- [x] Keep the explicit backup-folder choices available instead of a generic plus button.
 - [x] Shorten source cards to name and enable switch, status, local-to-remote folder mapping, and compact scan/edit actions.
 - [x] Move reset-history and remove-source actions into the existing source editor, preserving their confirmations.
 - [x] Make the issue summary open the relevant problems in Activity.

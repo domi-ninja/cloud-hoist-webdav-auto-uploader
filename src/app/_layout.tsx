@@ -56,8 +56,8 @@ export default function RootLayout() {
             <Tabs.Screen
               name="index"
               options={{
-                title: "Sources",
-                tabBarAccessibilityLabel: "Sources",
+                title: "Backups",
+                tabBarAccessibilityLabel: "Backups",
                 tabBarIcon: (props) => (
                   <MaterialCommunityIcons
                     {...props}
