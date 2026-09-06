@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 # Builds a release APK and checks cold-start Sources and Activity links on one Android target.
-# Use `pnpm test:deep-links`; set ANDROID_SERIAL when multiple targets are online.
+# Use `pnpm test:deep-links phone|emu`; ANDROID_SERIAL selects an exact target.
 # The script installs the release app over the selected target's existing app installation.
 
 set -eu
@@ -12,7 +12,7 @@ APP_ID=ninja.domi.webdavautoupload
 
 . "$SCRIPT_DIR/../android/env.sh"
 
-TARGET_SERIAL=$("$SCRIPT_DIR/../android/resolve-device.sh")
+TARGET_SERIAL=$("$SCRIPT_DIR/../android/resolve-device.sh" "$@")
 
 cd "$PROJECT_ROOT"
 NODE_ENV=production ./android/gradlew -p android :app:assembleRelease
@@ -42,7 +42,7 @@ assert_cold_link() {
   exit 1
 }
 
-assert_cold_link "webdav-auto-upload:///activity" "Recent"
-assert_cold_link "webdav-auto-upload:///" "Automatic uploads for Nextcloud."
+assert_cold_link "webdav-auto-upload:///activity" "Files"
+assert_cold_link "webdav-auto-upload:///" "WebDAV Auto Upload"
 
 printf '%s\n' "Cold-start deep links opened Activity and Sources on $TARGET_SERIAL."

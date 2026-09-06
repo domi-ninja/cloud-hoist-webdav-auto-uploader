@@ -1,16 +1,34 @@
 #!/usr/bin/env sh
 
 # Builds, installs, and launches the Expo development client on one Android target.
-# Run with `pnpm android`; set ANDROID_SERIAL when a phone and emulator are both online.
-# If no target is online and no serial was requested, this starts the medium_phone emulator.
+# Run with `pnpm android phone` or `pnpm android emu`; ANDROID_SERIAL selects an exact target.
+# The emu selector starts medium_phone when needed. With one target, no selector is required.
 
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$SCRIPT_DIR/env.sh"
 
-if [ -z "${ANDROID_SERIAL:-}" ] &&
+TARGET_KIND=${1:-}
+
+case "$TARGET_KIND" in
+  emu)
+    NEEDS_EMULATOR=$(adb devices | awk 'NR > 1 && $1 ~ /^emulator-/ && $2 == "device" { found = 1 } END { print found ? "no" : "yes" }')
+    ;;
+  phone|'')
+    NEEDS_EMULATOR=no
+    ;;
+  *)
+    NEEDS_EMULATOR=no
+    ;;
+esac
+
+if [ -z "$TARGET_KIND" ] && [ -z "${ANDROID_SERIAL:-}" ] &&
   ! adb devices | awk 'NR > 1 && $2 == "device" { found = 1 } END { exit !found }'; then
+  NEEDS_EMULATOR=yes
+fi
+
+if [ "$NEEDS_EMULATOR" = yes ]; then
   if ! command -v android >/dev/null 2>&1; then
     printf '%s\n' "No Android target is online and Android CLI is unavailable." >&2
     exit 1
@@ -19,7 +37,7 @@ if [ -z "${ANDROID_SERIAL:-}" ] &&
   android emulator start medium_phone
 fi
 
-TARGET_SERIAL=$("$SCRIPT_DIR/resolve-device.sh")
+TARGET_SERIAL=$("$SCRIPT_DIR/resolve-device.sh" "$@")
 
 case "$TARGET_SERIAL" in
   emulator-*)
@@ -28,10 +46,10 @@ case "$TARGET_SERIAL" in
   *)
     EXPO_DEVICE_NAME=$(adb devices -l | awk -v serial="$TARGET_SERIAL" '
       $1 == serial {
-        for (index = 3; index <= NF; index += 1) {
-          if ($index ~ /^model:/) {
-            sub(/^model:/, "", $index)
-            print $index
+        for (field_number = 3; field_number <= NF; field_number += 1) {
+          if ($field_number ~ /^model:/) {
+            sub(/^model:/, "", $field_number)
+            print $field_number
             exit
           }
         }

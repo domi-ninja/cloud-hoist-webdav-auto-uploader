@@ -217,7 +217,7 @@ const serverAddress =
 if (!serverAddress) {
   throw new Error("The development host could not resolve the Nextcloud server.");
 }
-const serial = run(resolveDeviceScript, []).trim();
+const serial = run(resolveDeviceScript, process.argv.slice(2)).trim();
 
 process.stdout.write(`Building the app and debug-only account acceptance test for ${serial}…\n`);
 run(

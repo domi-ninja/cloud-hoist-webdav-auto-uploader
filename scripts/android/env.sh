@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 # Resolves the Android SDK and a complete JDK, then exports the build environment.
-# Source this file from Android build and test scripts. Run `pnpm android:setup` if it fails.
+# Source this file from Android build and test scripts. Run `./scripts/setup.sh` if it fails.
 
 set -eu
 
@@ -37,7 +37,7 @@ resolve_java_home() {
     return
   fi
 
-  printf '%s\n' 'A complete JDK 21 is missing. Run pnpm android:setup.' >&2
+  printf '%s\n' 'A complete JDK 21 is missing. Run ./scripts/setup.sh.' >&2
   return 1
 }
 

@@ -8,32 +8,17 @@ The first release is under development. The accepted product and engineering dec
 
 - Linux on x86-64 with KVM available
 - Git
-- JDK 21; setup installs pinned Temurin 21.0.12.1 when no compiler is available
-- Node.js 24.20.0 through nvm
-- pnpm 11.3.0
-- Google's Android CLI
-
-Install the user-local Android CLI from Google's official installer:
-
-```sh
-curl -fsSL https://dl.google.com/android/cli/latest/linux_x86_64/install.sh -o /tmp/android-cli-install.sh
-bash /tmp/android-cli-install.sh
-```
+- nvm
 
 The tested Android CLI version is `1.0.16261425`. Its built-in help accepts the emulator profile as a positional argument even though an earlier documentation example used `--profile`.
 
 ## First setup
 
 ```sh
-nvm install
-nvm use
-corepack enable
-corepack prepare pnpm@11.3.0 --activate
-pnpm install --frozen-lockfile
-pnpm android:setup
+./scripts/setup.sh
 ```
 
-`android:setup` installs Android SDK Platform 36, Build Tools 36.0.0 and 35.0.0, NDK 27.1.12297006, CMake 3.22.1, and creates Google's `medium_phone` API 36 emulator if it does not exist. Build Tools 35 and CMake are explicit React Native transitive requirements.
+The setup script selects Node.js 24.20.0 through nvm, activates pnpm 11.3.0, installs project dependencies, installs Google's Android CLI when needed, installs the pinned JDK and Android SDK components, and creates the `medium_phone` API 36 emulator. Build Tools 35 and CMake are explicit React Native transitive requirements.
 
 ## Run on Android
 
@@ -44,31 +29,21 @@ pnpm android
 
 The command resolves Google's user-local SDK, generates the Android project through Expo prebuild when needed, builds the development client, installs it, and launches it. If no Android target is online, it starts the `medium_phone` emulator.
 
-When one target is online, the scripts use it automatically. When a real phone and an emulator are online together, list their serials and select exactly one:
+When one target is online, the scripts use it automatically. When a real phone and an emulator are online together, select the first target of either type:
 
 ```sh
-adb devices -l
-
-# Emulator example
-ANDROID_SERIAL=emulator-5554 pnpm android
-
-# Real-phone example; use the serial shown in the first column
-ANDROID_SERIAL=PHONE_SERIAL pnpm android
+pnpm android emu
+pnpm android phone
 ```
 
-Use the same `ANDROID_SERIAL=...` prefix with `pnpm android:seed-account`, `pnpm test:android`, `pnpm test:deep-links`, and `pnpm test:account:live`. These commands refuse to guess when multiple targets are online. Device tests install builds on the selected target, and the live account test also clears this app's data there.
+The `phone` and `emu` selectors also work with `pnpm android:seed-account`, `pnpm test:android`, `pnpm test:deep-links`, `pnpm test:account:live`, and `pnpm check`. Set `ANDROID_SERIAL` instead when you need an exact target among multiple phones or emulators. Device tests install builds on the selected target, and the live account test also clears this app's data there.
 
-Project automation is grouped by purpose: `scripts/android/` contains Android setup, environment, targeting, and launch helpers; `scripts/test/` contains test and verification runners; and `scripts/assets/` contains generated-asset tooling. Each script starts with its purpose, command, prerequisites, and material side effects.
+Project automation is grouped by purpose: `scripts/setup.sh` prepares the project, `scripts/android/` contains Android environment, targeting, and launch helpers, `scripts/test/` contains test and verification runners, and `scripts/assets/` contains generated-asset tooling. Each script starts with its purpose, command, prerequisites, and material side effects.
 
-Use these checks before committing application changes:
+Run every required check with one command:
 
 ```sh
-pnpm typecheck
-pnpm lint
-pnpm test
-pnpm test:native
-pnpm test:deep-links
-pnpm test:privacy
+pnpm check emu
 ```
 
 `test:native` generates the ignored Android project when necessary, loads the
@@ -90,7 +65,7 @@ With an Android target selected, the debug-only account acceptance path can
 consume that file without printing its values:
 
 ```sh
-pnpm test:account:live
+pnpm test:account:live emu
 ```
 
 The harness clears only WebDAV Auto Upload's app data on the selected target, drives the manual
