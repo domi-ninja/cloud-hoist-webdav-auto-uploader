@@ -10,7 +10,7 @@ import { formatBytes } from "@/lib/format";
 import { ActionButton, Panel, Separator } from "@/components/ui";
 
 type LocalSourcePickerProps = {
-  mode?: "all" | "folder" | "media";
+  mode?: "all" | "folder" | "media" | "camera" | "screenshots";
   onSelect: (selection: SourceSelection, preview: SourcePreview) => void;
 };
 
@@ -115,6 +115,10 @@ export function LocalSourcePicker({
       <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
         {mode === "folder"
           ? "Choose a watch folder"
+          : mode === "camera"
+            ? "Choose Camera"
+            : mode === "screenshots"
+              ? "Choose Screenshots"
           : mode === "media"
             ? "Choose a media collection"
             : "Choose what to upload"}
@@ -122,7 +126,7 @@ export function LocalSourcePicker({
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {mode === "folder"
           ? "Pick any readable Android folder. You can add as many as you need."
-          : mode === "media"
+          : mode === "media" || mode === "camera" || mode === "screenshots"
             ? "Watch new photos from an Android media collection."
             : "Pick a media collection or any readable Android folder."}
       </Text>
@@ -130,22 +134,28 @@ export function LocalSourcePicker({
       {mode !== "folder" ? (
         <>
           <Separator />
-          <ActionButton
-            accessibilityLabel="Choose Camera source"
-            disabled={busy}
-            label="Camera"
-            onPress={() => void chooseMedia({ type: "camera" })}
-          />
-          <Separator />
-          <ActionButton
-            accessibilityLabel="Choose Screenshots source"
-            disabled={busy}
-            label="Screenshots"
-            onPress={() => void chooseMedia({ type: "screenshots" })}
-          />
+          {mode !== "screenshots" ? (
+            <ActionButton
+              accessibilityLabel="Choose Camera source"
+              disabled={busy}
+              label="Camera"
+              onPress={() => void chooseMedia({ type: "camera" })}
+            />
+          ) : null}
+          {mode !== "camera" ? (
+            <>
+              <Separator />
+              <ActionButton
+                accessibilityLabel="Choose Screenshots source"
+                disabled={busy}
+                label="Screenshots"
+                onPress={() => void chooseMedia({ type: "screenshots" })}
+              />
+            </>
+          ) : null}
         </>
       ) : null}
-      {mode !== "media" ? (
+      {mode !== "media" && mode !== "camera" && mode !== "screenshots" ? (
         <>
           <Separator />
           <ActionButton

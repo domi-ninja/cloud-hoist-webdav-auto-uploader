@@ -37,6 +37,7 @@ type SourceEditorProps = {
   onClose: () => void;
   onEditExisting: (sourceId: string) => void;
   onSaved: () => void;
+  pickerMode?: "all" | "folder" | "media" | "camera" | "screenshots";
 };
 
 function displayPath(pathSegments: string[]) {
@@ -50,6 +51,7 @@ export function SourceEditor({
   onClose,
   onEditExisting,
   onSaved,
+  pickerMode = "all",
 }: SourceEditorProps) {
   const initialValue = useMemo(() => sourceEditorInitialValue(source), [source]);
   const initialKey = sourceEditorValueKey(initialValue);
@@ -134,6 +136,51 @@ export function SourceEditor({
     onSaved();
   };
 
+  const resetHistory = () => {
+    if (!source) return;
+    Alert.alert(
+      "Upload existing files again?",
+      "The next scan will reconsider files from this source. Files already on the server may be overwritten.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Reset history",
+          style: "destructive",
+          onPress: () => {
+            setBusy(true);
+            void webDavUploadEngine.resetSourceHistory(source.id).then((result) => {
+              setBusy(false);
+              if (!result.ok) setError(result.error);
+            });
+          },
+        },
+      ],
+    );
+  };
+
+  const remove = () => {
+    if (!source) return;
+    Alert.alert(
+      `Remove ${source.name}?`,
+      "This stops watching the source. Files already uploaded to Nextcloud are not deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            setBusy(true);
+            void webDavUploadEngine.removeSource(source.id).then((result) => {
+              setBusy(false);
+              if (!result.ok) setError(result.error);
+              else onSaved();
+            });
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <Modal
       animationType="slide"
@@ -165,35 +212,6 @@ export function SourceEditor({
         >
           <Panel>
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              If a file already exists on Nextcloud
-            </Text>
-            <Pressable
-              accessibilityLabel="Replace file on Nextcloud"
-              accessibilityRole="radio"
-              accessibilityState={{ checked: collisionPolicy === "replace" }}
-              className="flex-row items-center gap-4 p-4"
-              disabled={busy}
-              onPress={() => setCollisionPolicy("replace")}
-            >
-              <Text className="text-base text-ink-light dark:text-ink-dark">
-                {collisionPolicy === "replace" ? "●" : "○"} Replace on Nextcloud
-              </Text>
-            </Pressable>
-            <Pressable
-              accessibilityLabel="Keep both files"
-              accessibilityRole="radio"
-              accessibilityState={{ checked: collisionPolicy === "keep_both" }}
-              className="flex-row items-center gap-4 p-4"
-              disabled={busy}
-              onPress={() => setCollisionPolicy("keep_both")}
-            >
-              <Text className="text-base text-ink-light dark:text-ink-dark">
-                {collisionPolicy === "keep_both" ? "●" : "○"} Keep both
-              </Text>
-            </Pressable>
-          </Panel>
-          <Panel>
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
               Local folder
             </Text>
             <Text className="text-base text-muted-light dark:text-muted-dark">
@@ -212,6 +230,7 @@ export function SourceEditor({
           </Panel>
           {choosingLocal ? (
             <LocalSourcePicker
+              mode={pickerMode}
               onSelect={(nextSelection, nextPreview) => {
                 const existing = !source
                   ? existingPresetSource(sources, nextSelection)
@@ -263,25 +282,56 @@ export function SourceEditor({
             />
           ) : null}
           <Panel>
-            <View className="flex-row items-center justify-between gap-4">
-              <View className="shrink gap-4">
-                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                  Enabled
-                </Text>
-                <Text className="text-base text-muted-light dark:text-muted-dark">
-                  Scan this folder and upload changes.
-                </Text>
-              </View>
-              <Switch
-                accessibilityLabel="Enable upload source"
-                disabled={busy}
-                onValueChange={setEnabled}
-                thumbColor="#f4f4f0"
-                trackColor={{ false: "#62665d", true: "#4f7d45" }}
-                value={enabled}
-              />
-            </View>
+            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+              If a file already exists on Nextcloud
+            </Text>
+            <Pressable
+              accessibilityLabel="Replace file on Nextcloud"
+              accessibilityRole="radio"
+              accessibilityState={{ checked: collisionPolicy === "replace" }}
+              className="flex-row items-center gap-4 p-4"
+              disabled={busy}
+              onPress={() => setCollisionPolicy("replace")}
+            >
+              <Text className="text-base text-ink-light dark:text-ink-dark">
+                {collisionPolicy === "replace" ? "●" : "○"} Replace on Nextcloud
+              </Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="Keep both files"
+              accessibilityRole="radio"
+              accessibilityState={{ checked: collisionPolicy === "keep_both" }}
+              className="flex-row items-center gap-4 p-4"
+              disabled={busy}
+              onPress={() => setCollisionPolicy("keep_both")}
+            >
+              <Text className="text-base text-ink-light dark:text-ink-dark">
+                {collisionPolicy === "keep_both" ? "●" : "○"} Keep both
+              </Text>
+            </Pressable>
           </Panel>
+          {source ? (
+            <Panel>
+              <View className="flex-row items-center justify-between gap-4">
+                <View className="shrink gap-4">
+                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                    Enabled
+                  </Text>
+                  <Text className="text-base text-muted-light dark:text-muted-dark">
+                    Scan this folder and upload changes.
+                  </Text>
+                </View>
+                <Switch
+                  accessibilityLabel="Enable upload source"
+                  disabled={busy}
+                  onValueChange={setEnabled}
+                  thumbColor="#f4f4f0"
+                  trackColor={{ false: "#62665d", true: "#4f7d45" }}
+                  value={enabled}
+                />
+              </View>
+            </Panel>
+          ) : null}
           {error ? (
             <Text
               accessibilityLiveRegion="polite"
@@ -297,6 +347,26 @@ export function SourceEditor({
             onPress={() => void save()}
             tone="primary"
           />
+          {source ? (
+            <Panel>
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                Source maintenance
+              </Text>
+              <View className="flex-row flex-wrap gap-4">
+                <ActionButton
+                  disabled={busy}
+                  label="Reset upload history"
+                  onPress={resetHistory}
+                />
+                <ActionButton
+                  disabled={busy}
+                  label="Remove source"
+                  onPress={remove}
+                  tone="danger"
+                />
+              </View>
+            </Panel>
+          ) : null}
         </ScrollView>
       </SafeAreaView>
     </Modal>

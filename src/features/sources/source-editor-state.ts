@@ -26,10 +26,19 @@ export function sourceSelectionLabel(selection: SourceSelection | undefined) {
     case "screenshots":
       return "Screenshots";
     case "document_tree":
-      return "Android folder";
+      try {
+        const encodedPath = selection.treeUri.split("/tree/")[1]?.split("/document/")[0];
+        return encodedPath ? decodeURIComponent(encodedPath) : "Android folder";
+      } catch {
+        return "Android folder";
+      }
     default:
       return "Choose a local folder";
   }
+}
+
+export function sourceLocalLabel(source: SourceSummary) {
+  return sourceSelectionLabel(selectionForSource(source));
 }
 
 export function existingPresetSource(

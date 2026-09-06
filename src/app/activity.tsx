@@ -1,20 +1,24 @@
 import { Fragment, useState } from "react";
 import { useRouter } from "expo-router";
-import { Alert, Image, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Image, RefreshControl, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
   type EngineSnapshot,
   type FileInventoryEntry,
+  type FileInventoryFilter,
 } from "../../modules/webdav-upload-engine";
 import {
   useEngineSnapshot,
   useFileInventoryPages,
   useRemoteThumbnail,
+  useUnresolvedFailures,
 } from "@/lib/engine-query";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 import { useNow } from "@/lib/use-now";
 import { ActionButton, Panel, Separator } from "@/components/ui";
+import { RestoreSourcePermission } from "@/features/sources/RestoreSourcePermission";
+import { engineStatus, queueSummary } from "@/lib/upload-status";
 
 function blockerText(blocker: EngineSnapshot["blockers"][number], now: number) {
   switch (blocker.kind) {
@@ -39,9 +43,9 @@ const presenceText: Record<FileInventoryEntry["presence"], string> = {
   both: "On phone and Nextcloud",
 };
 
-const presenceIcon: Record<FileInventoryEntry["presence"], string> = {
+const presenceIcon: Record<FileInventoryEntry["presence"], string | null> = {
   local_only: "↑",
-  remote_only: "↓",
+  remote_only: null,
   both: "✓",
 };
 
@@ -82,14 +86,16 @@ function FileThumbnail({ entry }: { entry: FileInventoryEntry }) {
       ) : (
         <Text className="text-base text-muted-light dark:text-muted-dark">FILE</Text>
       )}
-      <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center bg-panel-light dark:bg-panel-dark">
+      {presenceIcon[entry.presence] ? (
+        <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center bg-panel-light dark:bg-panel-dark">
         <Text
           accessibilityLabel={presenceText[entry.presence]}
           className="text-base font-semibold text-accent"
         >
           {presenceIcon[entry.presence]}
         </Text>
-      </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -123,23 +129,29 @@ function FileRow({ entry, now }: { entry: FileInventoryEntry; now: number }) {
 export default function ActivityScreen() {
   const router = useRouter();
   const snapshot = useEngineSnapshot();
-  const inventory = useFileInventoryPages();
-  const [expanded, setExpanded] = useState(false);
+  const failures = useUnresolvedFailures();
+  const [statusFilter, setStatusFilter] = useState<FileInventoryFilter["status"]>("all");
+  const [sourceFilter, setSourceFilter] = useState<string | null>(null);
+  const inventory = useFileInventoryPages({ sourceId: sourceFilter, status: statusFilter });
   const [errorMessage, setErrorMessage] = useState<string>();
   const [refreshing, setRefreshing] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  const [clearing, setClearing] = useState(false);
   const now = useNow();
   const allItems = inventory.data?.pages.flatMap((page) => page.items) ?? [];
-  const items = expanded ? allItems : allItems.slice(0, 20);
   const inventoryErrors = inventory.data?.pages[0]?.errors ?? [];
-  const hasFailures = allItems.some((entry) => entry.transfer?.status === "failed");
+  const hasFailures = Boolean(failures.data?.length);
+  const failureDetails = failures.data?.filter(
+    (failure) => !snapshot.data?.blockers.some(
+      (blocker) => blocker.kind === "job" && blocker.jobId === failure.jobId,
+    ),
+  );
 
   const retryFailed = async () => {
     setRetrying(true);
     setErrorMessage(undefined);
     const result = await webDavUploadEngine.retryFailed();
     if (!result.ok) setErrorMessage(result.error.message);
+    await Promise.all([failures.refetch(), snapshot.refetch(), inventory.refetch()]);
     setRetrying(false);
   };
 
@@ -148,32 +160,8 @@ export default function ActivityScreen() {
     setErrorMessage(undefined);
     const scan = await webDavUploadEngine.scanNow();
     if (!scan.ok) setErrorMessage(scan.error.message);
-    await Promise.all([snapshot.refetch(), inventory.refetch()]);
+    await Promise.all([snapshot.refetch(), inventory.refetch(), failures.refetch()]);
     setRefreshing(false);
-  };
-
-  const clearCompleted = () => {
-    Alert.alert(
-      "Clear completed history?",
-      "The file list stays. Only completed transfer records are removed.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: () => {
-            setClearing(true);
-            setErrorMessage(undefined);
-            void webDavUploadEngine
-              .clearCompletedHistory()
-              .then((result) => {
-                if (!result.ok) setErrorMessage(result.error.message);
-              })
-              .finally(() => setClearing(false));
-          },
-        },
-      ],
-    );
   };
 
   return (
@@ -188,6 +176,16 @@ export default function ActivityScreen() {
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Activity
         </Text>
+        {snapshot.data ? (
+          <Panel>
+            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+              {engineStatus(snapshot.data, now)}
+            </Text>
+            <Text className="text-base text-muted-light dark:text-muted-dark">
+              {queueSummary(snapshot.data)}
+            </Text>
+          </Panel>
+        ) : null}
         {snapshot.isLoading || inventory.isLoading ? (
           <Text
             accessibilityLiveRegion="polite"
@@ -204,27 +202,51 @@ export default function ActivityScreen() {
             {errorMessage ?? "The file inventory could not be loaded."}
           </Text>
         ) : null}
-        {snapshot.data?.blockers.length ? (
+        {snapshot.data?.blockers.length || hasFailures ? (
           <View className="gap-4">
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Needs attention
-            </Text>
+            <View className="flex-row flex-wrap items-center justify-between gap-4">
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                Needs attention
+              </Text>
+              {hasFailures ? (
+                <ActionButton disabled={retrying} label={retrying ? "Retrying…" : "Retry failed"}
+                  onPress={() => void retryFailed()} tone="primary" />
+              ) : null}
+            </View>
             <Panel>
-              {snapshot.data.blockers.map((blocker, index) => (
-                <Fragment key={`${blocker.kind}-${index}`}>
-                  {index ? <Separator /> : null}
-                  <View className="gap-4">
-                    <Text className="text-base text-ink-light dark:text-ink-dark">
-                      {blockerText(blocker, now)}
-                    </Text>
-                    {blocker.kind === "account" || blocker.kind === "permission" ? (
-                      <ActionButton
-                        label="Repair in Sources"
-                        onPress={() => router.navigate("/")}
-                        tone="primary"
-                      />
-                    ) : null}
-                  </View>
+              {snapshot.data?.blockers.map((blocker, index) => {
+                const source = blocker.kind === "permission"
+                  ? snapshot.data.sources.find((item) => item.id === blocker.sourceId)
+                  : undefined;
+                return (
+                  <Fragment key={`${blocker.kind}-${index}`}>
+                    {index ? <Separator /> : null}
+                    <View className="gap-4">
+                      <Text className="text-base text-ink-light dark:text-ink-dark">
+                        {blockerText(blocker, now)}
+                      </Text>
+                      {blocker.kind === "account" ? (
+                        <ActionButton
+                          label="Open account settings"
+                          onPress={() => router.navigate({
+                            pathname: "/settings",
+                            params: { account: "open" },
+                          })}
+                          tone="primary"
+                        />
+                      ) : blocker.kind === "permission" && source ? (
+                        <RestoreSourcePermission blocker={blocker} source={source} />
+                      ) : null}
+                    </View>
+                  </Fragment>
+                );
+              })}
+              {failureDetails?.map((failure, index) => (
+                <Fragment key={failure.id}>
+                  {index || snapshot.data?.blockers.length ? <Separator /> : null}
+                  <Text className="text-base text-ink-light dark:text-ink-dark">
+                    {failure.message}
+                  </Text>
                 </Fragment>
               ))}
             </Panel>
@@ -236,15 +258,47 @@ export default function ActivityScreen() {
             className="text-base text-red-700 dark:text-red-300"
             key={error.sourceId}
           >
-            Nextcloud files for this source could not be loaded. Local files are still shown.
+            Nextcloud files for {snapshot.data?.sources.find(
+              (source) => source.id === error.sourceId,
+            )?.name ?? "this source"} could not be loaded. Local files are still shown.
           </Text>
         ))}
-        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-          Files
-        </Text>
-        {items.length ? (
+        <View className="gap-4">
+          <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">Files</Text>
+          <View className="flex-row flex-wrap gap-4">
+            {(["all", "pending", "failed", "uploaded"] as const).map((status) => (
+              <ActionButton
+                accessibilityState={{ selected: statusFilter === status }}
+                key={status}
+                label={status === "all" ? "All" : status[0].toUpperCase() + status.slice(1)}
+                onPress={() => setStatusFilter(status)}
+                tone={statusFilter === status ? "secondary" : "quiet"}
+              />
+            ))}
+          </View>
+          {snapshot.data && snapshot.data.sources.length > 1 ? (
+            <View className="flex-row flex-wrap gap-4">
+              <ActionButton
+                accessibilityState={{ selected: sourceFilter === null }}
+                label="All sources"
+                onPress={() => setSourceFilter(null)}
+                tone={sourceFilter === null ? "secondary" : "quiet"}
+              />
+              {snapshot.data.sources.map((source) => (
+                <ActionButton
+                  accessibilityState={{ selected: sourceFilter === source.id }}
+                  key={source.id}
+                  label={source.name}
+                  onPress={() => setSourceFilter(source.id)}
+                  tone={sourceFilter === source.id ? "secondary" : "quiet"}
+                />
+              ))}
+            </View>
+          ) : null}
+        </View>
+        {allItems.length ? (
           <Panel>
-            {items.map((entry, index) => (
+            {allItems.map((entry, index) => (
               <Fragment key={entry.id}>
                 {index ? <Separator /> : null}
                 <FileRow entry={entry} now={now} />
@@ -253,37 +307,14 @@ export default function ActivityScreen() {
           </Panel>
         ) : !inventory.isLoading ? (
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            No files found.
+            No matching files found.
           </Text>
         ) : null}
-        {!expanded && (allItems.length >= 20 || inventory.hasNextPage) ? (
-          <ActionButton label="Show more" onPress={() => setExpanded(true)} />
-        ) : null}
-        {expanded && inventory.hasNextPage ? (
+        {inventory.hasNextPage ? (
           <ActionButton
             disabled={inventory.isFetchingNextPage}
             label={inventory.isFetchingNextPage ? "Loading…" : "Show 20 more"}
             onPress={() => void inventory.fetchNextPage()}
-          />
-        ) : null}
-        {expanded ? (
-          <ActionButton label="Show fewer" onPress={() => setExpanded(false)} />
-        ) : null}
-        {hasFailures ? (
-          <ActionButton
-            disabled={retrying}
-            label={retrying ? "Retrying…" : "Retry failed"}
-            onPress={() => void retryFailed()}
-            tone="primary"
-          />
-        ) : null}
-        {snapshot.data?.queue.uploaded ? (
-          <ActionButton
-            accessibilityLabel="Clear completed upload history"
-            disabled={clearing}
-            label={clearing ? "Clearing…" : "Clear completed history"}
-            onPress={clearCompleted}
-            tone="danger"
           />
         ) : null}
       </ScrollView>

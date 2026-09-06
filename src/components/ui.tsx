@@ -25,6 +25,8 @@ const labelClasses: Record<ActionTone, string> = {
 
 export function ActionButton({
   accessibilityLabel,
+  accessibilityState,
+  disabled,
   label,
   tone = "quiet",
   ...props
@@ -33,7 +35,9 @@ export function ActionButton({
     <Pressable
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityRole="button"
-      className={buttonClasses[tone]}
+      accessibilityState={{ ...accessibilityState, disabled: Boolean(disabled) }}
+      className={`self-start max-w-full ${buttonClasses[tone]}`}
+      disabled={disabled}
       {...props}
     >
       <Text className={labelClasses[tone]}>{label}</Text>

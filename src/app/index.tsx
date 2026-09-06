@@ -1,55 +1,26 @@
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlatList, RefreshControl, Text, View } from "react-native";
 
 import { project } from "@/config/project";
-import webDavUploadEngine, {
-  type EngineSnapshot,
-} from "../../modules/webdav-upload-engine";
+import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
 import { SourceCard } from "@/features/sources/SourceCard";
 import { SourceEditor } from "@/features/sources/SourceEditor";
 import { useEngineSnapshot } from "@/lib/engine-query";
-import { formatBytes, formatRelativeTime } from "@/lib/format";
 import { useNow } from "@/lib/use-now";
 import { ActionButton, Panel } from "@/components/ui";
-
-function engineStatus(snapshot: EngineSnapshot, now: number) {
-  if (snapshot.account.status !== "connected") return "Connect an account to begin";
-  if (snapshot.worker.state === "scanning") return "Scanning for new files";
-  if (snapshot.worker.state === "uploading") {
-    return `Uploading ${formatBytes(snapshot.worker.bytesSent)} of ${formatBytes(snapshot.worker.totalBytes)}`;
-  }
-  if (snapshot.engine.state === "blocked") {
-    const count = snapshot.engine.blockerCount;
-    return `${count} ${count === 1 ? "issue needs" : "issues need"} attention`;
-  }
-  if (snapshot.engine.state === "paused") {
-    return `Uploads paused ${formatRelativeTime(snapshot.engine.pausedAt, now)}`;
-  }
-  if (snapshot.scheduler.lastScanCompletedAt) {
-    return `Last scan ${formatRelativeTime(snapshot.scheduler.lastScanCompletedAt, now)}`;
-  }
-  return "Ready to upload";
-}
-
-function queueSummary(snapshot: EngineSnapshot) {
-  const states = [
-    [snapshot.queue.queued, "queued"],
-    [snapshot.queue.uploading, "uploading"],
-    [snapshot.queue.failed, "blocked"],
-    [snapshot.queue.uploaded, "uploaded"],
-  ] as const;
-  const active = states.filter(([count]) => count > 0);
-  return active.length
-    ? active.map(([count, label]) => `${count} ${label}`).join(" · ")
-    : "No uploads yet";
-}
+import { engineStatus, queueSummary } from "@/lib/upload-status";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { data: snapshot, error: snapshotError, refetch } = useEngineSnapshot();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [editingSourceId, setEditingSourceId] = useState<string | "new">();
+  const [pickerMode, setPickerMode] = useState<
+    "all" | "folder" | "camera" | "screenshots"
+  >("all");
   const [scanning, setScanning] = useState(false);
   const now = useNow();
 
@@ -103,6 +74,10 @@ export default function HomeScreen() {
     editingSourceId && editingSourceId !== "new"
       ? snapshot?.sources.find((source) => source.id === editingSourceId)
       : undefined;
+  const addSource = (mode: typeof pickerMode = "all") => {
+    setPickerMode(mode);
+    setEditingSourceId("new");
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
@@ -129,6 +104,28 @@ export default function HomeScreen() {
                 <Text className="text-base text-muted-light dark:text-muted-dark">
                   {queueSummary(snapshot)}
                 </Text>
+                {connected && visibleSources.length ? (
+                  <View className="flex-row flex-wrap items-center gap-4">
+                    <ActionButton
+                      disabled={scanning}
+                      label={scanning ? "Scanning…" : "Scan now"}
+                      onPress={() => void scanNow()}
+                      tone="primary"
+                    />
+                    <ActionButton
+                      disabled={scanning}
+                      label={snapshot.engine.state === "paused" ? "Resume" : "Pause"}
+                      onPress={() => void togglePaused()}
+                    />
+                    {snapshot.blockers.length ? (
+                      <ActionButton
+                        label={`${snapshot.blockers.length} ${snapshot.blockers.length === 1 ? "issue" : "issues"}`}
+                        onPress={() => router.navigate("/activity")}
+                        tone="danger"
+                      />
+                    ) : null}
+                  </View>
+                ) : null}
               </Panel>
             ) : (
               <Text className="text-base text-muted-light dark:text-muted-dark">
@@ -146,48 +143,34 @@ export default function HomeScreen() {
             {snapshot && snapshot.account.status !== "connected" ? (
               <AccountConnection account={snapshot.account} />
             ) : null}
-            {visibleSources.length ? (
+            {connected ? (
               <View className="gap-4">
-                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                  Sources
-                </Text>
-                <Text className="text-base text-muted-light dark:text-muted-dark">
-                  {visibleSources.length}{" "}
-                  {visibleSources.length === 1 ? "source" : "sources"} · Add as
-                  many watch folders as needed
-                </Text>
+                <View className="flex-row items-center justify-between gap-4">
+                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                    Sources
+                  </Text>
+                  <ActionButton
+                    accessibilityLabel="Add upload source"
+                    label="Add source"
+                    onPress={() => addSource()}
+                    tone="primary"
+                  />
+                </View>
+                {!visibleSources.length ? (
+                  <View className="gap-4">
+                    <Text className="text-base text-muted-light dark:text-muted-dark">
+                      New files are scanned automatically, though Android may delay background work.
+                    </Text>
+                    <View className="flex-row flex-wrap gap-4">
+                      <ActionButton label="Camera" onPress={() => addSource("camera")} />
+                      <ActionButton label="Screenshots" onPress={() => addSource("screenshots")} />
+                      <ActionButton label="Choose folder" onPress={() => addSource("folder")} />
+                    </View>
+                  </View>
+                ) : null}
               </View>
             ) : null}
           </View>
-        }
-        ListFooterComponent={
-          connected ? (
-            <View className="mt-4 gap-4">
-              <ActionButton
-                accessibilityLabel="Add upload source"
-                label="Add source"
-                onPress={() => setEditingSourceId("new")}
-              />
-              <ActionButton
-                disabled={scanning}
-                label={scanning ? "Scanning…" : "Scan now"}
-                onPress={() => void scanNow()}
-                tone="primary"
-              />
-              <ActionButton
-                accessibilityLabel={
-                  snapshot.engine.state === "paused"
-                    ? "Resume uploads"
-                    : "Pause uploads"
-                }
-                disabled={scanning}
-                label={
-                  snapshot.engine.state === "paused" ? "Resume uploads" : "Pause uploads"
-                }
-                onPress={() => void togglePaused()}
-              />
-            </View>
-          ) : null
         }
         refreshControl={
           <RefreshControl refreshing={scanning} onRefresh={() => void refresh()} />
@@ -212,6 +195,7 @@ export default function HomeScreen() {
             setEditingSourceId(undefined);
             void refetch();
           }}
+          pickerMode={editingSourceId === "new" ? pickerMode : "all"}
           source={editingSource}
           sources={snapshot.sources}
           visible

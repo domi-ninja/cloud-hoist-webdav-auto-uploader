@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Alert, Switch, Text, View } from "react-native";
+import { Switch, Text, View } from "react-native";
 
 import webDavUploadEngine, {
   type EngineError,
@@ -7,7 +7,9 @@ import webDavUploadEngine, {
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
 import { formatRelativeTime } from "@/lib/format";
-import { ActionButton, Panel, Separator } from "@/components/ui";
+import { ActionButton, Panel } from "@/components/ui";
+import { RestoreSourcePermission } from "./RestoreSourcePermission";
+import { sourceLocalLabel } from "./source-editor-state";
 
 type SourceCardProps = {
   snapshot: EngineSnapshot;
@@ -29,6 +31,7 @@ function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary, now: numb
   if (permissionBlocker) return "Permission required";
   if (!source.enabled) return "Disabled";
   if (snapshot.engine.state === "paused") return "Paused";
+  if (snapshot.worker.state === "waiting") return snapshot.worker.reason;
   if (
     snapshot.worker.state === "scanning" &&
     (snapshot.worker.scope === "all" || source.kind === "media_store")
@@ -46,7 +49,6 @@ function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary, now: numb
 }
 
 export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
-  const [showMaintenance, setShowMaintenance] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
   const permissionBlocker = snapshot.blockers.find(
@@ -70,75 +72,6 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
   const updateSource = (changes: Partial<SourceSummary>) =>
     run(() => webDavUploadEngine.addOrUpdateSource({ ...source, ...changes }));
 
-  const restorePermission = async () => {
-    if (!permissionBlocker) return;
-    setBusy(true);
-    setError(undefined);
-
-    if (permissionBlocker.permission === "media") {
-      const permission = await webDavUploadEngine.requestMediaPermission();
-      if (!permission.ok) {
-        setBusy(false);
-        setError(permission.error);
-        return;
-      }
-    } else {
-      const selection = await webDavUploadEngine.pickDocumentTree(source.localUri);
-      if (!selection.ok) {
-        setBusy(false);
-        setError(selection.error);
-        return;
-      }
-      if (!selection.value) {
-        setBusy(false);
-        return;
-      }
-      const updated = await webDavUploadEngine.addOrUpdateSource({
-        ...source,
-        localUri: selection.value.treeUri,
-      });
-      if (!updated.ok) {
-        setBusy(false);
-        setError(updated.error);
-        return;
-      }
-    }
-
-    const scan = await webDavUploadEngine.scanSource(source.id);
-    setBusy(false);
-    if (!scan.ok) setError(scan.error);
-  };
-
-  const resetHistory = () => {
-    Alert.alert(
-      "Upload existing files again?",
-      "The next scan will reconsider files from this source. Files already on the server may be overwritten.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Reset history",
-          style: "destructive",
-          onPress: () => void run(() => webDavUploadEngine.resetSourceHistory(source.id)),
-        },
-      ],
-    );
-  };
-
-  const remove = () => {
-    Alert.alert(
-      `Remove ${source.name}?`,
-      "This stops watching the source. Files already uploaded to Nextcloud are not deleted.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => void run(() => webDavUploadEngine.removeSource(source.id)),
-        },
-      ],
-    );
-  };
-
   return (
     <Panel>
       <View className="flex-row items-center justify-between gap-4">
@@ -158,7 +91,7 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
         {sourceStatus(snapshot, source, now)}
       </Text>
       <Text className="text-base text-muted-light dark:text-muted-dark">
-        Upload to {source.remotePath}
+        {sourceLocalLabel(source)} → {source.remotePath}
       </Text>
       {error ? (
         <Text
@@ -169,13 +102,7 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
         </Text>
       ) : null}
       {permissionBlocker ? (
-        <ActionButton
-          accessibilityLabel={`Restore permission for ${source.name}`}
-          disabled={busy}
-          label="Restore permission"
-          onPress={() => void restorePermission()}
-          tone="primary"
-        />
+        <RestoreSourcePermission blocker={permissionBlocker} source={source} />
       ) : null}
       {busy ? (
         <Text
@@ -185,46 +112,21 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
           Working…
         </Text>
       ) : null}
-      <View className="gap-4">
+      <View className="flex-row flex-wrap items-center gap-4">
         <ActionButton
           accessibilityLabel={`Scan ${source.name}`}
           disabled={busy || !source.enabled}
-          label="Scan source"
+          label="Scan"
           onPress={() => void run(() => webDavUploadEngine.scanSource(source.id))}
           tone={permissionBlocker ? "secondary" : "primary"}
         />
         <ActionButton
           accessibilityLabel={`Edit ${source.name}`}
           disabled={busy}
-          label="Edit source"
+          label="Edit"
           onPress={onEdit}
         />
       </View>
-      <Separator />
-      <ActionButton
-        accessibilityLabel={`${showMaintenance ? "Hide" : "Show"} options for ${source.name}`}
-        accessibilityState={{ expanded: showMaintenance }}
-        disabled={busy}
-        label={showMaintenance ? "Hide source options" : "Source options"}
-        onPress={() => setShowMaintenance((shown) => !shown)}
-      />
-      {showMaintenance ? (
-        <View className="gap-4">
-          <ActionButton
-            accessibilityLabel={`Reset upload history for ${source.name}`}
-            disabled={busy}
-            label="Reset upload history"
-            onPress={resetHistory}
-          />
-          <ActionButton
-            accessibilityLabel={`Remove ${source.name}`}
-            disabled={busy}
-            label="Remove source"
-            onPress={remove}
-            tone="danger"
-          />
-        </View>
-      ) : null}
     </Panel>
   );
 }
