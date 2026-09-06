@@ -95,7 +95,7 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
       ) : null}
 
       {error ? (
-        <View className="gap-4">
+        <View className="gap-2">
           <Text
             accessibilityLiveRegion="polite"
             className="text-base text-red-700 dark:text-red-300"
@@ -118,7 +118,7 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
           Loading folders…
         </Text>
       ) : (
-        <View className="gap-4">
+        <View className="gap-2">
           {folders.length ? (
             folders.map((folder, index) => (
               <Fragment key={folder.pathSegments.join("\0")}>
@@ -141,7 +141,7 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
 
       <TextInput
         accessibilityLabel="New remote folder name"
-        className="border border-muted-light p-4 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
+        className="border border-muted-light p-2 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
         editable={!creating}
         onChangeText={setNewFolderName}
         onSubmitEditing={() => void createFolder()}

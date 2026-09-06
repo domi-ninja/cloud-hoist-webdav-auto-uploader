@@ -69,9 +69,9 @@ export function Panel({ children }: PropsWithChildren) {
     <Surface
       elevation={0}
       style={{
-        gap: 16,
-        padding: 16,
-        borderRadius: 16,
+        gap: 8,
+        padding: 8,
+        borderRadius: 8,
         backgroundColor: theme.colors.surfaceVariant,
       }}
     >

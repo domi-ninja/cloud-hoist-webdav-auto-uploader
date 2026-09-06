@@ -20,20 +20,29 @@ export function selectionForSource(source: SourceSummary): SourceSelection {
 }
 
 export function sourceSelectionLabel(selection: SourceSelection | undefined) {
+  const segments = selection ? sourceFolderPathSegments(selection) : [];
+  return segments.length ? segments.join("/") : "Choose a local folder";
+}
+
+export function sourceFolderPathSegments(selection: SourceSelection) {
   switch (selection?.type) {
     case "camera":
-      return "Camera";
+      return ["DCIM", "Camera"];
     case "screenshots":
-      return "Screenshots";
+      return ["Pictures", "Screenshots"];
     case "document_tree":
       try {
-        const encodedPath = selection.treeUri.split("/tree/")[1]?.split("/document/")[0];
-        return encodedPath ? decodeURIComponent(encodedPath) : "Android folder";
+        const encodedPath = selection.treeUri
+          .split("/tree/")[1]
+          ?.split("/document/")[0];
+        const storagePath = encodedPath
+          ? decodeURIComponent(encodedPath).split(":").slice(1).join(":")
+          : "";
+        const segments = storagePath.split("/").filter(Boolean).slice(-2);
+        return segments.length ? segments : ["Android folder"];
       } catch {
-        return "Android folder";
+        return ["Android folder"];
       }
-    default:
-      return "Choose a local folder";
   }
 }
 
@@ -55,9 +64,10 @@ export function existingPresetSource(
 export function sourceEditorInitialValue(
   source: SourceSummary | undefined,
 ): SourceEditorValue {
+  const selection = source ? selectionForSource(source) : undefined;
   return {
-    name: source?.name ?? "",
-    selection: source ? selectionForSource(source) : undefined,
+    name: selection ? sourceSelectionLabel(selection) : "",
+    selection,
     remotePathSegments: source
       ? source.remotePath.split("/").filter(Boolean)
       : ["WebDAV Auto Upload"],

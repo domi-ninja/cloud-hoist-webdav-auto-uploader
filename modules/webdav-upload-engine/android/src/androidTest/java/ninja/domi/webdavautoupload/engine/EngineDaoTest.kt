@@ -498,7 +498,9 @@ class EngineDaoTest {
     val result = recorder.record(source(), listOf(newer, older), queueNewRevisions = true)
     val first = dao.claimNext(300_000, "worker")
 
-    assertEquals(SourcePreview(2, 30L), result.preview)
+    assertEquals(2, result.preview.eligibleFileCount)
+    assertEquals(30L, result.preview.totalBytes)
+    assertEquals(2, result.preview.files.size)
     assertEquals(2, result.jobsAdded)
     assertEquals("same.jpg", first?.remoteFileName)
     assertEquals(
@@ -555,7 +557,10 @@ class EngineDaoTest {
     )
 
     assertEquals("created-source", result.sourceId)
-    assertEquals(SourcePreview(1, 50L, MediaPermissionAccess.PARTIAL), result.preview)
+    assertEquals(1, result.preview.eligibleFileCount)
+    assertEquals(50L, result.preview.totalBytes)
+    assertEquals(MediaPermissionAccess.PARTIAL, result.preview.permissionAccess)
+    assertEquals(listOf(discovered.localUri), result.preview.files.map { it.localUri })
     assertEquals(1, result.jobsAdded)
     assertEquals(1, dao.sourceCount("created-source"))
   }

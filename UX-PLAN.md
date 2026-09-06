@@ -14,11 +14,11 @@ Based on the code review of Sources, Activity, Settings, and their supporting di
 
 ## Current screen inventory
 
-| Screen | Existing content and actions | Main friction |
-| --- | --- | --- |
-| Sources | Account connection, global status, queue counts, source switches, scan/edit/maintenance actions, source editor, global scan and pause controls | Tall source cards push global actions below the list; waiting and recovery states need clearer explanations |
-| Activity | Blockers, repair links, file thumbnails and presence labels, transfer status, pagination, retry failures, history clearing | Troubleshooting and file browsing compete for attention; recovery controls can be buried or missing |
-| Settings | Account settings, network/battery/charging rules, diagnostic sharing, app information | Rules do not explain their combined effect or why current uploads are waiting |
+| Screen   | Existing content and actions                                                                                                                   | Main friction                                                                                               |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Sources  | Account connection, global status, queue counts, source switches, scan/edit/maintenance actions, source editor, global scan and pause controls | Tall source cards push global actions below the list; waiting and recovery states need clearer explanations |
+| Activity | Blockers, repair links, file thumbnails and presence labels, transfer status, pagination, retry failures, history clearing                     | Troubleshooting and file browsing compete for attention; recovery controls can be buried or missing         |
+| Settings | Account settings, network/battery/charging rules, diagnostic sharing, app information                                                          | Rules do not explain their combined effect or why current uploads are waiting                               |
 
 ## Phase 1: fix misleading behavior
 
@@ -95,6 +95,18 @@ Acceptance checks:
 - [x] Use compact icon buttons for scan, pause/resume, add, edit, retry, share, and maintenance actions. Keep accessibility labels and long-press tooltips.
 - [x] Replace homemade collision radios with Paper radios and use Paper switches, buttons, chips, and panels.
 - [x] Remove the exact acceptance-test source during fixture cleanup before its destination is deleted. Include the underlying inventory error in the UI.
+
+### Density and backup-folder defaults
+
+- [x] Reduce screen and panel spacing to one compact spacing unit across the app.
+- [x] Keep edit controls on the same row as their values and remove the duplicate Save action from the source editor.
+- [x] Collapse source maintenance into one row and shorten collision and enabled controls.
+- [x] Name new setup actions "Add backup folder".
+- [x] Remove the editable source name. Derive it from the local parent and folder name.
+- [x] Merge source selection into one "What do we back up?" panel with direct folder-based copy.
+- [x] Make the Nextcloud upload root configurable, including `/`, while always appending and creating the derived local parent/folder path.
+- [x] Show up to five real file thumbnails immediately after a backup folder is selected.
+- [x] Default new destinations to the app folder plus the local source's parent and folder name. Preserve a destination the user picked manually.
 
 ### Checks
 

@@ -40,6 +40,13 @@ data class SourcePreview(
   val eligibleFileCount: Int,
   val totalBytes: Long,
   val permissionAccess: MediaPermissionAccess? = null,
+  val files: List<SourcePreviewFile> = emptyList(),
+)
+
+data class SourcePreviewFile(
+  val localUri: String,
+  val fileName: String,
+  val mimeType: String?,
 )
 
 data class DocumentTreeNode(
@@ -84,6 +91,9 @@ fun Iterable<DiscoveredFile>.toSourcePreview(
   eligibleFileCount = count(),
   totalBytes = sumOf(DiscoveredFile::byteCount),
   permissionAccess = permissionAccess,
+  files = take(5).map { file ->
+    SourcePreviewFile(file.localUri, file.fileName, file.mimeType)
+  },
 )
 
 /** Media presets stay flat remotely, so their local directory is only used for classification. */

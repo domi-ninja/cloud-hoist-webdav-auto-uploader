@@ -6,6 +6,7 @@ import { useColorScheme } from "react-native";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from "react-native-paper";
 import { EngineQueryProvider } from "@/lib/engine-query";
+import { AppPreferencesProvider } from "@/lib/app-preferences";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -38,52 +39,57 @@ export default function RootLayout() {
         ),
       }}
     >
-      <EngineQueryProvider>
-        <Tabs
-          screenOptions={{
-            headerShown: false,
-            tabBarActiveTintColor: theme.colors.primary,
-            tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
-            tabBarLabelStyle: { fontSize: 16 },
-            tabBarStyle: {
-              backgroundColor: dark ? "#242720" : "#e6e8e1",
-              borderTopColor: dark ? "#aeb2a8" : "#62665d",
-            },
-          }}
-        >
-          <Tabs.Screen
-            name="index"
-            options={{
-              title: "Sources",
-              tabBarAccessibilityLabel: "Sources",
-              tabBarIcon: (props) => (
-                <MaterialCommunityIcons {...props} name="folder-sync-outline" />
-              ),
+      <AppPreferencesProvider>
+        <EngineQueryProvider>
+          <Tabs
+            screenOptions={{
+              headerShown: false,
+              tabBarActiveTintColor: theme.colors.primary,
+              tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+              tabBarLabelStyle: { fontSize: 16 },
+              tabBarStyle: {
+                backgroundColor: dark ? "#242720" : "#e6e8e1",
+                borderTopColor: dark ? "#aeb2a8" : "#62665d",
+              },
             }}
-          />
-          <Tabs.Screen
-            name="activity"
-            options={{
-              title: "Activity",
-              tabBarAccessibilityLabel: "Activity",
-              tabBarIcon: (props) => (
-                <MaterialCommunityIcons {...props} name="transfer" />
-              ),
-            }}
-          />
-          <Tabs.Screen
-            name="settings"
-            options={{
-              title: "Settings",
-              tabBarAccessibilityLabel: "Settings",
-              tabBarIcon: (props) => (
-                <MaterialCommunityIcons {...props} name="cog-outline" />
-              ),
-            }}
-          />
-        </Tabs>
-        <StatusBar style="auto" />
-      </EngineQueryProvider>
+          >
+            <Tabs.Screen
+              name="index"
+              options={{
+                title: "Sources",
+                tabBarAccessibilityLabel: "Sources",
+                tabBarIcon: (props) => (
+                  <MaterialCommunityIcons
+                    {...props}
+                    name="folder-sync-outline"
+                  />
+                ),
+              }}
+            />
+            <Tabs.Screen
+              name="activity"
+              options={{
+                title: "Activity",
+                tabBarAccessibilityLabel: "Activity",
+                tabBarIcon: (props) => (
+                  <MaterialCommunityIcons {...props} name="transfer" />
+                ),
+              }}
+            />
+            <Tabs.Screen
+              name="settings"
+              options={{
+                title: "Settings",
+                tabBarAccessibilityLabel: "Settings",
+                tabBarIcon: (props) => (
+                  <MaterialCommunityIcons {...props} name="cog-outline" />
+                ),
+              }}
+            />
+          </Tabs>
+          <StatusBar style="auto" />
+        </EngineQueryProvider>
+      </AppPreferencesProvider>
     </PaperProvider>
   );
 }

@@ -82,7 +82,7 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
 
   return (
     <Panel>
-      <View className="flex-row items-center justify-between gap-4">
+      <View className="flex-row items-center justify-between gap-2">
         <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
           {source.name}
         </Text>
@@ -118,7 +118,7 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
           Working…
         </Text>
       ) : null}
-      <View className="flex-row flex-wrap items-center gap-4">
+      <View className="flex-row flex-wrap items-center gap-2">
         <IconAction
           icon="folder-search-outline"
           accessibilityLabel={`Scan ${source.name}`}

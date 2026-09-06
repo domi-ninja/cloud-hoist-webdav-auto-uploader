@@ -6,12 +6,12 @@ import webDavUploadEngine, {
   type SourcePreview,
   type SourceSelection,
 } from "../../../modules/webdav-upload-engine";
-import { formatBytes } from "@/lib/format";
 import { ActionButton, Panel, Separator } from "@/components/ui";
 
 type LocalSourcePickerProps = {
   mode?: "all" | "folder" | "media" | "camera" | "screenshots";
   onSelect: (selection: SourceSelection, preview: SourcePreview) => void;
+  embedded?: boolean;
 };
 
 type PendingMediaSelection = Extract<
@@ -19,23 +19,12 @@ type PendingMediaSelection = Extract<
   { type: "camera" | "screenshots" }
 >;
 
-function sourceLabel(selection: SourceSelection) {
-  switch (selection.type) {
-    case "camera":
-      return "Camera";
-    case "screenshots":
-      return "Screenshots";
-    case "document_tree":
-      return "Selected folder";
-  }
-}
-
 export function LocalSourcePicker({
   mode = "all",
   onSelect,
+  embedded = false,
 }: LocalSourcePickerProps) {
   const [pendingMedia, setPendingMedia] = useState<PendingMediaSelection>();
-  const [selection, setSelection] = useState<SourceSelection>();
   const [preview, setPreview] = useState<SourcePreview>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
@@ -49,13 +38,12 @@ export function LocalSourcePicker({
       setError(result.error);
       return;
     }
-    setSelection(nextSelection);
     setPreview(result.value);
+    onSelect(nextSelection, result.value);
   };
 
   const chooseMedia = async (nextSelection: PendingMediaSelection) => {
     setPendingMedia(nextSelection);
-    setSelection(undefined);
     setPreview(undefined);
     setError(undefined);
 
@@ -95,7 +83,6 @@ export function LocalSourcePicker({
 
   const chooseFolder = async () => {
     setPendingMedia(undefined);
-    setSelection(undefined);
     setPreview(undefined);
     setBusy(true);
     setError(undefined);
@@ -106,30 +93,20 @@ export function LocalSourcePicker({
       return;
     }
     if (result.value) {
-      await loadPreview({ type: "document_tree", treeUri: result.value.treeUri });
+      await loadPreview({
+        type: "document_tree",
+        treeUri: result.value.treeUri,
+      });
     }
   };
 
-  return (
-    <Panel>
-      <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-        {mode === "folder"
-          ? "Choose a watch folder"
-          : mode === "camera"
-            ? "Choose Camera"
-            : mode === "screenshots"
-              ? "Choose Screenshots"
-          : mode === "media"
-            ? "Choose a media collection"
-            : "Choose what to upload"}
-      </Text>
-      <Text className="text-base text-muted-light dark:text-muted-dark">
-        {mode === "folder"
-          ? "Pick any readable Android folder. You can add as many as you need."
-          : mode === "media" || mode === "camera" || mode === "screenshots"
-            ? "Watch new photos from an Android media collection."
-            : "Pick a media collection or any readable Android folder."}
-      </Text>
+  const content = (
+    <>
+      {!embedded ? (
+        <Text className="text-base text-muted-light dark:text-muted-dark">
+          Pick the photos or folder to back up.
+        </Text>
+      ) : null}
 
       {mode !== "folder" ? (
         <>
@@ -168,10 +145,10 @@ export function LocalSourcePicker({
       ) : null}
 
       {pendingMedia && !preview ? (
-        <View className="gap-4">
+        <View className="gap-2">
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            Allow access to the photos and videos you want watched. Limited access
-            works, but only selected items can be discovered.
+            Allow access to the photos and videos you want watched. Limited
+            access works, but only selected items can be discovered.
           </Text>
           <ActionButton
             disabled={busy}
@@ -198,25 +175,8 @@ export function LocalSourcePicker({
           {error.message}
         </Text>
       ) : null}
-      {selection && preview ? (
-        <View className="gap-4">
-          <Text className="text-base text-ink-light dark:text-ink-dark">
-            {sourceLabel(selection)} · {preview.eligibleFileCount} files ·{" "}
-            {formatBytes(preview.totalBytes)}
-          </Text>
-          {preview.permissionAccess === "partial" ? (
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              Android granted limited access. Only the selected media will upload.
-            </Text>
-          ) : null}
-          <ActionButton
-            accessibilityLabel={`Use ${sourceLabel(selection)} source`}
-            label="Continue"
-            onPress={() => onSelect(selection, preview)}
-            tone="primary"
-          />
-        </View>
-      ) : null}
-    </Panel>
+    </>
   );
+
+  return embedded ? content : <Panel>{content}</Panel>;
 }

@@ -52,10 +52,11 @@ class SourceDiscoveryModelsTest {
 
     assertNull(item(displayName = "").forPreset(MediaPreset.CAMERA))
     assertNull(item(byteCount = -1).forPreset(MediaPreset.CAMERA))
-    assertEquals(
-      SourcePreview(2, 2_048, MediaPermissionAccess.PARTIAL),
-      listOf(valid, valid).toSourcePreview(MediaPermissionAccess.PARTIAL),
-    )
+    val preview = listOf(valid, valid).toSourcePreview(MediaPermissionAccess.PARTIAL)
+    assertEquals(2, preview.eligibleFileCount)
+    assertEquals(2_048, preview.totalBytes)
+    assertEquals(MediaPermissionAccess.PARTIAL, preview.permissionAccess)
+    assertEquals(listOf(valid.localUri, valid.localUri), preview.files.map { it.localUri })
   }
 
   @Test

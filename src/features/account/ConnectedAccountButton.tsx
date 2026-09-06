@@ -14,7 +14,7 @@ export function ConnectedAccountButton({ account }: { account: AccountSummary })
         accessibilityLabel={`Open account settings for ${account.displayName}`}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        className="items-center justify-center p-4"
+        className="items-center justify-center p-2"
         onPress={() => setOpen(true)}
       >
         <InstanceIcon compact serverUrl={account.serverUrl} />

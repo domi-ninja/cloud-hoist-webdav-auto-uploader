@@ -70,7 +70,7 @@ export function RestoreSourcePermission({
   };
 
   return (
-    <View className="gap-4">
+    <View className="gap-2">
       <IconAction
         icon="folder-key-outline"
         disabled={busy}

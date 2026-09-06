@@ -129,7 +129,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
       <TextInput
         autoCapitalize="none"
         autoCorrect={false}
-        className="border border-accent p-4 text-base text-ink-light dark:text-ink-dark"
+        className="border border-accent p-2 text-base text-ink-light dark:text-ink-dark"
         editable={!busy}
         onChangeText={setServerUrl}
         placeholder="https://cloud.example.com"
@@ -142,7 +142,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            className="border border-accent p-4 text-base text-ink-light dark:text-ink-dark"
+            className="border border-accent p-2 text-base text-ink-light dark:text-ink-dark"
             editable={!busy}
             onChangeText={setUsername}
             placeholder="Username"
@@ -152,7 +152,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            className="border border-accent p-4 text-base text-ink-light dark:text-ink-dark"
+            className="border border-accent p-2 text-base text-ink-light dark:text-ink-dark"
             editable={!busy}
             onChangeText={setAppPassword}
             placeholder="App password"

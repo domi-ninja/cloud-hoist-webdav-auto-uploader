@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Alert, ScrollView, Share, Text, View } from "react-native";
-import { Switch } from "react-native-paper";
+import { Switch, TextInput } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { project } from "@/config/project";
@@ -14,6 +14,11 @@ import { IconAction, Panel, Separator } from "@/components/ui";
 import { AccountSettingsModal } from "@/features/account/AccountSettingsModal";
 import { InstanceIcon } from "@/features/account/InstanceIcon";
 import { transferRulesSummary } from "@/lib/upload-status";
+import {
+  formatRemoteRoot,
+  parseRemoteRoot,
+  useAppPreferences,
+} from "@/lib/app-preferences";
 
 type ConstraintKey = keyof TransferConstraints;
 
@@ -21,11 +26,32 @@ export default function SettingsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ account?: string }>();
   const { data: snapshot, error, refetch } = useEngineSnapshot();
+  const { remoteRootPath, setRemoteRootPath } = useAppPreferences();
   const [saving, setSaving] = useState<ConstraintKey>();
   const [sharing, setSharing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [accountOpen, setAccountOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [rootText, setRootText] = useState(formatRemoteRoot(remoteRootPath));
+  const [rootError, setRootError] = useState<string>();
+  const [savingRoot, setSavingRoot] = useState(false);
+
+  const saveRemoteRoot = async () => {
+    const parsed = parseRemoteRoot(rootText);
+    if (!parsed.ok) {
+      setRootError(parsed.error);
+      return;
+    }
+    setSavingRoot(true);
+    setRootError(undefined);
+    try {
+      await setRemoteRootPath(parsed.value);
+    } catch {
+      setRootError("The upload root could not be saved.");
+    } finally {
+      setSavingRoot(false);
+    }
+  };
 
   const closeAccount = () => {
     setAccountOpen(false);
@@ -93,7 +119,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
-      <ScrollView className="flex-1" contentContainerClassName="gap-4 p-4">
+      <ScrollView className="flex-1" contentContainerClassName="gap-2 p-2">
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Settings
         </Text>
@@ -107,9 +133,9 @@ export default function SettingsScreen() {
         ) : null}
         {snapshot?.account.status === "connected" ? (
           <Panel>
-            <View className="flex-row items-center gap-4">
+            <View className="flex-row items-center gap-2">
               <InstanceIcon compact serverUrl={snapshot.account.serverUrl} />
-              <View className="flex-1 gap-4">
+              <View className="flex-1 gap-2">
                 <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                   {snapshot.account.displayName}
                 </Text>
@@ -125,6 +151,45 @@ export default function SettingsScreen() {
             </View>
           </Panel>
         ) : null}
+        <Panel>
+          <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+            Nextcloud upload root
+          </Text>
+          <View className="flex-row items-center gap-2">
+            <TextInput
+              accessibilityLabel="Nextcloud upload root"
+              autoCapitalize="none"
+              autoCorrect={false}
+              dense
+              error={Boolean(rootError)}
+              mode="outlined"
+              onChangeText={setRootText}
+              onSubmitEditing={() => void saveRemoteRoot()}
+              returnKeyType="done"
+              style={{ flex: 1, fontSize: 16 }}
+              value={rootText}
+            />
+            <IconAction
+              icon="content-save-outline"
+              disabled={savingRoot}
+              label={savingRoot ? "Saving upload root" : "Save upload root"}
+              onPress={() => void saveRemoteRoot()}
+              tone="primary"
+            />
+          </View>
+          <Text className="text-base text-muted-light dark:text-muted-dark">
+            New backups go here, followed by their local parent and folder name.
+            Use / to upload from the Nextcloud account root.
+          </Text>
+          {rootError ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              className="text-base text-red-700 dark:text-red-300"
+            >
+              {rootError}
+            </Text>
+          ) : null}
+        </Panel>
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Transfer rules
         </Text>
@@ -143,7 +208,7 @@ export default function SettingsScreen() {
               return (
                 <Fragment key={option.key}>
                   {index ? <Separator /> : null}
-                  <View className="flex-row items-center justify-between gap-4">
+                  <View className="flex-row items-center justify-between gap-2">
                     <Text className="shrink text-base text-ink-light dark:text-ink-dark">
                       {option.label}
                     </Text>
@@ -168,7 +233,7 @@ export default function SettingsScreen() {
           </Panel>
         ) : null}
         <Panel>
-          <View className="flex-row items-center justify-between gap-4">
+          <View className="flex-row items-center justify-between gap-2">
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
               Diagnostics
             </Text>
@@ -187,7 +252,7 @@ export default function SettingsScreen() {
         </Panel>
         {snapshot?.queue.uploaded ? (
           <Panel>
-            <View className="flex-row items-center justify-between gap-4">
+            <View className="flex-row items-center justify-between gap-2">
               <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                 Transfer history
               </Text>

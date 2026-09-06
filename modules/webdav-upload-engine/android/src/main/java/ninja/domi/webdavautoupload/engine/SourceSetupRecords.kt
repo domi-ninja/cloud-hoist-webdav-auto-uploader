@@ -50,6 +50,13 @@ fun SourcePreview.toMap(): Map<String, Any?> = mapOf(
   "eligibleFileCount" to eligibleFileCount,
   "totalBytes" to totalBytes,
   "permissionAccess" to permissionAccess?.name?.lowercase(),
+  "files" to files.map { file ->
+    mapOf(
+      "localUri" to file.localUri,
+      "fileName" to file.fileName,
+      "mimeType" to file.mimeType,
+    )
+  },
 )
 
 fun SourceCommitResult.toMap(): Map<String, Any?> = mapOf(

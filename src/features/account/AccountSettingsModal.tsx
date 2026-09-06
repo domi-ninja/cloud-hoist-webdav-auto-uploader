@@ -126,7 +126,7 @@ export function AccountSettingsModal({
       visible={visible}
     >
       <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
-        <View className="flex-row items-center justify-between gap-4 p-4">
+        <View className="flex-row items-center justify-between gap-2 p-2">
           <IconAction
             icon="close"
             disabled={busy}
@@ -145,13 +145,13 @@ export function AccountSettingsModal({
         </View>
         <ScrollView
           className="flex-1"
-          contentContainerClassName="gap-4 p-4"
+          contentContainerClassName="gap-2 p-2"
           keyboardShouldPersistTaps="handled"
         >
           <Panel>
-            <View className="flex-row items-center gap-4">
+            <View className="flex-row items-center gap-2">
               <InstanceIcon serverUrl={account.serverUrl} />
-              <View className="shrink gap-4">
+              <View className="shrink gap-2">
                 <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                   {account.displayName}
                 </Text>
@@ -198,7 +198,7 @@ export function AccountSettingsModal({
               accessibilityLabel="Nextcloud server URL"
               autoCapitalize="none"
               autoCorrect={false}
-              className="border border-muted-light p-4 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
+              className="border border-muted-light p-2 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
               editable={!busy}
               onChangeText={setServerUrl}
               placeholder="https://cloud.example.com"
@@ -209,7 +209,7 @@ export function AccountSettingsModal({
               accessibilityLabel="Nextcloud username"
               autoCapitalize="none"
               autoCorrect={false}
-              className="border border-muted-light p-4 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
+              className="border border-muted-light p-2 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
               editable={!busy}
               onChangeText={setUsername}
               placeholder="Username"
@@ -220,7 +220,7 @@ export function AccountSettingsModal({
               accessibilityLabel="Nextcloud app password"
               autoCapitalize="none"
               autoCorrect={false}
-              className="border border-muted-light p-4 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
+              className="border border-muted-light p-2 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
               editable={!busy}
               onChangeText={setAppPassword}
               placeholder="App password required to save"

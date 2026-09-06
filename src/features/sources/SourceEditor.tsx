@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Alert, Modal, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Modal, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
@@ -9,11 +9,16 @@ import webDavUploadEngine, {
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
 import { RadioButton, Switch } from "react-native-paper";
-import { ActionButton, IconAction, Panel } from "@/components/ui";
+import { IconAction, Panel } from "@/components/ui";
 import { formatBytes } from "@/lib/format";
-import { ensureRemoteDestination } from "./default-destination";
+import { useAppPreferences } from "@/lib/app-preferences";
+import {
+  defaultRemotePath,
+  ensureRemoteDestination,
+} from "./default-destination";
 import { LocalSourcePicker } from "./LocalSourcePicker";
 import { RemoteFolderPicker } from "./RemoteFolderPicker";
+import { SourcePreviewThumbnails } from "./SourcePreviewThumbnails";
 import {
   existingPresetSource,
   sourceEditorInitialValue,
@@ -45,17 +50,17 @@ export function SourceEditor({
   onSaved,
   pickerMode = "all",
 }: SourceEditorProps) {
+  const { remoteRootPath } = useAppPreferences();
   const initialValue = useMemo(
     () => sourceEditorInitialValue(source),
     [source],
   );
   const initialKey = sourceEditorValueKey(initialValue);
-  const [name, setName] = useState(initialValue.name);
   const [selection, setSelection] = useState<SourceSelection | undefined>(
     initialValue.selection,
   );
   const [remotePathSegments, setRemotePathSegments] = useState(
-    initialValue.remotePathSegments,
+    source ? initialValue.remotePathSegments : remoteRootPath,
   );
   const [enabled, setEnabled] = useState(initialValue.enabled);
   const [collisionPolicy, setCollisionPolicy] = useState(
@@ -64,18 +69,21 @@ export function SourceEditor({
   const [preview, setPreview] = useState<SourcePreview>();
   const [choosingLocal, setChoosingLocal] = useState(!source);
   const [choosingRemote, setChoosingRemote] = useState(false);
+  const [destinationCustomized, setDestinationCustomized] = useState(
+    Boolean(source),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
 
   const currentValue = {
-    name,
+    name: selection ? sourceSelectionLabel(selection) : "",
     selection,
     remotePathSegments,
     enabled,
     collisionPolicy,
   };
   const dirty = sourceEditorValueKey(currentValue) !== initialKey;
-  const canSave = Boolean(name.trim() && selection) && !busy;
+  const canSave = Boolean(selection) && !busy;
 
   const close = () => {
     if (!dirty) {
@@ -110,7 +118,7 @@ export function SourceEditor({
     const result = source
       ? await webDavUploadEngine.addOrUpdateSource(
           sourceInputFromEditor(source.id, {
-            name,
+            name: sourceSelectionLabel(selection),
             selection,
             remotePathSegments: destination.value,
             enabled,
@@ -118,7 +126,7 @@ export function SourceEditor({
           }),
         )
       : await webDavUploadEngine.commitSource({
-          name,
+          name: sourceSelectionLabel(selection),
           selection,
           remotePathSegments: destination.value,
           collisionPolicy,
@@ -162,7 +170,7 @@ export function SourceEditor({
   const remove = () => {
     if (!source) return;
     Alert.alert(
-      `Remove ${source.name}?`,
+      `Remove ${sourceSelectionLabel(selection)}?`,
       "This stops watching the source. Files already uploaded to Nextcloud are not deleted.",
       [
         { text: "Cancel", style: "cancel" },
@@ -190,7 +198,7 @@ export function SourceEditor({
       visible={visible}
     >
       <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
-        <View className="flex-row items-center justify-between gap-4 p-4">
+        <View className="flex-row items-center justify-between gap-2 p-2">
           <IconAction
             icon="close"
             disabled={busy}
@@ -198,127 +206,152 @@ export function SourceEditor({
             onPress={close}
           />
           <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
-            {source ? "Edit source" : "Add source"}
+            {source ? "Edit backup folder" : "Add backup folder"}
           </Text>
           <IconAction
             icon="check"
-            label={busy ? "Saving…" : "Save upload source"}
+            label={busy ? "Saving…" : "Save backup folder"}
             disabled={!canSave}
             onPress={() => void save()}
           />
         </View>
         <ScrollView
-          contentContainerClassName="gap-4 p-4"
+          contentContainerClassName="gap-2 p-2"
           keyboardShouldPersistTaps="handled"
         >
           <Panel>
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Local folder
-            </Text>
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              {sourceSelectionLabel(selection)}
-            </Text>
-            {preview ? (
-              <Text className="text-base text-muted-light dark:text-muted-dark">
-                {preview.eligibleFileCount} files ·{" "}
-                {formatBytes(preview.totalBytes)}
-              </Text>
+            <View className="flex-row items-center gap-2">
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                  What do we back up?
+                </Text>
+                <Text className="text-base text-muted-light dark:text-muted-dark">
+                  {selection
+                    ? `Upload photos in ${sourceSelectionLabel(selection)}.`
+                    : "Choose a folder."}
+                </Text>
+                {preview ? (
+                  <>
+                    <SourcePreviewThumbnails files={preview.files} />
+                    <Text className="text-base text-muted-light dark:text-muted-dark">
+                      {preview.eligibleFileCount} files ·{" "}
+                      {formatBytes(preview.totalBytes)}
+                    </Text>
+                    {preview.permissionAccess === "partial" ? (
+                      <Text className="text-base text-muted-light dark:text-muted-dark">
+                        Only photos allowed by Android will be backed up.
+                      </Text>
+                    ) : null}
+                  </>
+                ) : null}
+              </View>
+              <IconAction
+                icon={choosingLocal ? "chevron-up" : "folder-edit-outline"}
+                disabled={busy}
+                label={choosingLocal ? "Hide choices" : "Change source"}
+                onPress={() => setChoosingLocal((open) => !open)}
+              />
+            </View>
+            {choosingLocal ? (
+              <LocalSourcePicker
+                embedded
+                mode={pickerMode}
+                onSelect={(nextSelection, nextPreview) => {
+                  const existing = !source
+                    ? existingPresetSource(sources, nextSelection)
+                    : undefined;
+                  if (existing) {
+                    onEditExisting(existing.id);
+                    return;
+                  }
+                  setSelection(nextSelection);
+                  setPreview(nextPreview);
+                  if (!destinationCustomized) {
+                    setRemotePathSegments(
+                      defaultRemotePath(nextSelection, remoteRootPath),
+                    );
+                  }
+                  setChoosingLocal(false);
+                }}
+              />
             ) : null}
-            <IconAction
-              icon={choosingLocal ? "chevron-up" : "folder-edit-outline"}
-              disabled={busy}
-              label={choosingLocal ? "Hide choices" : "Change source"}
-              onPress={() => setChoosingLocal((open) => !open)}
-            />
           </Panel>
-          {choosingLocal ? (
-            <LocalSourcePicker
-              mode={pickerMode}
-              onSelect={(nextSelection, nextPreview) => {
-                const existing = !source
-                  ? existingPresetSource(sources, nextSelection)
-                  : undefined;
-                if (existing) {
-                  onEditExisting(existing.id);
-                  return;
+          <Panel>
+            <View className="flex-row items-center gap-2">
+              <View className="flex-1">
+                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                  Nextcloud folder
+                </Text>
+                <Text className="text-base text-muted-light dark:text-muted-dark">
+                  {displayPath(remotePathSegments)}
+                </Text>
+              </View>
+              <IconAction
+                icon="folder-edit-outline"
+                disabled={busy}
+                label={
+                  choosingRemote ? "Hide folder browser" : "Change destination"
                 }
-                setSelection(nextSelection);
-                setPreview(nextPreview);
-                if (!name.trim()) setName(sourceSelectionLabel(nextSelection));
-                setChoosingLocal(false);
-              }}
-            />
-          ) : null}
-          <Panel>
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Source name
-            </Text>
-            <TextInput
-              accessibilityLabel="Source name"
-              className="border border-muted-light p-4 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
-              editable={!busy}
-              onChangeText={setName}
-              placeholder="Source name"
-              placeholderTextColor="#737373"
-              value={name}
-            />
-          </Panel>
-          <Panel>
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Nextcloud folder
-            </Text>
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              {displayPath(remotePathSegments)}
-            </Text>
-            <IconAction
-              icon="folder-edit-outline"
-              disabled={busy}
-              label={
-                choosingRemote ? "Hide folder browser" : "Change destination"
-              }
-              onPress={() => setChoosingRemote((open) => !open)}
-            />
+                onPress={() => setChoosingRemote((open) => !open)}
+              />
+            </View>
           </Panel>
           {choosingRemote ? (
             <RemoteFolderPicker
               onSelect={(pathSegments) => {
-                setRemotePathSegments(pathSegments);
+                setRemotePathSegments(
+                  selection
+                    ? defaultRemotePath(selection, pathSegments)
+                    : pathSegments,
+                );
+                setDestinationCustomized(true);
                 setChoosingRemote(false);
               }}
             />
           ) : null}
           <Panel>
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              If a file already exists on Nextcloud
+              Existing files on Nextcloud
             </Text>
-            <RadioButton.Item
-              label="Replace on Nextcloud"
-              value="replace"
-              status={collisionPolicy === "replace" ? "checked" : "unchecked"}
-              labelStyle={{ fontSize: 16 }}
-              accessibilityLabel="Replace file on Nextcloud"
-              disabled={busy}
-              onPress={() => setCollisionPolicy("replace")}
-            />
-            <RadioButton.Item
-              label="Keep both"
-              value="keep_both"
-              status={collisionPolicy === "keep_both" ? "checked" : "unchecked"}
-              labelStyle={{ fontSize: 16 }}
-              accessibilityLabel="Keep both files"
-              disabled={busy}
-              onPress={() => setCollisionPolicy("keep_both")}
-            />
+            <View>
+              <RadioButton.Item
+                label="Replace on Nextcloud"
+                value="replace"
+                status={collisionPolicy === "replace" ? "checked" : "unchecked"}
+                labelStyle={{ fontSize: 16 }}
+                style={{
+                  minHeight: 48,
+                  paddingVertical: 0,
+                  paddingHorizontal: 8,
+                }}
+                accessibilityLabel="Replace file on Nextcloud"
+                disabled={busy}
+                onPress={() => setCollisionPolicy("replace")}
+              />
+              <RadioButton.Item
+                label="Keep both"
+                value="keep_both"
+                status={
+                  collisionPolicy === "keep_both" ? "checked" : "unchecked"
+                }
+                labelStyle={{ fontSize: 16 }}
+                style={{
+                  minHeight: 48,
+                  paddingVertical: 0,
+                  paddingHorizontal: 8,
+                }}
+                accessibilityLabel="Keep both files"
+                disabled={busy}
+                onPress={() => setCollisionPolicy("keep_both")}
+              />
+            </View>
           </Panel>
           {source ? (
             <Panel>
-              <View className="flex-row items-center justify-between gap-4">
-                <View className="shrink gap-4">
+              <View className="flex-row items-center justify-between gap-2">
+                <View className="shrink gap-2">
                   <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                     Enabled
-                  </Text>
-                  <Text className="text-base text-muted-light dark:text-muted-dark">
-                    Scan this folder and upload changes.
                   </Text>
                 </View>
                 <Switch
@@ -338,33 +371,27 @@ export function SourceEditor({
               {error.message}
             </Text>
           ) : null}
-          <ActionButton
-            icon="check"
-            accessibilityLabel="Save upload source at bottom"
-            disabled={!canSave}
-            label={busy ? "Saving…" : "Save"}
-            onPress={() => void save()}
-            tone="primary"
-          />
           {source ? (
             <Panel>
-              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                Source maintenance
-              </Text>
-              <View className="flex-row flex-wrap gap-4">
-                <IconAction
-                  icon="history"
-                  disabled={busy}
-                  label="Reset upload history"
-                  onPress={resetHistory}
-                />
-                <IconAction
-                  icon="delete-outline"
-                  disabled={busy}
-                  label="Remove source"
-                  onPress={remove}
-                  tone="danger"
-                />
+              <View className="flex-row items-center justify-between gap-2">
+                <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
+                  Maintenance
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  <IconAction
+                    icon="history"
+                    disabled={busy}
+                    label="Reset upload history"
+                    onPress={resetHistory}
+                  />
+                  <IconAction
+                    icon="delete-outline"
+                    disabled={busy}
+                    label="Remove source"
+                    onPress={remove}
+                    tone="danger"
+                  />
+                </View>
               </View>
             </Panel>
           ) : null}

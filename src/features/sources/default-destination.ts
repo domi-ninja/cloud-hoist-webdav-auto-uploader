@@ -1,7 +1,9 @@
 import { project } from "@/config/project";
+import { sourceFolderPathSegments } from "./source-editor-state";
 import type {
   EngineValueResult,
   RemoteFolder,
+  SourceSelection,
 } from "../../../modules/webdav-upload-engine";
 
 type CreateRemoteFolder = (
@@ -9,8 +11,14 @@ type CreateRemoteFolder = (
   name: string,
 ) => Promise<EngineValueResult<RemoteFolder>>;
 
-export function defaultRemotePath() {
-  return [project.defaultRemoteFolder];
+export function defaultRemotePath(
+  selection?: SourceSelection,
+  remoteRootPath: string[] = [project.defaultRemoteFolder],
+) {
+  return [
+    ...remoteRootPath,
+    ...(selection ? sourceFolderPathSegments(selection) : []),
+  ];
 }
 
 export async function ensureRemoteDestination(

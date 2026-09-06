@@ -13,7 +13,8 @@ const source: SourceSummary = {
   id: "source-1",
   name: "Receipts",
   kind: "saf",
-  localUri: "content://receipts",
+  localUri:
+    "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2FReceipts",
   remotePath: "/Archive/Receipts",
   enabled: false,
   collisionPolicy: "replace",
@@ -23,8 +24,8 @@ const source: SourceSummary = {
 describe("source editor state", () => {
   it("hydrates every persisted source field", () => {
     expect(sourceEditorInitialValue(source)).toEqual({
-      name: "Receipts",
-      selection: { type: "document_tree", treeUri: "content://receipts" },
+      name: "Documents/Receipts",
+      selection: { type: "document_tree", treeUri: source.localUri },
       remotePathSegments: ["Archive", "Receipts"],
       enabled: false,
       collisionPolicy: "replace",
@@ -33,7 +34,7 @@ describe("source editor state", () => {
 
   it("detects editor changes through a stable value key", () => {
     const initial = sourceEditorInitialValue(source);
-    expect(sourceEditorValueKey({ ...initial, name: "Tax receipts" })).not.toBe(
+    expect(sourceEditorValueKey({ ...initial, enabled: true })).not.toBe(
       sourceEditorValueKey(initial),
     );
   });
@@ -47,9 +48,9 @@ describe("source editor state", () => {
       }),
     ).toEqual({
       id: "source-1",
-      name: "Receipts",
+      name: "Documents/Receipts",
       kind: "saf",
-      localUri: "content://receipts",
+      localUri: source.localUri,
       remotePath: "/Archive/Receipts",
       enabled: false,
       collisionPolicy: "replace",
@@ -63,7 +64,9 @@ describe("source editor state", () => {
       kind: "media_store" as const,
       localUri: "mediastore://camera",
     };
-    expect(existingPresetSource([camera], { type: "camera" })?.id).toBe("camera");
+    expect(existingPresetSource([camera], { type: "camera" })?.id).toBe(
+      "camera",
+    );
     expect(
       existingPresetSource([camera], {
         type: "document_tree",

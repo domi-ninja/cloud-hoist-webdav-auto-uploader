@@ -83,14 +83,14 @@ export default function HomeScreen() {
     <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
       <FlatList
         className="flex-1"
-        contentContainerClassName="flex-grow p-4"
+        contentContainerClassName="flex-grow p-2"
         data={visibleSources}
-        ItemSeparatorComponent={() => <View className="h-4" />}
+        ItemSeparatorComponent={() => <View className="h-2" />}
         keyboardShouldPersistTaps="handled"
         keyExtractor={(source) => source.id}
         ListHeaderComponent={
-          <View className="mb-4 gap-4">
-            <View className="flex-row items-center justify-between gap-4">
+          <View className="mb-2 gap-2">
+            <View className="flex-row items-center justify-between gap-2">
               <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
                 {project.displayName}
               </Text>
@@ -107,7 +107,7 @@ export default function HomeScreen() {
                   {queueSummary(snapshot)}
                 </Text>
                 {connected && visibleSources.length ? (
-                  <View className="flex-row flex-wrap items-center gap-4">
+                  <View className="flex-row flex-wrap items-center gap-2">
                     <IconAction
                       icon="folder-search-outline"
                       disabled={scanning}
@@ -152,26 +152,26 @@ export default function HomeScreen() {
               <AccountConnection account={snapshot.account} />
             ) : null}
             {connected ? (
-              <View className="gap-4">
-                <View className="flex-row items-center justify-between gap-4">
+              <View className="gap-2">
+                <View className="flex-row items-center justify-between gap-2">
                   <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                     Sources
                   </Text>
                   <IconAction
                     icon="plus"
-                    accessibilityLabel="Add upload source"
-                    label="Add source"
+                    accessibilityLabel="Add backup folder"
+                    label="Add backup folder"
                     onPress={() => addSource()}
                     tone="primary"
                   />
                 </View>
                 {!visibleSources.length ? (
-                  <View className="gap-4">
+                  <View className="gap-2">
                     <Text className="text-base text-muted-light dark:text-muted-dark">
                       New files are scanned automatically, though Android may
                       delay background work.
                     </Text>
-                    <View className="flex-row flex-wrap gap-4">
+                    <View className="flex-row flex-wrap gap-2">
                       <ActionButton
                         icon="camera-outline"
                         label="Camera"

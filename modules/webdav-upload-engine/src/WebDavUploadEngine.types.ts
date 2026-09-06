@@ -29,7 +29,10 @@ export const accountHealthSchema = z.discriminatedUnion("status", [
 export const engineStateSchema = z.discriminatedUnion("state", [
   z.object({ state: z.literal("running") }),
   z.object({ state: z.literal("paused"), pausedAt: z.string().datetime() }),
-  z.object({ state: z.literal("blocked"), blockerCount: z.number().int().nonnegative() }),
+  z.object({
+    state: z.literal("blocked"),
+    blockerCount: z.number().int().nonnegative(),
+  }),
 ]);
 
 export const sourceSummarySchema = z.object({
@@ -56,7 +59,10 @@ export const jobStateSchema = z.discriminatedUnion("status", [
     status: z.literal("uploading"),
     bytesSent: z.number().int().nonnegative(),
   }),
-  z.object({ status: z.literal("uploaded"), uploadedAt: z.string().datetime() }),
+  z.object({
+    status: z.literal("uploaded"),
+    uploadedAt: z.string().datetime(),
+  }),
   z.object({
     status: z.literal("failed"),
     code: z.string().min(1),
@@ -263,6 +269,15 @@ export const sourcePreviewSchema = z.object({
   eligibleFileCount: z.number().int().nonnegative(),
   totalBytes: z.number().int().nonnegative(),
   permissionAccess: z.enum(["full", "partial", "denied"]).nullable(),
+  files: z
+    .array(
+      z.object({
+        localUri: z.string(),
+        fileName: z.string(),
+        mimeType: z.string().nullable(),
+      }),
+    )
+    .default([]),
 });
 
 export const sourceCommitSchema = z.object({
@@ -369,7 +384,7 @@ export type EngineError = {
   message: string;
 };
 
-export type EngineCommandResult = { ok: true } | { ok: false; error: EngineError };
+export type EngineCommandResult =
+  { ok: true } | { ok: false; error: EngineError };
 export type EngineValueResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; error: EngineError };
+  { ok: true; value: T } | { ok: false; error: EngineError };

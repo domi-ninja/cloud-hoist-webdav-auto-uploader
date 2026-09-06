@@ -102,9 +102,9 @@ function FileThumbnail({ entry }: { entry: FileInventoryEntry }) {
 function FileRow({ entry, now }: { entry: FileInventoryEntry; now: number }) {
   const transfer = transferText(entry, now);
   return (
-    <View className="flex-row gap-4">
+    <View className="flex-row gap-2">
       <FileThumbnail entry={entry} />
-      <View className="shrink gap-4">
+      <View className="shrink gap-2">
         <Text
           accessibilityLabel={entry.fileName}
           className="text-base font-semibold text-ink-light dark:text-ink-dark"
@@ -182,7 +182,7 @@ export default function ActivityScreen() {
     <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
       <ScrollView
         className="flex-1"
-        contentContainerClassName="gap-4 p-4"
+        contentContainerClassName="gap-2 p-2"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -220,8 +220,8 @@ export default function ActivityScreen() {
           </Text>
         ) : null}
         {snapshot.data?.blockers.length || hasFailures ? (
-          <View className="gap-4">
-            <View className="flex-row flex-wrap items-center justify-between gap-4">
+          <View className="gap-2">
+            <View className="flex-row flex-wrap items-center justify-between gap-2">
               <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                 Needs attention
               </Text>
@@ -246,7 +246,7 @@ export default function ActivityScreen() {
                 return (
                   <Fragment key={`${blocker.kind}-${index}`}>
                     {index ? <Separator /> : null}
-                    <View className="gap-4">
+                    <View className="gap-2">
                       <Text className="text-base text-ink-light dark:text-ink-dark">
                         {blockerText(blocker, now)}
                       </Text>
@@ -297,8 +297,8 @@ export default function ActivityScreen() {
             could not be loaded. {error.message} Local files are still shown.
           </Text>
         ))}
-        <View className="gap-4">
-          <View className="flex-row items-center justify-between gap-4">
+        <View className="gap-2">
+          <View className="flex-row items-center justify-between gap-2">
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
               Files
             </Text>
@@ -318,7 +318,7 @@ export default function ActivityScreen() {
           </View>
           {filtersOpen ? (
             <>
-              <View className="flex-row flex-wrap gap-4">
+              <View className="flex-row flex-wrap gap-2">
                 {(["all", "pending", "failed", "uploaded"] as const).map(
                   (status) => (
                     <Chip
@@ -336,7 +336,7 @@ export default function ActivityScreen() {
                 )}
               </View>
               {snapshot.data && snapshot.data.sources.length > 1 ? (
-                <View className="flex-row flex-wrap gap-4">
+                <View className="flex-row flex-wrap gap-2">
                   <ActionButton
                     accessibilityState={{ selected: sourceFilter === null }}
                     label="All sources"
