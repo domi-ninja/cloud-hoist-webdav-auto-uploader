@@ -5,7 +5,7 @@ import webDavUploadEngine, {
   type EngineError,
   type RemoteFolder,
 } from "../../../modules/webdav-upload-engine";
-import { ActionButton, Panel, Separator } from "@/components/ui";
+import { ActionButton, IconAction, Panel, Separator } from "@/components/ui";
 
 type RemoteFolderPickerProps = {
   onSelect: (pathSegments: string[]) => void;
@@ -65,7 +65,10 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
     }
     setCreating(true);
     setError(undefined);
-    const result = await webDavUploadEngine.createRemoteFolder(pathSegments, name);
+    const result = await webDavUploadEngine.createRemoteFolder(
+      pathSegments,
+      name,
+    );
     setCreating(false);
     if (!result.ok) {
       setError(result.error);
@@ -84,7 +87,8 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
         {displayPath(pathSegments)}
       </Text>
       {pathSegments.length ? (
-        <ActionButton
+        <IconAction
+          icon="arrow-up"
           label="Up one folder"
           onPress={() => openPath(pathSegments.slice(0, -1))}
         />
@@ -98,7 +102,8 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
           >
             {error.message}
           </Text>
-          <ActionButton
+          <IconAction
+            icon="reload"
             disabled={loading}
             label="Retry"
             onPress={() => void loadFolders()}
@@ -145,7 +150,8 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
         returnKeyType="done"
         value={newFolderName}
       />
-      <ActionButton
+      <IconAction
+        icon="folder-plus-outline"
         disabled={creating}
         label={creating ? "Creating…" : "Create folder"}
         onPress={() => void createFolder()}

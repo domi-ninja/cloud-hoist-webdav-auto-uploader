@@ -1,20 +1,12 @@
 import { useState } from "react";
-import {
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Modal, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
   type AccountSummary,
   type EngineError,
 } from "../../../modules/webdav-upload-engine";
-import { ActionButton, Panel, Separator } from "@/components/ui";
+import { ActionButton, IconAction, Panel, Separator } from "@/components/ui";
 import { formatRelativeTime } from "@/lib/format";
 import { useStoredAccountVerification } from "@/lib/engine-query";
 import { useNow } from "@/lib/use-now";
@@ -40,7 +32,10 @@ export function AccountSettingsModal({
   onSignedOut,
 }: AccountSettingsModalProps) {
   const now = useNow();
-  const verification = useStoredAccountVerification({ ...account, status: "connected" });
+  const verification = useStoredAccountVerification({
+    ...account,
+    status: "connected",
+  });
   const initialValue = initialAccountSettings(account);
   const [serverUrl, setServerUrl] = useState(initialValue.serverUrl);
   const [username, setUsername] = useState(initialValue.username);
@@ -56,10 +51,14 @@ export function AccountSettingsModal({
       onClose();
       return;
     }
-    Alert.alert("Discard account changes?", "Your unsaved changes will be lost.", [
-      { text: "Keep editing", style: "cancel" },
-      { text: "Discard", style: "destructive", onPress: onClose },
-    ]);
+    Alert.alert(
+      "Discard account changes?",
+      "Your unsaved changes will be lost.",
+      [
+        { text: "Keep editing", style: "cancel" },
+        { text: "Discard", style: "destructive", onPress: onClose },
+      ],
+    );
   };
 
   const replaceAccount = async () => {
@@ -128,21 +127,21 @@ export function AccountSettingsModal({
     >
       <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
         <View className="flex-row items-center justify-between gap-4 p-4">
-          <ActionButton disabled={busy} label="Cancel" onPress={close} />
+          <IconAction
+            icon="close"
+            disabled={busy}
+            label="Cancel"
+            onPress={close}
+          />
           <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
             Account settings
           </Text>
-          <Pressable
-            accessibilityLabel="Save account settings"
-            accessibilityRole="button"
-            className="p-4 disabled:opacity-50"
+          <IconAction
+            icon="check"
+            label={busy ? "Saving…" : "Save account settings"}
             disabled={!canSave}
             onPress={save}
-          >
-            <Text className="text-base font-semibold text-accent">
-              {busy ? "Saving…" : "Save"}
-            </Text>
-          </Pressable>
+          />
         </View>
         <ScrollView
           className="flex-1"
@@ -179,7 +178,8 @@ export function AccountSettingsModal({
               </>
             ) : (
               <Text className="text-base text-muted-light dark:text-muted-dark">
-                Last checked {formatRelativeTime(
+                Last checked{" "}
+                {formatRelativeTime(
                   verification.data?.checkedAt ?? account.checkedAt,
                   now,
                 )}
@@ -191,7 +191,8 @@ export function AccountSettingsModal({
               Replace connection
             </Text>
             <Text className="text-base text-muted-light dark:text-muted-dark">
-              Enter all three values to move the existing sources to another account.
+              Enter all three values to move the existing sources to another
+              account.
             </Text>
             <TextInput
               accessibilityLabel="Nextcloud server URL"

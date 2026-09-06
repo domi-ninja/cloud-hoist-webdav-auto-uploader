@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import { useRouter } from "expo-router";
 import { Image, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Chip, Icon } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
@@ -16,7 +17,7 @@ import {
 } from "@/lib/engine-query";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 import { useNow } from "@/lib/use-now";
-import { ActionButton, Panel, Separator } from "@/components/ui";
+import { ActionButton, IconAction, Panel, Separator } from "@/components/ui";
 import { RestoreSourcePermission } from "@/features/sources/RestoreSourcePermission";
 import { engineStatus, queueSummary } from "@/lib/upload-status";
 
@@ -44,9 +45,9 @@ const presenceText: Record<FileInventoryEntry["presence"], string> = {
 };
 
 const presenceIcon: Record<FileInventoryEntry["presence"], string | null> = {
-  local_only: "↑",
+  local_only: "upload",
   remote_only: null,
-  both: "✓",
+  both: "check",
 };
 
 function transferText(entry: FileInventoryEntry, now: number) {
@@ -84,16 +85,14 @@ function FileThumbnail({ entry }: { entry: FileInventoryEntry }) {
           source={{ uri }}
         />
       ) : (
-        <Text className="text-base text-muted-light dark:text-muted-dark">FILE</Text>
+        <Icon source="file-outline" size={32} />
       )}
       {presenceIcon[entry.presence] ? (
         <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center bg-panel-light dark:bg-panel-dark">
-        <Text
-          accessibilityLabel={presenceText[entry.presence]}
-          className="text-base font-semibold text-accent"
-        >
-          {presenceIcon[entry.presence]}
-        </Text>
+          <Icon
+            source={presenceIcon[entry.presence] ?? "file-outline"}
+            size={24}
+          />
         </View>
       ) : null}
     </View>
@@ -130,9 +129,15 @@ export default function ActivityScreen() {
   const router = useRouter();
   const snapshot = useEngineSnapshot();
   const failures = useUnresolvedFailures();
-  const [statusFilter, setStatusFilter] = useState<FileInventoryFilter["status"]>("all");
+  const [statusFilter, setStatusFilter] =
+    useState<FileInventoryFilter["status"]>("all");
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
-  const inventory = useFileInventoryPages({ sourceId: sourceFilter, status: statusFilter });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtered = statusFilter !== "all" || sourceFilter !== null;
+  const inventory = useFileInventoryPages({
+    sourceId: sourceFilter,
+    status: statusFilter,
+  });
   const [errorMessage, setErrorMessage] = useState<string>();
   const [refreshing, setRefreshing] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -141,9 +146,10 @@ export default function ActivityScreen() {
   const inventoryErrors = inventory.data?.pages[0]?.errors ?? [];
   const hasFailures = Boolean(failures.data?.length);
   const failureDetails = failures.data?.filter(
-    (failure) => !snapshot.data?.blockers.some(
-      (blocker) => blocker.kind === "job" && blocker.jobId === failure.jobId,
-    ),
+    (failure) =>
+      !snapshot.data?.blockers.some(
+        (blocker) => blocker.kind === "job" && blocker.jobId === failure.jobId,
+      ),
   );
 
   const retryFailed = async () => {
@@ -151,7 +157,11 @@ export default function ActivityScreen() {
     setErrorMessage(undefined);
     const result = await webDavUploadEngine.retryFailed();
     if (!result.ok) setErrorMessage(result.error.message);
-    await Promise.all([failures.refetch(), snapshot.refetch(), inventory.refetch()]);
+    await Promise.all([
+      failures.refetch(),
+      snapshot.refetch(),
+      inventory.refetch(),
+    ]);
     setRetrying(false);
   };
 
@@ -160,7 +170,11 @@ export default function ActivityScreen() {
     setErrorMessage(undefined);
     const scan = await webDavUploadEngine.scanNow();
     if (!scan.ok) setErrorMessage(scan.error.message);
-    await Promise.all([snapshot.refetch(), inventory.refetch(), failures.refetch()]);
+    await Promise.all([
+      snapshot.refetch(),
+      inventory.refetch(),
+      failures.refetch(),
+    ]);
     setRefreshing(false);
   };
 
@@ -170,7 +184,10 @@ export default function ActivityScreen() {
         className="flex-1"
         contentContainerClassName="gap-4 p-4"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void refresh()}
+          />
         }
       >
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
@@ -209,15 +226,23 @@ export default function ActivityScreen() {
                 Needs attention
               </Text>
               {hasFailures ? (
-                <ActionButton disabled={retrying} label={retrying ? "Retrying…" : "Retry failed"}
-                  onPress={() => void retryFailed()} tone="primary" />
+                <IconAction
+                  icon="reload"
+                  disabled={retrying}
+                  label={retrying ? "Retrying…" : "Retry failed"}
+                  onPress={() => void retryFailed()}
+                  tone="primary"
+                />
               ) : null}
             </View>
             <Panel>
               {snapshot.data?.blockers.map((blocker, index) => {
-                const source = blocker.kind === "permission"
-                  ? snapshot.data.sources.find((item) => item.id === blocker.sourceId)
-                  : undefined;
+                const source =
+                  blocker.kind === "permission"
+                    ? snapshot.data.sources.find(
+                        (item) => item.id === blocker.sourceId,
+                      )
+                    : undefined;
                 return (
                   <Fragment key={`${blocker.kind}-${index}`}>
                     {index ? <Separator /> : null}
@@ -228,14 +253,19 @@ export default function ActivityScreen() {
                       {blocker.kind === "account" ? (
                         <ActionButton
                           label="Open account settings"
-                          onPress={() => router.navigate({
-                            pathname: "/settings",
-                            params: { account: "open" },
-                          })}
+                          onPress={() =>
+                            router.navigate({
+                              pathname: "/settings",
+                              params: { account: "open" },
+                            })
+                          }
                           tone="primary"
                         />
                       ) : blocker.kind === "permission" && source ? (
-                        <RestoreSourcePermission blocker={blocker} source={source} />
+                        <RestoreSourcePermission
+                          blocker={blocker}
+                          source={source}
+                        />
                       ) : null}
                     </View>
                   </Fragment>
@@ -243,7 +273,9 @@ export default function ActivityScreen() {
               })}
               {failureDetails?.map((failure, index) => (
                 <Fragment key={failure.id}>
-                  {index || snapshot.data?.blockers.length ? <Separator /> : null}
+                  {index || snapshot.data?.blockers.length ? (
+                    <Separator />
+                  ) : null}
                   <Text className="text-base text-ink-light dark:text-ink-dark">
                     {failure.message}
                   </Text>
@@ -258,42 +290,73 @@ export default function ActivityScreen() {
             className="text-base text-red-700 dark:text-red-300"
             key={error.sourceId}
           >
-            Nextcloud files for {snapshot.data?.sources.find(
+            Nextcloud files for{" "}
+            {snapshot.data?.sources.find(
               (source) => source.id === error.sourceId,
-            )?.name ?? "this source"} could not be loaded. Local files are still shown.
+            )?.name ?? "this source"}{" "}
+            could not be loaded. {error.message} Local files are still shown.
           </Text>
         ))}
         <View className="gap-4">
-          <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">Files</Text>
-          <View className="flex-row flex-wrap gap-4">
-            {(["all", "pending", "failed", "uploaded"] as const).map((status) => (
-              <ActionButton
-                accessibilityState={{ selected: statusFilter === status }}
-                key={status}
-                label={status === "all" ? "All" : status[0].toUpperCase() + status.slice(1)}
-                onPress={() => setStatusFilter(status)}
-                tone={statusFilter === status ? "secondary" : "quiet"}
-              />
-            ))}
+          <View className="flex-row items-center justify-between gap-4">
+            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+              Files
+            </Text>
+            <IconAction
+              icon={filtered ? "filter-check" : "filter-variant"}
+              label={
+                filtersOpen
+                  ? "Hide file filters"
+                  : filtered
+                    ? "Show file filters, filters active"
+                    : "Show file filters"
+              }
+              accessibilityState={{ expanded: filtersOpen }}
+              tone={filtered ? "secondary" : "quiet"}
+              onPress={() => setFiltersOpen(!filtersOpen)}
+            />
           </View>
-          {snapshot.data && snapshot.data.sources.length > 1 ? (
-            <View className="flex-row flex-wrap gap-4">
-              <ActionButton
-                accessibilityState={{ selected: sourceFilter === null }}
-                label="All sources"
-                onPress={() => setSourceFilter(null)}
-                tone={sourceFilter === null ? "secondary" : "quiet"}
-              />
-              {snapshot.data.sources.map((source) => (
-                <ActionButton
-                  accessibilityState={{ selected: sourceFilter === source.id }}
-                  key={source.id}
-                  label={source.name}
-                  onPress={() => setSourceFilter(source.id)}
-                  tone={sourceFilter === source.id ? "secondary" : "quiet"}
-                />
-              ))}
-            </View>
+          {filtersOpen ? (
+            <>
+              <View className="flex-row flex-wrap gap-4">
+                {(["all", "pending", "failed", "uploaded"] as const).map(
+                  (status) => (
+                    <Chip
+                      accessibilityState={{ selected: statusFilter === status }}
+                      key={status}
+                      onPress={() => setStatusFilter(status)}
+                      selected={statusFilter === status}
+                      textStyle={{ fontSize: 16, marginVertical: 14 }}
+                    >
+                      {status === "all"
+                        ? "All"
+                        : status[0].toUpperCase() + status.slice(1)}
+                    </Chip>
+                  ),
+                )}
+              </View>
+              {snapshot.data && snapshot.data.sources.length > 1 ? (
+                <View className="flex-row flex-wrap gap-4">
+                  <ActionButton
+                    accessibilityState={{ selected: sourceFilter === null }}
+                    label="All sources"
+                    onPress={() => setSourceFilter(null)}
+                    tone={sourceFilter === null ? "secondary" : "quiet"}
+                  />
+                  {snapshot.data.sources.map((source) => (
+                    <ActionButton
+                      accessibilityState={{
+                        selected: sourceFilter === source.id,
+                      }}
+                      key={source.id}
+                      label={source.name}
+                      onPress={() => setSourceFilter(source.id)}
+                      tone={sourceFilter === source.id ? "secondary" : "quiet"}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </>
           ) : null}
         </View>
         {allItems.length ? (
@@ -307,7 +370,7 @@ export default function ActivityScreen() {
           </Panel>
         ) : !inventory.isLoading ? (
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            No matching files found.
+            {filtered ? "No matching files found." : "No files yet."}
           </Text>
         ) : null}
         {inventory.hasNextPage ? (

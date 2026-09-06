@@ -1,7 +1,8 @@
 import { Fragment, useState } from "react";
 import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, ScrollView, Share, Switch, Text, View } from "react-native";
+import { Alert, ScrollView, Share, Text, View } from "react-native";
+import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { project } from "@/config/project";
@@ -9,7 +10,7 @@ import { useEngineSnapshot } from "@/lib/engine-query";
 import webDavUploadEngine, {
   type TransferConstraints,
 } from "../../modules/webdav-upload-engine";
-import { ActionButton, Panel, Separator } from "@/components/ui";
+import { IconAction, Panel, Separator } from "@/components/ui";
 import { AccountSettingsModal } from "@/features/account/AccountSettingsModal";
 import { InstanceIcon } from "@/features/account/InstanceIcon";
 import { transferRulesSummary } from "@/lib/upload-status";
@@ -108,7 +109,7 @@ export default function SettingsScreen() {
           <Panel>
             <View className="flex-row items-center gap-4">
               <InstanceIcon compact serverUrl={snapshot.account.serverUrl} />
-              <View className="shrink gap-4">
+              <View className="flex-1 gap-4">
                 <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                   {snapshot.account.displayName}
                 </Text>
@@ -116,11 +117,12 @@ export default function SettingsScreen() {
                   {new URL(snapshot.account.serverUrl).host}
                 </Text>
               </View>
+              <IconAction
+                icon="account-cog-outline"
+                label="Account settings"
+                onPress={() => setAccountOpen(true)}
+              />
             </View>
-            <ActionButton
-              label="Account settings"
-              onPress={() => setAccountOpen(true)}
-            />
           </Panel>
         ) : null}
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
@@ -131,69 +133,76 @@ export default function SettingsScreen() {
             Loading settings…
           </Text>
         ) : null}
-        {snapshot
-          ? (
-              <Panel>
-                <Text className="text-base text-muted-light dark:text-muted-dark">
-                  {transferRulesSummary(snapshot.scheduler.constraints)}
-                </Text>
-                {options.map((option, index) => {
-                  const checked = snapshot.scheduler.constraints[option.key];
-                  return (
-                    <Fragment key={option.key}>
-                      {index ? <Separator /> : null}
-                      <View className="flex-row items-center justify-between gap-4">
-                        <Text className="shrink text-base text-ink-light dark:text-ink-dark">
-                          {option.label}
-                        </Text>
-                        <Switch
-                          accessibilityLabel={option.label}
-                          disabled={saving !== undefined}
-                          onValueChange={() => void toggle(option.key)}
-                          thumbColor="#f4f4f0"
-                          trackColor={{ false: "#62665d", true: "#4f7d45" }}
-                          value={checked}
-                        />
-                      </View>
-                    </Fragment>
-                  );
-                })}
-                {saving ? (
-                  <Text
-                    accessibilityLiveRegion="polite"
-                    className="text-base text-muted-light dark:text-muted-dark"
-                  >
-                    Saving transfer rules…
-                  </Text>
-                ) : null}
-              </Panel>
-            )
-          : null}
+        {snapshot ? (
+          <Panel>
+            <Text className="text-base text-muted-light dark:text-muted-dark">
+              {transferRulesSummary(snapshot.scheduler.constraints)}
+            </Text>
+            {options.map((option, index) => {
+              const checked = snapshot.scheduler.constraints[option.key];
+              return (
+                <Fragment key={option.key}>
+                  {index ? <Separator /> : null}
+                  <View className="flex-row items-center justify-between gap-4">
+                    <Text className="shrink text-base text-ink-light dark:text-ink-dark">
+                      {option.label}
+                    </Text>
+                    <Switch
+                      accessibilityLabel={option.label}
+                      disabled={saving !== undefined}
+                      onValueChange={() => void toggle(option.key)}
+                      value={checked}
+                    />
+                  </View>
+                </Fragment>
+              );
+            })}
+            {saving ? (
+              <Text
+                accessibilityLiveRegion="polite"
+                className="text-base text-muted-light dark:text-muted-dark"
+              >
+                Saving transfer rules…
+              </Text>
+            ) : null}
+          </Panel>
+        ) : null}
         <Panel>
-          <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-            Diagnostics
-          </Text>
+          <View className="flex-row items-center justify-between gap-4">
+            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+              Diagnostics
+            </Text>
+            <IconAction
+              icon="share-variant-outline"
+              accessibilityLabel="Share diagnostic report"
+              disabled={sharing}
+              label={sharing ? "Opening share sheet…" : "Share diagnostics"}
+              onPress={() => void shareDiagnostics()}
+            />
+          </View>
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            Share app and Android versions, queue counts, transfer rules, and recent engine
-            codes. Account, file, and folder details are excluded.
+            Share app and Android versions, queue counts, transfer rules, and
+            recent engine codes. Account, file, and folder details are excluded.
           </Text>
-          <ActionButton
-            accessibilityLabel="Share diagnostic report"
-            disabled={sharing}
-            label={sharing ? "Opening share sheet…" : "Share diagnostics"}
-            onPress={() => void shareDiagnostics()}
-          />
         </Panel>
         {snapshot?.queue.uploaded ? (
           <Panel>
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Transfer history
-            </Text>
+            <View className="flex-row items-center justify-between gap-4">
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                Transfer history
+              </Text>
+              <IconAction
+                icon="delete-outline"
+                disabled={clearing}
+                label={clearing ? "Clearing…" : "Clear completed history"}
+                onPress={clearCompleted}
+                tone="danger"
+              />
+            </View>
             <Text className="text-base text-muted-light dark:text-muted-dark">
-              Clear completed transfer records. Files on your phone and Nextcloud stay untouched.
+              Clear completed transfer records. Files on your phone and
+              Nextcloud stay untouched.
             </Text>
-            <ActionButton disabled={clearing} label={clearing ? "Clearing…" : "Clear completed history"}
-              onPress={clearCompleted} tone="danger" />
           </Panel>
         ) : null}
         <Panel>
@@ -211,7 +220,8 @@ export default function SettingsScreen() {
           </Text>
         </Panel>
       </ScrollView>
-      {(accountOpen || params.account === "open") && snapshot?.account.status === "connected" ? (
+      {(accountOpen || params.account === "open") &&
+      snapshot?.account.status === "connected" ? (
         <AccountSettingsModal
           account={snapshot.account}
           key={snapshot.account.id}

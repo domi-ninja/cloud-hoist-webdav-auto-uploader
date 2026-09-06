@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 
-import { ActionButton } from "@/components/ui";
+import { IconAction } from "@/components/ui";
 import webDavUploadEngine, {
   type EngineSnapshot,
   type SourceSummary,
@@ -33,11 +33,15 @@ export function RestoreSourcePermission({
           return;
         }
         if (result.value.access === "denied") {
-          setError("Allow photo and video access in Android Settings to continue.");
+          setError(
+            "Allow photo and video access in Android Settings to continue.",
+          );
           return;
         }
       } else {
-        const result = await webDavUploadEngine.pickDocumentTree(source.localUri);
+        const result = await webDavUploadEngine.pickDocumentTree(
+          source.localUri,
+        );
         if (!result.ok) {
           setError(result.error.message);
           return;
@@ -56,7 +60,9 @@ export function RestoreSourcePermission({
       const scan = await webDavUploadEngine.scanSource(source.id);
       if (!scan.ok) setError(scan.error.message);
       else if (scan.value.blocker) {
-        setError("Access is still unavailable. Check the selected folder or Android permissions.");
+        setError(
+          "Access is still unavailable. Check the selected folder or Android permissions.",
+        );
       }
     } finally {
       setBusy(false);
@@ -65,7 +71,8 @@ export function RestoreSourcePermission({
 
   return (
     <View className="gap-4">
-      <ActionButton
+      <IconAction
+        icon="folder-key-outline"
         disabled={busy}
         label={busy ? "Restoring access…" : `Restore ${source.name} access`}
         onPress={() => void restore()}

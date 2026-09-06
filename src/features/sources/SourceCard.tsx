@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Switch, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { Switch } from "react-native-paper";
 
 import webDavUploadEngine, {
   type EngineError,
@@ -7,7 +8,7 @@ import webDavUploadEngine, {
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
 import { formatRelativeTime } from "@/lib/format";
-import { ActionButton, Panel } from "@/components/ui";
+import { IconAction, Panel } from "@/components/ui";
 import { RestoreSourcePermission } from "./RestoreSourcePermission";
 import { sourceLocalLabel } from "./source-editor-state";
 
@@ -18,9 +19,14 @@ type SourceCardProps = {
   onEdit: () => void;
 };
 
-function sourceStatus(snapshot: EngineSnapshot, source: SourceSummary, now: number) {
+function sourceStatus(
+  snapshot: EngineSnapshot,
+  source: SourceSummary,
+  now: number,
+) {
   const permissionBlocker = snapshot.blockers.some(
-    (blocker) => blocker.kind === "permission" && blocker.sourceId === source.id,
+    (blocker) =>
+      blocker.kind === "permission" && blocker.sourceId === source.id,
   );
   const worker = snapshot.worker;
   const activeJob =
@@ -54,8 +60,10 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
   const permissionBlocker = snapshot.blockers.find(
     (
       blocker,
-    ): blocker is Extract<EngineSnapshot["blockers"][number], { kind: "permission" }> =>
-      blocker.kind === "permission" && blocker.sourceId === source.id,
+    ): blocker is Extract<
+      EngineSnapshot["blockers"][number],
+      { kind: "permission" }
+    > => blocker.kind === "permission" && blocker.sourceId === source.id,
   );
 
   const run = async (
@@ -82,8 +90,6 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
           accessibilityLabel={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
           disabled={busy}
           onValueChange={(enabled) => void updateSource({ enabled })}
-          thumbColor="#f4f4f0"
-          trackColor={{ false: "#62665d", true: "#4f7d45" }}
           value={source.enabled}
         />
       </View>
@@ -113,14 +119,18 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
         </Text>
       ) : null}
       <View className="flex-row flex-wrap items-center gap-4">
-        <ActionButton
+        <IconAction
+          icon="folder-search-outline"
           accessibilityLabel={`Scan ${source.name}`}
           disabled={busy || !source.enabled}
           label="Scan"
-          onPress={() => void run(() => webDavUploadEngine.scanSource(source.id))}
+          onPress={() =>
+            void run(() => webDavUploadEngine.scanSource(source.id))
+          }
           tone={permissionBlocker ? "secondary" : "primary"}
         />
-        <ActionButton
+        <IconAction
+          icon="pencil-outline"
           accessibilityLabel={`Edit ${source.name}`}
           disabled={busy}
           label="Edit"

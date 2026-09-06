@@ -10,7 +10,7 @@ import { SourceCard } from "@/features/sources/SourceCard";
 import { SourceEditor } from "@/features/sources/SourceEditor";
 import { useEngineSnapshot } from "@/lib/engine-query";
 import { useNow } from "@/lib/use-now";
-import { ActionButton, Panel } from "@/components/ui";
+import { ActionButton, IconAction, Panel } from "@/components/ui";
 import { engineStatus, queueSummary } from "@/lib/upload-status";
 
 export default function HomeScreen() {
@@ -94,7 +94,9 @@ export default function HomeScreen() {
               <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
                 {project.displayName}
               </Text>
-              {connected ? <AccountConnection account={snapshot.account} /> : null}
+              {connected ? (
+                <AccountConnection account={snapshot.account} />
+              ) : null}
             </View>
             {snapshot ? (
               <Panel>
@@ -106,15 +108,21 @@ export default function HomeScreen() {
                 </Text>
                 {connected && visibleSources.length ? (
                   <View className="flex-row flex-wrap items-center gap-4">
-                    <ActionButton
+                    <IconAction
+                      icon="folder-search-outline"
                       disabled={scanning}
                       label={scanning ? "Scanning…" : "Scan now"}
                       onPress={() => void scanNow()}
                       tone="primary"
                     />
-                    <ActionButton
+                    <IconAction
+                      icon={
+                        snapshot.engine.state === "paused" ? "play" : "pause"
+                      }
                       disabled={scanning}
-                      label={snapshot.engine.state === "paused" ? "Resume" : "Pause"}
+                      label={
+                        snapshot.engine.state === "paused" ? "Resume" : "Pause"
+                      }
                       onPress={() => void togglePaused()}
                     />
                     {snapshot.blockers.length ? (
@@ -149,7 +157,8 @@ export default function HomeScreen() {
                   <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                     Sources
                   </Text>
-                  <ActionButton
+                  <IconAction
+                    icon="plus"
                     accessibilityLabel="Add upload source"
                     label="Add source"
                     onPress={() => addSource()}
@@ -159,12 +168,25 @@ export default function HomeScreen() {
                 {!visibleSources.length ? (
                   <View className="gap-4">
                     <Text className="text-base text-muted-light dark:text-muted-dark">
-                      New files are scanned automatically, though Android may delay background work.
+                      New files are scanned automatically, though Android may
+                      delay background work.
                     </Text>
                     <View className="flex-row flex-wrap gap-4">
-                      <ActionButton label="Camera" onPress={() => addSource("camera")} />
-                      <ActionButton label="Screenshots" onPress={() => addSource("screenshots")} />
-                      <ActionButton label="Choose folder" onPress={() => addSource("folder")} />
+                      <ActionButton
+                        icon="camera-outline"
+                        label="Camera"
+                        onPress={() => addSource("camera")}
+                      />
+                      <ActionButton
+                        icon="cellphone-screenshot"
+                        label="Screenshots"
+                        onPress={() => addSource("screenshots")}
+                      />
+                      <ActionButton
+                        icon="folder-outline"
+                        label="Choose folder"
+                        onPress={() => addSource("folder")}
+                      />
                     </View>
                   </View>
                 ) : null}
@@ -173,7 +195,10 @@ export default function HomeScreen() {
           </View>
         }
         refreshControl={
-          <RefreshControl refreshing={scanning} onRefresh={() => void refresh()} />
+          <RefreshControl
+            refreshing={scanning}
+            onRefresh={() => void refresh()}
+          />
         }
         renderItem={({ item: source }) =>
           snapshot ? (

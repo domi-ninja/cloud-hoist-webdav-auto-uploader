@@ -1,14 +1,5 @@
 import { useMemo, useState } from "react";
-import {
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Modal, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
@@ -17,7 +8,8 @@ import webDavUploadEngine, {
   type SourceSelection,
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
-import { ActionButton, Panel } from "@/components/ui";
+import { RadioButton, Switch } from "react-native-paper";
+import { ActionButton, IconAction, Panel } from "@/components/ui";
 import { formatBytes } from "@/lib/format";
 import { ensureRemoteDestination } from "./default-destination";
 import { LocalSourcePicker } from "./LocalSourcePicker";
@@ -53,7 +45,10 @@ export function SourceEditor({
   onSaved,
   pickerMode = "all",
 }: SourceEditorProps) {
-  const initialValue = useMemo(() => sourceEditorInitialValue(source), [source]);
+  const initialValue = useMemo(
+    () => sourceEditorInitialValue(source),
+    [source],
+  );
   const initialKey = sourceEditorValueKey(initialValue);
   const [name, setName] = useState(initialValue.name);
   const [selection, setSelection] = useState<SourceSelection | undefined>(
@@ -87,10 +82,14 @@ export function SourceEditor({
       onClose();
       return;
     }
-    Alert.alert("Discard source changes?", "Your unsaved changes will be lost.", [
-      { text: "Keep editing", style: "cancel" },
-      { text: "Discard", style: "destructive", onPress: onClose },
-    ]);
+    Alert.alert(
+      "Discard source changes?",
+      "Your unsaved changes will be lost.",
+      [
+        { text: "Keep editing", style: "cancel" },
+        { text: "Discard", style: "destructive", onPress: onClose },
+      ],
+    );
   };
 
   const save = async () => {
@@ -148,10 +147,12 @@ export function SourceEditor({
           style: "destructive",
           onPress: () => {
             setBusy(true);
-            void webDavUploadEngine.resetSourceHistory(source.id).then((result) => {
-              setBusy(false);
-              if (!result.ok) setError(result.error);
-            });
+            void webDavUploadEngine
+              .resetSourceHistory(source.id)
+              .then((result) => {
+                setBusy(false);
+                if (!result.ok) setError(result.error);
+              });
           },
         },
       ],
@@ -190,21 +191,21 @@ export function SourceEditor({
     >
       <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
         <View className="flex-row items-center justify-between gap-4 p-4">
-          <ActionButton disabled={busy} label="Cancel" onPress={close} />
+          <IconAction
+            icon="close"
+            disabled={busy}
+            label="Cancel"
+            onPress={close}
+          />
           <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
             {source ? "Edit source" : "Add source"}
           </Text>
-          <Pressable
-            accessibilityLabel="Save upload source"
-            accessibilityRole="button"
-            className="p-4 disabled:opacity-50"
+          <IconAction
+            icon="check"
+            label={busy ? "Saving…" : "Save upload source"}
             disabled={!canSave}
             onPress={() => void save()}
-          >
-            <Text className="text-base font-semibold text-accent">
-              {busy ? "Saving…" : "Save"}
-            </Text>
-          </Pressable>
+          />
         </View>
         <ScrollView
           contentContainerClassName="gap-4 p-4"
@@ -219,10 +220,12 @@ export function SourceEditor({
             </Text>
             {preview ? (
               <Text className="text-base text-muted-light dark:text-muted-dark">
-                {preview.eligibleFileCount} files · {formatBytes(preview.totalBytes)}
+                {preview.eligibleFileCount} files ·{" "}
+                {formatBytes(preview.totalBytes)}
               </Text>
             ) : null}
-            <ActionButton
+            <IconAction
+              icon={choosingLocal ? "chevron-up" : "folder-edit-outline"}
               disabled={busy}
               label={choosingLocal ? "Hide choices" : "Change source"}
               onPress={() => setChoosingLocal((open) => !open)}
@@ -267,9 +270,12 @@ export function SourceEditor({
             <Text className="text-base text-muted-light dark:text-muted-dark">
               {displayPath(remotePathSegments)}
             </Text>
-            <ActionButton
+            <IconAction
+              icon="folder-edit-outline"
               disabled={busy}
-              label={choosingRemote ? "Hide folder browser" : "Change destination"}
+              label={
+                choosingRemote ? "Hide folder browser" : "Change destination"
+              }
               onPress={() => setChoosingRemote((open) => !open)}
             />
           </Panel>
@@ -285,30 +291,24 @@ export function SourceEditor({
             <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
               If a file already exists on Nextcloud
             </Text>
-            <Pressable
+            <RadioButton.Item
+              label="Replace on Nextcloud"
+              value="replace"
+              status={collisionPolicy === "replace" ? "checked" : "unchecked"}
+              labelStyle={{ fontSize: 16 }}
               accessibilityLabel="Replace file on Nextcloud"
-              accessibilityRole="radio"
-              accessibilityState={{ checked: collisionPolicy === "replace" }}
-              className="flex-row items-center gap-4 p-4"
               disabled={busy}
               onPress={() => setCollisionPolicy("replace")}
-            >
-              <Text className="text-base text-ink-light dark:text-ink-dark">
-                {collisionPolicy === "replace" ? "●" : "○"} Replace on Nextcloud
-              </Text>
-            </Pressable>
-            <Pressable
+            />
+            <RadioButton.Item
+              label="Keep both"
+              value="keep_both"
+              status={collisionPolicy === "keep_both" ? "checked" : "unchecked"}
+              labelStyle={{ fontSize: 16 }}
               accessibilityLabel="Keep both files"
-              accessibilityRole="radio"
-              accessibilityState={{ checked: collisionPolicy === "keep_both" }}
-              className="flex-row items-center gap-4 p-4"
               disabled={busy}
               onPress={() => setCollisionPolicy("keep_both")}
-            >
-              <Text className="text-base text-ink-light dark:text-ink-dark">
-                {collisionPolicy === "keep_both" ? "●" : "○"} Keep both
-              </Text>
-            </Pressable>
+            />
           </Panel>
           {source ? (
             <Panel>
@@ -325,8 +325,6 @@ export function SourceEditor({
                   accessibilityLabel="Enable upload source"
                   disabled={busy}
                   onValueChange={setEnabled}
-                  thumbColor="#f4f4f0"
-                  trackColor={{ false: "#62665d", true: "#4f7d45" }}
                   value={enabled}
                 />
               </View>
@@ -341,6 +339,7 @@ export function SourceEditor({
             </Text>
           ) : null}
           <ActionButton
+            icon="check"
             accessibilityLabel="Save upload source at bottom"
             disabled={!canSave}
             label={busy ? "Saving…" : "Save"}
@@ -353,12 +352,14 @@ export function SourceEditor({
                 Source maintenance
               </Text>
               <View className="flex-row flex-wrap gap-4">
-                <ActionButton
+                <IconAction
+                  icon="history"
                   disabled={busy}
                   label="Reset upload history"
                   onPress={resetHistory}
                 />
-                <ActionButton
+                <IconAction
+                  icon="delete-outline"
                   disabled={busy}
                   label="Remove source"
                   onPress={remove}

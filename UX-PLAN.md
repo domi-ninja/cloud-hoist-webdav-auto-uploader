@@ -2,7 +2,7 @@
 
 Status: implemented on 2026-09-06.
 
-Based on the code review of Sources, Activity, Settings, and their supporting dialogs on 2026-09-06. Layout and interaction changes still need an on-device review.
+Based on the code review of Sources, Activity, Settings, and their supporting dialogs on 2026-09-06. The Paper control migration and collapsed/active filters were reviewed on the Android emulator in light and dark modes. Populated queues and large-text layouts still need a broader review.
 
 ## Scope and design constraints
 
@@ -87,6 +87,16 @@ Acceptance checks:
 - App version and diagnostics are easy to find without dominating the screen.
 
 ## Verification and implementation notes
+
+### Icon controls and component library correction
+
+- [x] Introduce React Native Paper controls and Expo Material Community Icons, with light/dark themes.
+- [x] Hide Activity filters behind a filter icon beside Files. Indicate active filters when collapsed.
+- [x] Use compact icon buttons for scan, pause/resume, add, edit, retry, share, and maintenance actions. Keep accessibility labels and long-press tooltips.
+- [x] Replace homemade collision radios with Paper radios and use Paper switches, buttons, chips, and panels.
+- [x] Remove the exact acceptance-test source during fixture cleanup before its destination is deleted. Include the underlying inventory error in the UI.
+
+### Checks
 
 - Read the exact Expo v57 documentation before application code changes, as required by `AGENTS.md`.
 - Add focused tests for changed behavior, especially source creation, pagination, and failure visibility. Avoid tests that merely mirror layout markup.
