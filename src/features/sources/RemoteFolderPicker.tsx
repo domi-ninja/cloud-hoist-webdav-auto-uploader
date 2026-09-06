@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
-import { Text, TextInput, View } from "react-native";
+import { Text, View } from "react-native";
+import { TextInput } from "react-native-paper";
 
 import webDavUploadEngine, {
   type EngineError,
@@ -8,15 +9,22 @@ import webDavUploadEngine, {
 import { ActionButton, IconAction, Panel, Separator } from "@/components/ui";
 
 type RemoteFolderPickerProps = {
+  initialPathSegments?: string[];
   onSelect: (pathSegments: string[]) => void;
+  title?: string;
 };
 
 function displayPath(pathSegments: string[]) {
   return pathSegments.length ? `/${pathSegments.join("/")}` : "/";
 }
 
-export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
-  const [pathSegments, setPathSegments] = useState<string[]>([]);
+export function RemoteFolderPicker({
+  initialPathSegments = [],
+  onSelect,
+  title = "Choose upload destination",
+}: RemoteFolderPickerProps) {
+  const [pathSegments, setPathSegments] =
+    useState<string[]>(initialPathSegments);
   const [folders, setFolders] = useState<RemoteFolder[]>([]);
   const [newFolderName, setNewFolderName] = useState("");
   const [loading, setLoading] = useState(true);
@@ -81,7 +89,7 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
   return (
     <Panel>
       <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-        Choose upload destination
+        {title}
       </Text>
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {displayPath(pathSegments)}
@@ -126,7 +134,8 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
                 <ActionButton
                   accessibilityLabel={`Open ${folder.name}`}
                   disabled={creating}
-                  label={`${folder.name}/`}
+                  icon="folder-outline"
+                  label={folder.name}
                   onPress={() => openPath(folder.pathSegments)}
                 />
               </Fragment>
@@ -139,24 +148,27 @@ export function RemoteFolderPicker({ onSelect }: RemoteFolderPickerProps) {
         </View>
       )}
 
-      <TextInput
-        accessibilityLabel="New remote folder name"
-        className="border border-muted-light p-2 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
-        editable={!creating}
-        onChangeText={setNewFolderName}
-        onSubmitEditing={() => void createFolder()}
-        placeholder="New folder"
-        placeholderTextColor="#737373"
-        returnKeyType="done"
-        value={newFolderName}
-      />
-      <IconAction
-        icon="folder-plus-outline"
-        disabled={creating}
-        label={creating ? "Creating…" : "Create folder"}
-        onPress={() => void createFolder()}
-        tone="secondary"
-      />
+      <View className="flex-row items-center gap-2">
+        <TextInput
+          accessibilityLabel="New remote folder name"
+          dense
+          editable={!creating}
+          mode="outlined"
+          onChangeText={setNewFolderName}
+          onSubmitEditing={() => void createFolder()}
+          placeholder="New folder"
+          returnKeyType="done"
+          style={{ flex: 1, fontSize: 16 }}
+          value={newFolderName}
+        />
+        <IconAction
+          icon="folder-plus-outline"
+          disabled={creating}
+          label={creating ? "Creating…" : "Create folder"}
+          onPress={() => void createFolder()}
+          tone="secondary"
+        />
+      </View>
 
       <ActionButton
         accessibilityLabel="Use current remote folder"

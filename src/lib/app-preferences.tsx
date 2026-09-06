@@ -10,7 +10,7 @@ import {
 import { project } from "@/config/project";
 import { remotePathSegmentsSchema } from "../../modules/webdav-upload-engine/src/WebDavUploadEngine.types";
 
-export { formatRemoteRoot, parseRemoteRoot } from "./app-preferences-state";
+export { formatRemoteRoot } from "./app-preferences-state";
 
 const STORAGE_KEY = "app-preferences";
 const defaultRemoteRootPath: string[] = [project.defaultRemoteFolder];

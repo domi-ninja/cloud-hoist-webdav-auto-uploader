@@ -2,7 +2,7 @@ import { Fragment, useState } from "react";
 import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Alert, ScrollView, Share, Text, View } from "react-native";
-import { Switch, TextInput } from "react-native-paper";
+import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { project } from "@/config/project";
@@ -13,12 +13,9 @@ import webDavUploadEngine, {
 import { IconAction, Panel, Separator } from "@/components/ui";
 import { AccountSettingsModal } from "@/features/account/AccountSettingsModal";
 import { InstanceIcon } from "@/features/account/InstanceIcon";
+import { RemoteFolderPicker } from "@/features/sources/RemoteFolderPicker";
 import { transferRulesSummary } from "@/lib/upload-status";
-import {
-  formatRemoteRoot,
-  parseRemoteRoot,
-  useAppPreferences,
-} from "@/lib/app-preferences";
+import { formatRemoteRoot, useAppPreferences } from "@/lib/app-preferences";
 
 type ConstraintKey = keyof TransferConstraints;
 
@@ -32,20 +29,16 @@ export default function SettingsScreen() {
   const [errorMessage, setErrorMessage] = useState<string>();
   const [accountOpen, setAccountOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
-  const [rootText, setRootText] = useState(formatRemoteRoot(remoteRootPath));
+  const [choosingRoot, setChoosingRoot] = useState(false);
   const [rootError, setRootError] = useState<string>();
   const [savingRoot, setSavingRoot] = useState(false);
 
-  const saveRemoteRoot = async () => {
-    const parsed = parseRemoteRoot(rootText);
-    if (!parsed.ok) {
-      setRootError(parsed.error);
-      return;
-    }
+  const selectRemoteRoot = async (pathSegments: string[]) => {
     setSavingRoot(true);
     setRootError(undefined);
     try {
-      await setRemoteRootPath(parsed.value);
+      await setRemoteRootPath(pathSegments);
+      setChoosingRoot(false);
     } catch {
       setRootError("The upload root could not be saved.");
     } finally {
@@ -152,28 +145,22 @@ export default function SettingsScreen() {
           </Panel>
         ) : null}
         <Panel>
-          <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-            Nextcloud upload root
-          </Text>
           <View className="flex-row items-center gap-2">
-            <TextInput
-              accessibilityLabel="Nextcloud upload root"
-              autoCapitalize="none"
-              autoCorrect={false}
-              dense
-              error={Boolean(rootError)}
-              mode="outlined"
-              onChangeText={setRootText}
-              onSubmitEditing={() => void saveRemoteRoot()}
-              returnKeyType="done"
-              style={{ flex: 1, fontSize: 16 }}
-              value={rootText}
-            />
+            <View className="flex-1 gap-2">
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                Nextcloud upload root
+              </Text>
+              <Text className="text-base text-muted-light dark:text-muted-dark">
+                {formatRemoteRoot(remoteRootPath)}
+              </Text>
+            </View>
             <IconAction
-              icon="content-save-outline"
-              disabled={savingRoot}
-              label={savingRoot ? "Saving upload root" : "Save upload root"}
-              onPress={() => void saveRemoteRoot()}
+              icon={choosingRoot ? "chevron-up" : "folder-edit-outline"}
+              disabled={savingRoot || snapshot?.account.status !== "connected"}
+              label={
+                choosingRoot ? "Hide folder browser" : "Choose upload root"
+              }
+              onPress={() => setChoosingRoot((open) => !open)}
               tone="primary"
             />
           </View>
@@ -190,6 +177,13 @@ export default function SettingsScreen() {
             </Text>
           ) : null}
         </Panel>
+        {choosingRoot ? (
+          <RemoteFolderPicker
+            initialPathSegments={remoteRootPath}
+            onSelect={(pathSegments) => void selectRemoteRoot(pathSegments)}
+            title="Choose upload root"
+          />
+        ) : null}
         <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
           Transfer rules
         </Text>
