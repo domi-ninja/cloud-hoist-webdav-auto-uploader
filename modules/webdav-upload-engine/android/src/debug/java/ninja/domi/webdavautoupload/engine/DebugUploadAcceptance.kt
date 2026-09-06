@@ -193,6 +193,10 @@ class DebugUploadAcceptance(
 
   fun cleanupMedia(runFolder: String) {
     validateRunFolder(runFolder)
+    // The harness deletes this destination next. Do not leave an enabled watcher behind.
+    dao.allSources().filter { source ->
+      source.name == SOURCE_NAME && source.remotePathSegments == listOf(runFolder)
+    }.forEach { source -> dao.removeSource(source.id) }
     val names = arrayOf("$runFolder-small.bmp", "$runFolder-large.bmp")
     context.contentResolver.query(
       MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
