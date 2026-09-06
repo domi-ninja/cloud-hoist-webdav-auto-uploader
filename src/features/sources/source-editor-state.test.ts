@@ -4,6 +4,7 @@ import type { SourceSummary } from "../../../modules/webdav-upload-engine";
 import {
   existingPresetSource,
   keepBothPreviewName,
+  selectionForPickerMode,
   selectionForSource,
   sourceEditorInitialValue,
   sourceEditorValueKey,
@@ -23,6 +24,26 @@ const source: SourceSummary = {
 };
 
 describe("source editor state", () => {
+  it("turns media presets into selected sources", () => {
+    expect(selectionForPickerMode("camera")).toEqual({ type: "camera" });
+    expect(selectionForPickerMode("screenshots")).toEqual({
+      type: "screenshots",
+    });
+    expect(selectionForPickerMode("folder")).toBeUndefined();
+  });
+
+  it("appends a media preset to the configured upload root", () => {
+    expect(
+      sourceEditorInitialValue(undefined, "screenshots", ["backup"]),
+    ).toEqual({
+      name: "Pictures/Screenshots",
+      selection: { type: "screenshots" },
+      remotePathSegments: ["backup", "Pictures", "Screenshots"],
+      enabled: true,
+      collisionPolicy: "replace",
+    });
+  });
+
   it("previews numbered copies using the uploader naming format", () => {
     expect(keepBothPreviewName("example.txt")).toBe("example.001.txt");
     expect(keepBothPreviewName("archive", 12)).toBe("archive.012");

@@ -7,9 +7,10 @@ import webDavUploadEngine, {
   type SourceSelection,
 } from "../../../modules/webdav-upload-engine";
 import { ActionButton, Panel, Separator } from "@/components/ui";
+import type { SourcePickerMode } from "./source-editor-state";
 
 type LocalSourcePickerProps = {
-  mode?: "all" | "folder" | "media" | "camera" | "screenshots";
+  mode?: SourcePickerMode;
   onSelect: (selection: SourceSelection, preview: SourcePreview) => void;
   embedded?: boolean;
 };

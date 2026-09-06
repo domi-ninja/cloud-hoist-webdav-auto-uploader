@@ -26,6 +26,7 @@ import {
   sourceEditorValueKey,
   sourceInputFromEditor,
   sourceSelectionLabel,
+  type SourcePickerMode,
 } from "./source-editor-state";
 
 type SourceEditorProps = {
@@ -35,7 +36,7 @@ type SourceEditorProps = {
   onClose: () => void;
   onEditExisting: (sourceId: string) => void;
   onSaved: () => void;
-  pickerMode?: "all" | "folder" | "media" | "camera" | "screenshots";
+  pickerMode?: SourcePickerMode;
 };
 
 function displayPath(pathSegments: string[]) {
@@ -53,48 +54,70 @@ export function SourceEditor({
 }: SourceEditorProps) {
   const { remoteRootPath } = useAppPreferences();
   const initialValue = useMemo(
-    () => sourceEditorInitialValue(source),
-    [source],
+    () => sourceEditorInitialValue(source, pickerMode, remoteRootPath),
+    [pickerMode, remoteRootPath, source],
   );
   const initialKey = sourceEditorValueKey(initialValue);
   const [selection, setSelection] = useState<SourceSelection | undefined>(
     initialValue.selection,
   );
   const [remotePathSegments, setRemotePathSegments] = useState(
-    source ? initialValue.remotePathSegments : remoteRootPath,
+    initialValue.remotePathSegments,
   );
   const [enabled, setEnabled] = useState(initialValue.enabled);
   const [collisionPolicy, setCollisionPolicy] = useState(
     initialValue.collisionPolicy,
   );
   const [preview, setPreview] = useState<SourcePreview>();
-  const [choosingLocal, setChoosingLocal] = useState(!source);
+  const [choosingLocal, setChoosingLocal] = useState(!initialValue.selection);
   const [choosingRemote, setChoosingRemote] = useState(false);
   const [destinationCustomized, setDestinationCustomized] = useState(
     Boolean(source),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
-  const sourceId = source?.id;
-  const sourceKind = source?.kind;
-  const sourceLocalUri = source?.localUri;
-
   useEffect(() => {
-    if (!sourceId || !sourceKind || !sourceLocalUri) return;
-    const existingSelection: SourceSelection =
-      sourceKind === "saf"
-        ? { type: "document_tree", treeUri: sourceLocalUri }
-        : sourceLocalUri === "mediastore://camera"
-          ? { type: "camera" }
-          : { type: "screenshots" };
+    const initialSelection = initialValue.selection;
+    if (!initialSelection) return;
     let cancelled = false;
-    void webDavUploadEngine.previewSource(existingSelection).then((result) => {
-      if (!cancelled && result.ok) setPreview(result.value);
-    });
+
+    const loadPreview = async () => {
+      if (initialSelection.type !== "document_tree") {
+        const currentPermission = await webDavUploadEngine.getMediaPermission();
+        if (cancelled) return;
+        if (!currentPermission.ok) {
+          setError(currentPermission.error);
+          return;
+        }
+        if (currentPermission.value.access === "denied") {
+          const requestedPermission =
+            await webDavUploadEngine.requestMediaPermission();
+          if (cancelled) return;
+          if (!requestedPermission.ok) {
+            setError(requestedPermission.error);
+            return;
+          }
+          if (requestedPermission.value.access === "denied") {
+            setError({
+              code: "source_permission_revoked",
+              message: "Allow photo and video access to preview this backup.",
+            });
+            return;
+          }
+        }
+      }
+
+      const result = await webDavUploadEngine.previewSource(initialSelection);
+      if (cancelled) return;
+      if (result.ok) setPreview(result.value);
+      else setError(result.error);
+    };
+
+    void loadPreview();
     return () => {
       cancelled = true;
     };
-  }, [sourceId, sourceKind, sourceLocalUri]);
+  }, [initialValue.selection]);
 
   const currentValue = {
     name: selection ? sourceSelectionLabel(selection) : "",
@@ -106,7 +129,7 @@ export function SourceEditor({
   const dirty = sourceEditorValueKey(currentValue) !== initialKey;
   const canSave = Boolean(selection) && !busy;
   const previewFileName = preview?.files[0]?.fileName ?? "example.txt";
-  const keepBothLabel = `Add a number to the name. Preview: ${previewFileName} -> ${keepBothPreviewName(previewFileName)}`;
+  const keepBothPreview = `${previewFileName} -> ${keepBothPreviewName(previewFileName)}`;
 
   const close = () => {
     if (!dirty) {
@@ -352,7 +375,7 @@ export function SourceEditor({
                 onPress={() => setCollisionPolicy("replace")}
               />
               <RadioButton.Item
-                label={keepBothLabel}
+                label="Add a number to the name."
                 value="keep_both"
                 status={
                   collisionPolicy === "keep_both" ? "checked" : "unchecked"
@@ -363,10 +386,13 @@ export function SourceEditor({
                   paddingVertical: 0,
                   paddingHorizontal: 8,
                 }}
-                accessibilityLabel={keepBothLabel}
+                accessibilityLabel={`Add a number to the name. Preview: ${keepBothPreview}`}
                 disabled={busy}
                 onPress={() => setCollisionPolicy("keep_both")}
               />
+              <Text className="px-2 pb-2 text-sm text-muted-light dark:text-muted-dark">
+                Preview: {keepBothPreview}
+              </Text>
             </View>
           </Panel>
           {source ? (

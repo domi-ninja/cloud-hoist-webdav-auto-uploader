@@ -11,6 +11,17 @@ export type SourceEditorValue = {
   collisionPolicy: "replace" | "keep_both";
 };
 
+export type SourcePickerMode =
+  "all" | "folder" | "media" | "camera" | "screenshots";
+
+export function selectionForPickerMode(
+  mode: SourcePickerMode,
+): SourceSelection | undefined {
+  if (mode === "camera") return { type: "camera" };
+  if (mode === "screenshots") return { type: "screenshots" };
+  return undefined;
+}
+
 export function selectionForSource(source: SourceSummary): SourceSelection {
   if (source.kind === "saf") {
     return { type: "document_tree", treeUri: source.localUri };
@@ -63,14 +74,21 @@ export function existingPresetSource(
 
 export function sourceEditorInitialValue(
   source: SourceSummary | undefined,
+  pickerMode: SourcePickerMode = "all",
+  remoteRootPath: string[] = ["WebDAV Auto Upload"],
 ): SourceEditorValue {
-  const selection = source ? selectionForSource(source) : undefined;
+  const selection = source
+    ? selectionForSource(source)
+    : selectionForPickerMode(pickerMode);
   return {
     name: selection ? sourceSelectionLabel(selection) : "",
     selection,
     remotePathSegments: source
       ? source.remotePath.split("/").filter(Boolean)
-      : ["WebDAV Auto Upload"],
+      : [
+          ...remoteRootPath,
+          ...(selection ? sourceFolderPathSegments(selection) : []),
+        ],
     enabled: source?.enabled ?? true,
     collisionPolicy: source?.collisionPolicy ?? "replace",
   };

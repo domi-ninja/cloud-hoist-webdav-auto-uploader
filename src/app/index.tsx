@@ -8,6 +8,11 @@ import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
 import { SourceCard } from "@/features/sources/SourceCard";
 import { SourceEditor } from "@/features/sources/SourceEditor";
+import {
+  existingPresetSource,
+  selectionForPickerMode,
+  type SourcePickerMode,
+} from "@/features/sources/source-editor-state";
 import { useEngineSnapshot } from "@/lib/engine-query";
 import { useNow } from "@/lib/use-now";
 import { ActionButton, IconAction, Panel } from "@/components/ui";
@@ -18,9 +23,7 @@ export default function HomeScreen() {
   const { data: snapshot, error: snapshotError, refetch } = useEngineSnapshot();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [editingSourceId, setEditingSourceId] = useState<string | "new">();
-  const [pickerMode, setPickerMode] = useState<
-    "all" | "folder" | "camera" | "screenshots"
-  >("all");
+  const [pickerMode, setPickerMode] = useState<SourcePickerMode>("all");
   const [scanning, setScanning] = useState(false);
   const now = useNow();
 
@@ -75,8 +78,13 @@ export default function HomeScreen() {
       ? snapshot?.sources.find((source) => source.id === editingSourceId)
       : undefined;
   const addSource = (mode: typeof pickerMode = "all") => {
+    const presetSelection = selectionForPickerMode(mode);
+    const existing =
+      snapshot && presetSelection
+        ? existingPresetSource(snapshot.sources, presetSelection)
+        : undefined;
     setPickerMode(mode);
-    setEditingSourceId("new");
+    setEditingSourceId(existing?.id ?? "new");
   };
 
   return (
