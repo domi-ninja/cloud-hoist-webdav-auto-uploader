@@ -1,7 +1,4 @@
-import type {
-  EngineSnapshot,
-  TransferConstraints,
-} from "../../modules/webdav-upload-engine";
+import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
 import { formatBytes, formatRelativeTime } from "./format";
 
 export function engineStatus(snapshot: EngineSnapshot, now: number) {
@@ -36,13 +33,4 @@ export function queueSummary(snapshot: EngineSnapshot) {
   return active.length
     ? active.map(([count, label]) => `${count} ${label}`).join(" · ")
     : "No uploads yet";
-}
-
-export function transferRulesSummary(rules: TransferConstraints) {
-  const conditions = [
-    rules.unmeteredOnly ? "an unmetered connection" : "a network connection",
-    ...(rules.batteryNotLow ? ["a battery that is not low"] : []),
-    ...(rules.requiresCharging ? ["charging"] : []),
-  ];
-  return `Uploads require ${conditions.join(" and ")}. Android may delay background work.`;
 }

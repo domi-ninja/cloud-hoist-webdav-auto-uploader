@@ -14,7 +14,6 @@ import { IconAction, Panel, Separator } from "@/components/ui";
 import { AccountSettingsModal } from "@/features/account/AccountSettingsModal";
 import { InstanceIcon } from "@/features/account/InstanceIcon";
 import { RemoteFolderPicker } from "@/features/sources/RemoteFolderPicker";
-import { transferRulesSummary } from "@/lib/upload-status";
 import { formatRemoteRoot, useAppPreferences } from "@/lib/app-preferences";
 
 type ConstraintKey = keyof TransferConstraints;
@@ -222,9 +221,6 @@ export default function SettingsScreen() {
         ) : null}
         {snapshot ? (
           <Panel>
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              {transferRulesSummary(snapshot.scheduler.constraints)}
-            </Text>
             {options.map((option, index) => {
               const checked = snapshot.scheduler.constraints[option.key];
               return (

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
-import { engineStatus, transferRulesSummary } from "./upload-status";
+import { engineStatus } from "./upload-status";
 
 function snapshot(worker: EngineSnapshot["worker"]): EngineSnapshot {
   return {
@@ -52,11 +52,4 @@ describe("upload status", () => {
       .toBe("Waiting for charging");
   });
 
-  it("summarizes the combined transfer rules", () => {
-    expect(transferRulesSummary({
-      unmeteredOnly: true,
-      batteryNotLow: false,
-      requiresCharging: true,
-    })).toBe("Uploads require an unmetered connection and charging. Android may delay background work.");
-  });
 });
