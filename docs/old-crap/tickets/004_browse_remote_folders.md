@@ -1,6 +1,6 @@
 # 004 Browse and create remote folders
 
-Status: in progress
+Status: archived specification. Implementation exists; see [current tracking](../../tickets/README.md) for remaining validation and superseding decisions. Historical acceptance criteria below are not a completion claim.
 
 Depends on: 003
 

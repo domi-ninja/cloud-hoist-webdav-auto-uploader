@@ -1,6 +1,6 @@
 # 015 Prepare the GitHub prerelease
 
-Status: blocked by 014
+Status: deferred by Domi on 2026-09-28 while testing locally. Release infrastructure is not a current blocker; see [current tracking](../../tickets/README.md). The requirements below apply when publication work resumes.
 
 Depends on: 001 through 014
 

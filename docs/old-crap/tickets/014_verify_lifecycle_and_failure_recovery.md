@@ -1,6 +1,6 @@
 # 014 Verify lifecycle and failure recovery
 
-Status: blocked by 013
+Status: physical-device validation pending. The old dependency on 013 is obsolete; see [current tracking](../../tickets/README.md). This archived checklist remains relevant to local testing.
 
 Depends on: 003 through 013
 

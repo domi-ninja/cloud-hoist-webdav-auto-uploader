@@ -117,7 +117,7 @@ Decisions:
 
 ## Round 3: data and safety contract
 
-Status: accepted on 2026-09-04, with Q16 overridden
+Status: accepted on 2026-09-04, with Q16 overridden; Q13 overridden by Domi on 2026-09-28
 
 ❓ **Q11** - **Which license do we use?**: A clean implementation lets us choose. Should forks have to remain open, or should companies and other apps be free to reuse the code under a permissive license?
 
@@ -129,7 +129,7 @@ Status: accepted on 2026-09-04, with Q16 overridden
 
 ❓ **Q13** - **What happens to files already in a folder?**: When a user enables a source, should we queue everything already there, start from that moment, or ask every time?
 
-➡️ Ask during setup after showing the number and total size of existing eligible files. Default to "new files only" so enabling a folder cannot start a surprise 200 GB upload.
+➡️ Automatically include all existing eligible files when a backup folder is added. Domi confirmed on 2026-09-28 that there must be no include-existing choice or new-files-only mode. This is intended behavior, not a bug or release blocker.
 
 ❓ **Q14** - **Can the app remove local files?**: Should successful uploads leave files untouched, optionally delete them, or optionally move them elsewhere?
 
@@ -159,7 +159,7 @@ Decisions:
 
 - License the app under `GPL-3.0-or-later`.
 - Ship MediaStore presets for Camera and Screenshots plus arbitrary folders selected through the Storage Access Framework.
-- During source setup, show the existing file count and size. Ask whether to include them, defaulting to new files only.
+- Adding a backup folder automatically queues all existing eligible files. Do not add an include-existing choice or new-files-only mode.
 - Never delete or move local files in v1.
 - Give each source one remote root. Mirror custom-folder subdirectories and keep media presets flat. Do not add date-based folders in v1.
 - Overwrite an existing destination by default. Stage the upload under a temporary remote name, then replace the destination only after the complete payload reaches Nextcloud.
@@ -230,7 +230,7 @@ Status: accepted on 2026-09-04
 
 ❓ **Q30** - **How should onboarding work?**: We can ask for every permission and setting at launch, or request each thing when the user reaches the feature that needs it.
 
-➡️ Use a short guided path: connect Nextcloud, add the first source, choose its remote destination, decide whether existing files count, then show the home screen. Ask for Android permissions in context. Do not front-load a wall of permission dialogs.
+➡️ Use a short guided path: connect Nextcloud, add the first source, choose its remote destination, then show the home screen. Existing eligible files are included automatically. Ask for Android permissions in context. Do not front-load a wall of permission dialogs.
 
 ❓ **Q31** - **What is the app's navigation?**: The app needs sources, activity, settings, and little else.
 
@@ -238,7 +238,7 @@ Status: accepted on 2026-09-04
 
 ❓ **Q32** - **How does a user add a source?**: One dense settings form is faster to build. A short sequence is easier to understand and gives permissions context.
 
-➡️ Use a compact step flow: source type, local folder, remote folder, include-existing choice, review. Keep advanced scheduling out because v1 uses global constraints.
+➡️ Use a compact step flow: source type, local folder, remote folder, review. Keep advanced scheduling out because v1 uses global constraints.
 
 ❓ **Q33** - **How much status belongs on Sources?**: A background app can look healthy while Android has not run it for hours.
 
@@ -270,7 +270,7 @@ Status: accepted on 2026-09-04
 
 Decisions:
 
-- Onboard in context: connect Nextcloud, add a source, choose its destination, choose whether existing files count, then enter the app.
+- Onboard in context: connect Nextcloud, add a source, choose its destination, then enter the app. Include existing eligible files automatically.
 - Use three tabs: Sources, Activity, and Settings.
 - Add sources with a compact step flow instead of one dense settings form.
 - Show each source's real state, last scan time, queued count, and failed count. Do not promise an exact next run.
@@ -295,13 +295,15 @@ The name and icon must not use the Nextcloud name or cloud logo as product brand
 
 Status: accepted on 2026-09-04
 
+Current priority, confirmed by Domi on 2026-09-28: test locally on the emulator and connected phone. Release infrastructure, signing automation, release tags, and store metadata are deferred until later. Their absence does not block local testing and should not be treated as a current project blocker. The publication requirements below apply when release work resumes.
+
 ❓ **Q40** - **Does the name promise generic WebDAV?**: `WebDAV Auto Upload` sounds broader than the first release, which uses Nextcloud login, capabilities, chunking, and DAV paths.
 
 ➡️ State plainly that v1 supports Nextcloud servers. Keep the transport code isolated and add generic WebDAV only after testing it against named servers. Do not put an untested "works with any WebDAV server" claim in the README or stores.
 
 ❓ **Q41** - **What exactly is v0.1?**: Without a hard boundary, settings and compatibility work can expand forever.
 
-➡️ v0.1 connects one Nextcloud account, manages multiple MediaStore or SAF sources, picks or creates remote folders, optionally includes existing files, persists a native queue, uploads in the background under global constraints, safely overwrites collisions, resumes interrupted large uploads, and exposes status, activity, manual controls, and actionable errors. Nothing else belongs in v0.1.
+➡️ v0.1 connects one Nextcloud account, manages multiple MediaStore or SAF sources, picks or creates remote folders, automatically includes existing eligible files, persists a native queue, uploads in the background under global constraints, safely overwrites collisions, resumes interrupted large uploads, and exposes status, activity, manual controls, and actionable errors. Nothing else belongs in v0.1.
 
 ❓ **Q42** - **How do we claim server compatibility?**: Nextcloud exposes capabilities, and older installations vary. A version number alone does not prove the required APIs work.
 
@@ -351,35 +353,37 @@ None. The design tree is empty.
 
 ## Implementation tickets
 
+See [current project tracking](docs/tickets/README.md) for implementation and validation status. The original tickets below are historical specifications; archived acceptance criteria are not evidence that device validation passed. Later decisions in this plan and current tracking supersede them.
+
 Foundation:
 
-1. [Bootstrap the Expo Android app](tickets/done/001_bootstrap_expo_android.md)
-2. [Create the typed native engine module](tickets/done/002_create_typed_native_engine_module.md)
+1. [Bootstrap the Expo Android app](docs/old-crap/tickets/done/001_bootstrap_expo_android.md)
+2. [Create the typed native engine module](docs/old-crap/tickets/done/002_create_typed_native_engine_module.md)
 
 Server upload path:
 
-3. [Connect and validate one Nextcloud account](tickets/003_connect_nextcloud_account.md)
-4. [Browse and create remote folders](tickets/004_browse_remote_folders.md)
-5. [Upload one file with safe overwrite](tickets/005_upload_one_file_safely.md)
-6. [Add the durable Room queue](tickets/done/006_add_durable_room_queue.md)
-7. [Resume large chunked uploads](tickets/007_resume_large_chunked_uploads.md)
+3. [Connect and validate one Nextcloud account](docs/old-crap/tickets/003_connect_nextcloud_account.md)
+4. [Browse and create remote folders](docs/old-crap/tickets/004_browse_remote_folders.md)
+5. [Upload one file with safe overwrite](docs/old-crap/tickets/005_upload_one_file_safely.md)
+6. [Add the durable Room queue](docs/old-crap/tickets/done/006_add_durable_room_queue.md)
+7. [Resume large chunked uploads](docs/old-crap/tickets/007_resume_large_chunked_uploads.md)
 
 Android automation:
 
-8. [Discover media and selected folders](tickets/done/008_discover_media_and_selected_folders.md)
-9. [Schedule scans and queue drains](tickets/done/009_schedule_scans_and_queue_drains.md)
-10. [Run reliable background transfers](tickets/010_run_reliable_background_transfers.md)
+8. [Discover media and selected folders](docs/old-crap/tickets/done/008_discover_media_and_selected_folders.md)
+9. [Schedule scans and queue drains](docs/old-crap/tickets/done/009_schedule_scans_and_queue_drains.md)
+10. [Run reliable background transfers](docs/old-crap/tickets/010_run_reliable_background_transfers.md)
 
 Product interface:
 
-11. [Build onboarding and source setup](tickets/011_build_onboarding_and_source_setup.md)
-12. [Build Sources, Activity, and Settings](tickets/012_build_sources_activity_and_settings.md)
-13. [Add cleanup and private diagnostics](tickets/013_add_cleanup_and_private_diagnostics.md)
+11. [Build onboarding and source setup](docs/old-crap/tickets/011_build_onboarding_and_source_setup.md)
+12. [Build Sources, Activity, and Settings](docs/old-crap/tickets/012_build_sources_activity_and_settings.md)
+13. [Add cleanup and private diagnostics](docs/old-crap/tickets/013_add_cleanup_and_private_diagnostics.md)
 
 Release gates:
 
-14. [Verify lifecycle and failure recovery](tickets/014_verify_lifecycle_and_failure_recovery.md)
-15. [Prepare the GitHub prerelease](tickets/015_prepare_the_github_prerelease.md)
+14. [Verify lifecycle and failure recovery](docs/old-crap/tickets/014_verify_lifecycle_and_failure_recovery.md). Device validation remains open.
+15. [Prepare the GitHub prerelease](docs/old-crap/tickets/015_prepare_the_github_prerelease.md). Deferred while testing locally.
 
 ## v0.1 acceptance statement
 

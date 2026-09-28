@@ -1,6 +1,6 @@
 # 036 Instrument app storage instead of the library test host
 
-Status: in progress
+Status: archived specification. Implementation exists; see [current tracking](../../tickets/README.md) for remaining validation and superseding decisions. Historical acceptance criteria below are not a completion claim.
 
 Found while working on: 003
 

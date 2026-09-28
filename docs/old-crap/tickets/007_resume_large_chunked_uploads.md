@@ -1,6 +1,6 @@
 # 007 Resume large chunked uploads
 
-Status: in progress
+Status: archived specification. Implementation exists; see [current tracking](../../tickets/README.md) for remaining validation and superseding decisions. Historical acceptance criteria below are not a completion claim.
 
 Depends on: 003, 005, 006
 

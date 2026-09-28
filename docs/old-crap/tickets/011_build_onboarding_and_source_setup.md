@@ -1,6 +1,6 @@
 # 011 Build onboarding and source setup
 
-Status: in progress
+Status: archived specification. Implementation exists; see [current tracking](../../tickets/README.md) for remaining validation and superseding decisions. Historical acceptance criteria below are not a completion claim.
 
 Depends on: 003, 004, 008, 009, 010
 

@@ -2,7 +2,7 @@
 
 WebDAV Auto Upload is an Android app for automatic uploads to Nextcloud servers. It is an independent project and is not affiliated with or endorsed by Nextcloud GmbH.
 
-The first release is under development. The accepted product and engineering decisions live in `PLAN.md`, and implementation work is tracked in `tickets/`.
+The app is being tested locally on Android phones and emulators. Release infrastructure is deferred. Product decisions live in [PLAN.md](PLAN.md), and [project tracking](docs/tickets/README.md) records implemented work, outstanding validation, and archived tickets.
 
 ## Development requirements
 
