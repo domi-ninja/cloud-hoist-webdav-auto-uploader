@@ -20,6 +20,8 @@ The tested Android CLI version is `1.0.16261425`. Its built-in help accepts the 
 
 The setup script selects Node.js 24.20.0 through nvm, activates pnpm 11.3.0, installs project dependencies, installs Google's Android CLI when needed, installs the pinned JDK and Android SDK components, and creates the `medium_phone` API 36 emulator. Build Tools 35 and CMake are explicit React Native transitive requirements.
 
+The project also pins Node.js 24.20.0 through pnpm's `devEngines.runtime`. After `pnpm install`, project scripts and `pnpm exec node` use that runtime even when the shell defaults to another Node version. Use `nvm use` for direct `node` commands.
+
 ## Run on Android
 
 ```sh
