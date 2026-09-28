@@ -24,6 +24,7 @@ local.properties
 
 # Tool output
 coverage/
+test-results/
 *.tsbuildinfo
 .metro-health-check*
 npm-debug.*

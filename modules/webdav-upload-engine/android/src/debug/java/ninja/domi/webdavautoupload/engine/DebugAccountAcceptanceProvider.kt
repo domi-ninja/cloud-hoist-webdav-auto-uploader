@@ -11,7 +11,10 @@ import java.time.Instant
 
 /** Debug-APK-only entry point for opaque host-driven live account checks. */
 class DebugAccountAcceptanceProvider : ContentProvider() {
-  override fun onCreate() = true
+  override fun onCreate(): Boolean {
+    DebugStressAcceptance.resumeStatusMonitor(requireNotNull(context))
+    return true
+  }
 
   override fun call(method: String, arg: String?, extras: Bundle?): Bundle = try {
     when (method) {
@@ -22,14 +25,18 @@ class DebugAccountAcceptanceProvider : ContentProvider() {
       "cleanupMedia" -> cleanupMedia(requireNotNull(extras))
       "seed" -> seed()
       "clear" -> clear()
+      "stressSetup", "stressResume", "stressRetry", "stressCleanup", "stressStatus" ->
+        DebugStressAcceptance(requireNotNull(context)).call(method, requireNotNull(arg))
       else -> result("error", "ERR_ACCEPTANCE_UNKNOWN_METHOD")
     }
   } catch (error: DebugUploadAcceptanceException) {
     result("error", error.acceptanceCode)
   } catch (error: CodedException) {
     result("error", error.code)
-  } catch (_: Exception) {
-    result("error", "ERR_ACCEPTANCE_FAILURE")
+  } catch (error: Exception) {
+    result("error", "ERR_ACCEPTANCE_${error.javaClass.simpleName}").apply {
+      if (method.startsWith("stress") && error is SecurityException) putString("detail", error.message)
+    }
   }
 
   private fun connect(extras: Bundle): Bundle {

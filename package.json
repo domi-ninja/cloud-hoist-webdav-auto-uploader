@@ -48,6 +48,7 @@
     "test:account:live": "./scripts/test/account-live.sh",
     "test:native": "./scripts/test/native-unit.sh",
     "test:privacy": "./scripts/test/privacy.sh",
+    "test:stress": "./scripts/test/stress.sh",
     "test:watch": "jest --watch"
   },
   "private": true,

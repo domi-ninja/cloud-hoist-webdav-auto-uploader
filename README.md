@@ -53,11 +53,52 @@ every downloaded image.
 
 Project automation is grouped by purpose: `scripts/setup.sh` prepares the project, `scripts/android/` contains Android environment, targeting, and launch helpers, `scripts/test/` contains test and verification runners, and `scripts/assets/` contains generated-asset tooling. Each script starts with its purpose, command, prerequisites, and material side effects.
 
-Run every required check with one command:
+Run every required check with one command. The suite now includes a live stress
+test on both an authorized phone and emulator, and requires `test-creds.tct`:
 
 ```sh
 pnpm check emu
 ```
+
+This command clean-reinstalls this app on **both targets**, clearing its account,
+backup configuration, queue, and history. Other apps and your original photos
+are left alone. `emu` selects the target for the preceding instrumentation and
+deep-link checks; the stress phase always runs phone and emulator concurrently.
+
+### Live stress test
+
+Run the device stress phase alone with `pnpm test:stress`. It downloads six
+photographs from Lorem Picsum and generates 2,000 distinct JPEGs per device in
+Camera and Screenshots, then clean-reinstalls a bundled test build. It backs up
+only the generated photos through a test-owned SAF provider, using the real
+discovery, Room queue, WorkManager, and Nextcloud upload code. Your original
+photos are excluded from the test backup.
+
+The runner checks navigation and thumbnails during uploads, 150% system text,
+emulator dark mode, the account dialog with its keyboard open,
+cold-start/process recovery, remote file counts, three downloaded SHA-256 samples
+per device, and Android crash/ANR records. The emulator uses a TLS-preserving
+CONNECT proxy with 96 KiB/s per connection/direction, 750 ms connection latency,
+and an intentional 15-second outage. It runs on battery for 25 minutes after
+process recovery, then simulates plugging in to check background continuation
+under Android's normal power rules. Job quotas are not disabled or reset.
+Phone networking and power settings are unchanged.
+Background progress is read from test-only status files, without repeatedly
+binding the app and altering Android's background-network eligibility.
+
+Allow time for the Samsung: photo creation and installation can take minutes,
+and uploads have a two-hour deadline per target. Override `STRESS_PHOTO_COUNT`
+to test 2,000–20,000 photos or `STRESS_TIMEOUT_MINUTES` for a longer run. Use
+`STRESS_PHONE_SERIAL` and `STRESS_EMULATOR_SERIAL` when multiple devices exist.
+
+Reports and screenshots are written under ignored `test-results/stress-*/`.
+Cleanup removes only that run's generated media and remote directory, restores
+emulator proxy, power, and system text settings, and reinstalls the normal release build.
+The test build uses separate Gradle variant `stress`; its acceptance provider
+is never included in release. Credentials are read from the ignored file and
+redacted from command output. Screenshots can show account display information,
+so review them before sharing. Cleanup failures are test failures and remain in
+the result JSON for recovery.
 
 `test:native` generates the ignored Android project when necessary, loads the
 pinned SDK/JDK environment, and runs the Kotlin engine module tests.

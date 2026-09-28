@@ -1,0 +1,22 @@
+// Test-only bundled build. Never adds acceptance providers to the release APK.
+gradle.beforeProject { project ->
+    project.plugins.withId('com.android.application') {
+        project.android.buildTypes.create('stress') {
+            initWith project.android.buildTypes.release
+            matchingFallbacks = ['release']
+            signingConfig project.android.signingConfigs.debug
+        }
+    }
+    if (project.name == 'webdav-upload-engine') {
+        project.plugins.withId('com.android.library') {
+            project.android.buildTypes.create('stress') {
+                initWith project.android.buildTypes.release
+                matchingFallbacks = ['release']
+            }
+            project.android.sourceSets.stress {
+                java.srcDir 'src/debug/java'
+                manifest.srcFile 'src/debug/AndroidManifest.xml'
+            }
+        }
+    }
+}
