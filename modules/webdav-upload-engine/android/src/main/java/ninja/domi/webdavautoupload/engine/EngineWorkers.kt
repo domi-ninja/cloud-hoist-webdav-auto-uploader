@@ -1,6 +1,7 @@
 package ninja.domi.webdavautoupload.engine
 
 import android.content.Context
+import android.app.ActivityManager
 import android.app.ForegroundServiceStartNotAllowedException
 import android.os.Build
 import androidx.work.ListenableWorker
@@ -76,9 +77,16 @@ class QueueDrainWorker(
   override fun doWork(): Result {
     val queueCount = EngineRoomDatabase.open(applicationContext).engineDao()
       .pendingWorkCount()
-    val notification = if (queueCount > 0) {
+    val process = ActivityManager.RunningAppProcessInfo().also(ActivityManager::getMyMemoryState)
+    val notification = if (queueCount > 0 && mayPromoteUploadWorker(Build.VERSION.SDK_INT, process.importance)) {
       val candidate = TransferNotification(applicationContext)
-      if (promoteUploadWorker { setForegroundAsync(candidate.foregroundInfo(queueCount)).get() }) candidate else null
+      if (!promoteUploadWorker { setForegroundAsync(candidate.foregroundInfo(queueCount)).get() }) {
+        // Visibility can change between the check and promotion. WorkManager has already
+        // marked this worker foreground; finish it before trying an ordinary background batch.
+        EngineWorkScheduler(applicationContext).continueQueueDrain()
+        return Result.success()
+      }
+      candidate
     } else {
       null
     }
@@ -98,9 +106,11 @@ class QueueDrainWorker(
   }
 }
 
-/** Android may deny notification-service promotion on a background retry.
- * The upload batch still fits the ordinary worker's time limit (eight minutes).
- */
+/** Background batches fit the ordinary eight-minute worker budget and need no FGS. */
+internal fun mayPromoteUploadWorker(sdk: Int, processImportance: Int): Boolean =
+  sdk < 31 || processImportance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+
+/** Recognize a visibility race, without swallowing unrelated startup errors. */
 internal fun promoteUploadWorker(promote: () -> Unit): Boolean = try {
   promote()
   true

@@ -116,7 +116,17 @@ class EngineWorkSchedulerTest {
   }
 
   @Test
-  fun deniedForegroundPromotionFallsBackButDoesNotHideOtherFailures() {
+  fun backgroundWorkersAvoidForegroundPromotion() {
+    val foreground = android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+    val background = android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED
+    assertTrue(mayPromoteUploadWorker(30, background))
+    assertTrue(mayPromoteUploadWorker(31, foreground))
+    assertFalse(mayPromoteUploadWorker(31, background))
+    assertFalse(mayPromoteUploadWorker(36, background))
+  }
+
+  @Test
+  fun deniedForegroundPromotionIsRecognizedWithoutHidingOtherFailures() {
     assumeTrue(Build.VERSION.SDK_INT >= 31)
     assertFalse(promoteUploadWorker {
       throw java.util.concurrent.ExecutionException(ForegroundServiceStartNotAllowedException("background"))
