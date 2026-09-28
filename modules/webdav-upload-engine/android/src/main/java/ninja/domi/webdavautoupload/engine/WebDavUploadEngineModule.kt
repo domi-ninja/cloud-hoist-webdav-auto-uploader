@@ -8,6 +8,8 @@ import expo.modules.kotlin.activityresult.AppContextActivityResultLauncher
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.Exceptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class WebDavUploadEngineModule : Module() {
   private lateinit var documentTreePicker:
@@ -159,12 +161,16 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("getFileInventoryPageAsync") Coroutine { offset: Int, filter: InventoryFilterRecord ->
-      fileInventoryManager.page(offset, filter = filter.toFilter()).toMap()
+      withContext(Dispatchers.IO) {
+        fileInventoryManager.page(offset, filter = filter.toFilter()).toMap()
+      }
     }
 
     AsyncFunction("getRemoteThumbnailAsync") Coroutine {
         sourceId: String, relativePath: String, version: String? ->
-      remoteThumbnailManager.thumbnail(sourceId, relativePath, version)
+      withContext(Dispatchers.IO) {
+        remoteThumbnailManager.thumbnail(sourceId, relativePath, version)
+      }
     }
 
     AsyncFunction("getUnresolvedFailuresAsync") {
@@ -272,13 +278,13 @@ class WebDavUploadEngineModule : Module() {
       engine.invalidate()
     }
 
-    AsyncFunction("listRemoteFoldersAsync") { pathSegments: List<String> ->
-      remoteFolderManager.list(pathSegments).map(RemoteFolder::toMap)
+    AsyncFunction("listRemoteFoldersAsync") Coroutine { pathSegments: List<String> ->
+      withContext(Dispatchers.IO) { remoteFolderManager.list(pathSegments).map(RemoteFolder::toMap) }
     }
 
-    AsyncFunction("createRemoteFolderAsync") {
+    AsyncFunction("createRemoteFolderAsync") Coroutine {
         parentPathSegments: List<String>, name: String ->
-      remoteFolderManager.create(parentPathSegments, name).toMap()
+      withContext(Dispatchers.IO) { remoteFolderManager.create(parentPathSegments, name).toMap() }
     }
 
     AsyncFunction("pickDocumentTreeAsync") Coroutine { initialUri: String? ->
@@ -291,8 +297,8 @@ class WebDavUploadEngineModule : Module() {
       }
     }
 
-    AsyncFunction("previewSourceAsync") { selection: SourceSelectionRecord ->
-      sourceDiscoveryManager.preview(selection.toSelection()).toMap()
+    AsyncFunction("previewSourceAsync") Coroutine { selection: SourceSelectionRecord ->
+      withContext(Dispatchers.IO) { sourceDiscoveryManager.preview(selection.toSelection()).toMap() }
     }
 
     AsyncFunction("commitSourceAsync") { source: SourceCommitRecord ->

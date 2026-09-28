@@ -44,6 +44,12 @@ export const sourceSummarySchema = z.object({
   enabled: z.boolean(),
   collisionPolicy: z.enum(["replace", "keep_both"]),
   lastScanAt: z.string().datetime().nullable(),
+  queue: z
+    .object({
+      pending: z.number().int().nonnegative(),
+      failed: z.number().int().nonnegative(),
+    })
+    .optional(),
 });
 
 export const queueCountsSchema = z.object({
@@ -385,6 +391,8 @@ export type EngineError = {
 };
 
 export type EngineCommandResult =
-  { ok: true } | { ok: false; error: EngineError };
+  | { ok: true }
+  | { ok: false; error: EngineError };
 export type EngineValueResult<T> =
-  { ok: true; value: T } | { ok: false; error: EngineError };
+  | { ok: true; value: T }
+  | { ok: false; error: EngineError };

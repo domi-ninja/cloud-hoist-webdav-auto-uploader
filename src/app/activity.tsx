@@ -1,6 +1,6 @@
-import { Fragment, useState } from "react";
-import { useRouter } from "expo-router";
-import { Image, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Fragment, memo, useMemo, useState } from "react";
+import { usePathname, useRouter } from "expo-router";
+import { FlatList, Image, RefreshControl, Text, View } from "react-native";
 import { Chip, Icon } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -17,7 +17,13 @@ import {
 } from "@/lib/engine-query";
 import { formatBytes, formatRelativeTime } from "@/lib/format";
 import { useNow } from "@/lib/use-now";
-import { ActionButton, IconAction, Panel, Separator } from "@/components/ui";
+import {
+  ActionButton,
+  IconAction,
+  LoadingState,
+  Panel,
+  Separator,
+} from "@/components/ui";
 import { RestoreSourcePermission } from "@/features/sources/RestoreSourcePermission";
 import { engineStatus, queueSummary } from "@/lib/upload-status";
 
@@ -55,7 +61,9 @@ function transferText(entry: FileInventoryEntry, now: number) {
     case "queued":
       return "Queued";
     case "uploading":
-      return `Uploading · ${formatBytes(entry.transfer.bytesSent)} sent`;
+      return entry.transfer.bytesSent > 0
+        ? `Uploading · ${formatBytes(entry.transfer.bytesSent)} sent`
+        : "Uploading";
     case "uploaded":
       return `Uploaded ${formatRelativeTime(entry.transfer.uploadedAt, now)}`;
     case "failed":
@@ -66,6 +74,7 @@ function transferText(entry: FileInventoryEntry, now: number) {
 }
 
 function FileThumbnail({ entry }: { entry: FileInventoryEntry }) {
+  const [failedUri, setFailedUri] = useState<string>();
   const image = entry.mimeType?.startsWith("image/") ?? false;
   const remoteThumbnail = useRemoteThumbnail(
     entry.sourceId,
@@ -77,11 +86,13 @@ function FileThumbnail({ entry }: { entry: FileInventoryEntry }) {
 
   return (
     <View className="h-20 w-20 shrink-0 items-center justify-center bg-canvas-light dark:bg-canvas-dark">
-      {image && uri ? (
+      {image && uri && failedUri !== uri ? (
         <Image
-          accessibilityLabel={`Thumbnail for ${entry.fileName}`}
+          accessible={false}
           className="h-20 w-20"
           resizeMode="cover"
+          resizeMethod="resize"
+          onError={() => setFailedUri(uri)}
           source={{ uri }}
         />
       ) : (
@@ -99,12 +110,22 @@ function FileThumbnail({ entry }: { entry: FileInventoryEntry }) {
   );
 }
 
-function FileRow({ entry, now }: { entry: FileInventoryEntry; now: number }) {
+const FileRow = memo(function FileRow({
+  entry,
+  now,
+}: {
+  entry: FileInventoryEntry;
+  now: number;
+}) {
   const transfer = transferText(entry, now);
   return (
-    <View className="flex-row gap-2">
+    <View
+      accessible
+      accessibilityLabel={`${entry.fileName}. ${presenceText[entry.presence]}. ${entry.sourceName}. ${transfer ?? ""}`}
+      className="flex-row gap-2 rounded-lg bg-panel-light p-2 dark:bg-panel-dark"
+    >
       <FileThumbnail entry={entry} />
-      <View className="shrink gap-2">
+      <View className="flex-1 gap-2">
         <Text
           accessibilityLabel={entry.fileName}
           className="text-base font-semibold text-ink-light dark:text-ink-dark"
@@ -123,26 +144,38 @@ function FileRow({ entry, now }: { entry: FileInventoryEntry; now: number }) {
       </View>
     </View>
   );
-}
+});
 
 export default function ActivityScreen() {
   const router = useRouter();
+  const focused = usePathname() === "/activity";
   const snapshot = useEngineSnapshot();
-  const failures = useUnresolvedFailures();
+  const failures = useUnresolvedFailures(focused);
   const [statusFilter, setStatusFilter] =
     useState<FileInventoryFilter["status"]>("all");
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filtered = statusFilter !== "all" || sourceFilter !== null;
-  const inventory = useFileInventoryPages({
-    sourceId: sourceFilter,
-    status: statusFilter,
-  });
+  const activeSourceFilter = snapshot.data?.sources.some(
+    (source) => source.id === sourceFilter,
+  )
+    ? sourceFilter
+    : null;
+  const inventory = useFileInventoryPages(
+    {
+      sourceId: activeSourceFilter,
+      status: statusFilter,
+    },
+    focused && snapshot.data?.account.status === "connected",
+  );
   const [errorMessage, setErrorMessage] = useState<string>();
   const [refreshing, setRefreshing] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const now = useNow();
-  const allItems = inventory.data?.pages.flatMap((page) => page.items) ?? [];
+  const allItems = useMemo(
+    () => inventory.data?.pages.flatMap((page) => page.items) ?? [],
+    [inventory.data],
+  );
   const inventoryErrors = inventory.data?.pages[0]?.errors ?? [];
   const hasFailures = Boolean(failures.data?.length);
   const failureDetails = failures.data?.filter(
@@ -155,232 +188,288 @@ export default function ActivityScreen() {
   const retryFailed = async () => {
     setRetrying(true);
     setErrorMessage(undefined);
-    const result = await webDavUploadEngine.retryFailed();
-    if (!result.ok) setErrorMessage(result.error.message);
-    await Promise.all([
-      failures.refetch(),
-      snapshot.refetch(),
-      inventory.refetch(),
-    ]);
-    setRetrying(false);
+    try {
+      const result = await webDavUploadEngine.retryFailed();
+      if (!result.ok) setErrorMessage(result.error.message);
+      await Promise.all([
+        failures.refetch(),
+        snapshot.refetch(),
+        inventory.refetch(),
+      ]);
+    } catch {
+      setErrorMessage("Could not retry uploads. Please try again.");
+    } finally {
+      setRetrying(false);
+    }
   };
 
   const refresh = async () => {
     setRefreshing(true);
     setErrorMessage(undefined);
-    const scan = await webDavUploadEngine.scanNow();
-    if (!scan.ok) setErrorMessage(scan.error.message);
-    await Promise.all([
-      snapshot.refetch(),
-      inventory.refetch(),
-      failures.refetch(),
-    ]);
-    setRefreshing(false);
+    try {
+      if (snapshot.data?.account.status === "connected") {
+        const scan = await webDavUploadEngine.scanNow();
+        if (!scan.ok) setErrorMessage(scan.error.message);
+      }
+      await Promise.all([
+        snapshot.refetch(),
+        ...(snapshot.data?.account.status === "connected"
+          ? [inventory.refetch()]
+          : []),
+        failures.refetch(),
+      ]);
+    } catch {
+      setErrorMessage("Could not refresh files. Please try again.");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
-      <ScrollView
+    <SafeAreaView
+      edges={["top", "left", "right"]}
+      className="flex-1 bg-canvas-light dark:bg-canvas-dark"
+    >
+      <FlatList
         className="flex-1"
         contentContainerClassName="gap-2 p-2"
+        data={allItems}
+        keyExtractor={(entry) => entry.id}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        renderItem={({ item }) => <FileRow entry={item} now={now} />}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => void refresh()}
           />
         }
-      >
-        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-          Activity
-        </Text>
-        {snapshot.data ? (
-          <Panel>
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              {engineStatus(snapshot.data, now)}
-            </Text>
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              {queueSummary(snapshot.data)}
-            </Text>
-          </Panel>
-        ) : null}
-        {snapshot.isLoading || inventory.isLoading ? (
-          <Text
-            accessibilityLiveRegion="polite"
-            className="text-base text-muted-light dark:text-muted-dark"
-          >
-            Loading files…
-          </Text>
-        ) : null}
-        {snapshot.error || inventory.error || errorMessage ? (
-          <Text
-            accessibilityLiveRegion="polite"
-            className="text-base text-red-700 dark:text-red-300"
-          >
-            {errorMessage ?? "The file inventory could not be loaded."}
-          </Text>
-        ) : null}
-        {snapshot.data?.blockers.length || hasFailures ? (
+        ListHeaderComponent={
           <View className="gap-2">
-            <View className="flex-row flex-wrap items-center justify-between gap-2">
-              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                Needs attention
+            <Text
+              accessibilityRole="header"
+              className="text-base font-semibold text-ink-light dark:text-ink-dark"
+            >
+              Activity
+            </Text>
+            {snapshot.data ? (
+              <Panel>
+                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                  {engineStatus(snapshot.data, now)}
+                </Text>
+                {Object.values(snapshot.data.queue).some(
+                  (count) => count > 0,
+                ) ? (
+                  <Text className="text-base text-muted-light dark:text-muted-dark">
+                    {queueSummary(snapshot.data)}
+                  </Text>
+                ) : null}
+              </Panel>
+            ) : null}
+            {snapshot.isLoading || inventory.isLoading ? (
+              <Text
+                accessibilityLiveRegion="polite"
+                className="text-base text-muted-light dark:text-muted-dark"
+              >
+                Loading files…
               </Text>
-              {hasFailures ? (
+            ) : null}
+            {snapshot.error || inventory.error || errorMessage ? (
+              <Text
+                accessibilityLiveRegion="polite"
+                className="text-base text-red-700 dark:text-red-300"
+              >
+                {errorMessage ?? "The file inventory could not be loaded."}
+              </Text>
+            ) : null}
+            {snapshot.data?.blockers.length || hasFailures ? (
+              <View className="gap-2">
+                <View className="flex-row flex-wrap items-center justify-between gap-2">
+                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                    Needs attention
+                  </Text>
+                  {hasFailures ? (
+                    <IconAction
+                      icon="reload"
+                      disabled={retrying}
+                      label={retrying ? "Retrying…" : "Retry failed"}
+                      onPress={() => void retryFailed()}
+                      tone="primary"
+                    />
+                  ) : null}
+                </View>
+                <Panel>
+                  {snapshot.data?.blockers.map((blocker, index) => {
+                    const source =
+                      blocker.kind === "permission"
+                        ? snapshot.data.sources.find(
+                            (item) => item.id === blocker.sourceId,
+                          )
+                        : undefined;
+                    return (
+                      <Fragment key={`${blocker.kind}-${index}`}>
+                        {index ? <Separator /> : null}
+                        <View className="gap-2">
+                          <Text className="text-base text-ink-light dark:text-ink-dark">
+                            {blockerText(blocker, now)}
+                          </Text>
+                          {blocker.kind === "account" ? (
+                            <ActionButton
+                              label="Open account settings"
+                              onPress={() =>
+                                router.navigate({
+                                  pathname: "/settings",
+                                  params: { account: "open" },
+                                })
+                              }
+                              tone="primary"
+                            />
+                          ) : blocker.kind === "permission" && source ? (
+                            <RestoreSourcePermission
+                              blocker={blocker}
+                              source={source}
+                            />
+                          ) : null}
+                        </View>
+                      </Fragment>
+                    );
+                  })}
+                  {failureDetails?.slice(0, 10).map((failure, index) => (
+                    <Fragment key={failure.id}>
+                      {index || snapshot.data?.blockers.length ? (
+                        <Separator />
+                      ) : null}
+                      <Text className="text-base text-ink-light dark:text-ink-dark">
+                        {failure.message}
+                      </Text>
+                    </Fragment>
+                  ))}
+                  {failureDetails && failureDetails.length > 10 ? (
+                    <Text className="text-base text-muted-light dark:text-muted-dark">
+                      {failureDetails.length - 10} more failures. Use the Failed
+                      filter to browse affected files.
+                    </Text>
+                  ) : null}
+                </Panel>
+              </View>
+            ) : null}
+            {inventoryErrors.map((error) => (
+              <Text
+                accessibilityLiveRegion="polite"
+                className="text-base text-red-700 dark:text-red-300"
+                key={error.sourceId}
+              >
+                Nextcloud files for{" "}
+                {snapshot.data?.sources.find(
+                  (source) => source.id === error.sourceId,
+                )?.name ?? "this source"}{" "}
+                could not be loaded. {error.message} Local files are still
+                shown.
+              </Text>
+            ))}
+            <View className="gap-2">
+              <View className="flex-row items-center justify-between gap-2">
+                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                  Files
+                </Text>
                 <IconAction
-                  icon="reload"
-                  disabled={retrying}
-                  label={retrying ? "Retrying…" : "Retry failed"}
-                  onPress={() => void retryFailed()}
-                  tone="primary"
+                  icon={filtered ? "filter-check" : "filter-variant"}
+                  label={
+                    filtersOpen
+                      ? "Hide file filters"
+                      : filtered
+                        ? "Show file filters, filters active"
+                        : "Show file filters"
+                  }
+                  accessibilityState={{ expanded: filtersOpen }}
+                  tone={filtered ? "secondary" : "quiet"}
+                  onPress={() => setFiltersOpen(!filtersOpen)}
+                />
+              </View>
+              {filtersOpen ? (
+                <>
+                  <View className="flex-row flex-wrap gap-2">
+                    {(["all", "pending", "failed", "uploaded"] as const).map(
+                      (status) => (
+                        <Chip
+                          accessibilityLabel={`Filter files: ${status}`}
+                          accessibilityState={{
+                            selected: statusFilter === status,
+                          }}
+                          key={status}
+                          onPress={() => setStatusFilter(status)}
+                          selected={statusFilter === status}
+                          textStyle={{ fontSize: 16, marginVertical: 14 }}
+                        >
+                          {status === "all"
+                            ? "All"
+                            : status[0].toUpperCase() + status.slice(1)}
+                        </Chip>
+                      ),
+                    )}
+                  </View>
+                  {snapshot.data && snapshot.data.sources.length > 1 ? (
+                    <View className="flex-row flex-wrap gap-2">
+                      <ActionButton
+                        accessibilityState={{ selected: sourceFilter === null }}
+                        label="All backup folders"
+                        onPress={() => setSourceFilter(null)}
+                        tone={sourceFilter === null ? "secondary" : "quiet"}
+                      />
+                      {snapshot.data.sources.map((source) => (
+                        <ActionButton
+                          accessibilityState={{
+                            selected: sourceFilter === source.id,
+                          }}
+                          key={source.id}
+                          label={source.name}
+                          onPress={() => setSourceFilter(source.id)}
+                          tone={
+                            sourceFilter === source.id ? "secondary" : "quiet"
+                          }
+                        />
+                      ))}
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+              {filtered ? (
+                <ActionButton
+                  icon="filter-remove-outline"
+                  label="Clear filters"
+                  onPress={() => {
+                    setStatusFilter("all");
+                    setSourceFilter(null);
+                  }}
                 />
               ) : null}
             </View>
-            <Panel>
-              {snapshot.data?.blockers.map((blocker, index) => {
-                const source =
-                  blocker.kind === "permission"
-                    ? snapshot.data.sources.find(
-                        (item) => item.id === blocker.sourceId,
-                      )
-                    : undefined;
-                return (
-                  <Fragment key={`${blocker.kind}-${index}`}>
-                    {index ? <Separator /> : null}
-                    <View className="gap-2">
-                      <Text className="text-base text-ink-light dark:text-ink-dark">
-                        {blockerText(blocker, now)}
-                      </Text>
-                      {blocker.kind === "account" ? (
-                        <ActionButton
-                          label="Open account settings"
-                          onPress={() =>
-                            router.navigate({
-                              pathname: "/settings",
-                              params: { account: "open" },
-                            })
-                          }
-                          tone="primary"
-                        />
-                      ) : blocker.kind === "permission" && source ? (
-                        <RestoreSourcePermission
-                          blocker={blocker}
-                          source={source}
-                        />
-                      ) : null}
-                    </View>
-                  </Fragment>
-                );
-              })}
-              {failureDetails?.map((failure, index) => (
-                <Fragment key={failure.id}>
-                  {index || snapshot.data?.blockers.length ? (
-                    <Separator />
-                  ) : null}
-                  <Text className="text-base text-ink-light dark:text-ink-dark">
-                    {failure.message}
-                  </Text>
-                </Fragment>
-              ))}
-            </Panel>
           </View>
-        ) : null}
-        {inventoryErrors.map((error) => (
-          <Text
-            accessibilityLiveRegion="polite"
-            className="text-base text-red-700 dark:text-red-300"
-            key={error.sourceId}
-          >
-            Nextcloud files for{" "}
-            {snapshot.data?.sources.find(
-              (source) => source.id === error.sourceId,
-            )?.name ?? "this source"}{" "}
-            could not be loaded. {error.message} Local files are still shown.
-          </Text>
-        ))}
-        <View className="gap-2">
-          <View className="flex-row items-center justify-between gap-2">
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Files
+        }
+        ListEmptyComponent={
+          !inventory.isLoading ? (
+            <Text className="text-base text-muted-light dark:text-muted-dark">
+              {filtered
+                ? "No matching files found."
+                : snapshot.data?.sources.length
+                  ? "No files yet."
+                  : "Add a backup folder to see its files here."}
             </Text>
-            <IconAction
-              icon={filtered ? "filter-check" : "filter-variant"}
-              label={
-                filtersOpen
-                  ? "Hide file filters"
-                  : filtered
-                    ? "Show file filters, filters active"
-                    : "Show file filters"
-              }
-              accessibilityState={{ expanded: filtersOpen }}
-              tone={filtered ? "secondary" : "quiet"}
-              onPress={() => setFiltersOpen(!filtersOpen)}
+          ) : (
+            <LoadingState label="Loading files…" />
+          )
+        }
+        ListFooterComponent={
+          inventory.hasNextPage ? (
+            <ActionButton
+              disabled={inventory.isFetchingNextPage}
+              label={inventory.isFetchingNextPage ? "Loading…" : "Show 20 more"}
+              onPress={() => void inventory.fetchNextPage()}
             />
-          </View>
-          {filtersOpen ? (
-            <>
-              <View className="flex-row flex-wrap gap-2">
-                {(["all", "pending", "failed", "uploaded"] as const).map(
-                  (status) => (
-                    <Chip
-                      accessibilityState={{ selected: statusFilter === status }}
-                      key={status}
-                      onPress={() => setStatusFilter(status)}
-                      selected={statusFilter === status}
-                      textStyle={{ fontSize: 16, marginVertical: 14 }}
-                    >
-                      {status === "all"
-                        ? "All"
-                        : status[0].toUpperCase() + status.slice(1)}
-                    </Chip>
-                  ),
-                )}
-              </View>
-              {snapshot.data && snapshot.data.sources.length > 1 ? (
-                <View className="flex-row flex-wrap gap-2">
-                  <ActionButton
-                    accessibilityState={{ selected: sourceFilter === null }}
-                    label="All sources"
-                    onPress={() => setSourceFilter(null)}
-                    tone={sourceFilter === null ? "secondary" : "quiet"}
-                  />
-                  {snapshot.data.sources.map((source) => (
-                    <ActionButton
-                      accessibilityState={{
-                        selected: sourceFilter === source.id,
-                      }}
-                      key={source.id}
-                      label={source.name}
-                      onPress={() => setSourceFilter(source.id)}
-                      tone={sourceFilter === source.id ? "secondary" : "quiet"}
-                    />
-                  ))}
-                </View>
-              ) : null}
-            </>
-          ) : null}
-        </View>
-        {allItems.length ? (
-          <Panel>
-            {allItems.map((entry, index) => (
-              <Fragment key={entry.id}>
-                {index ? <Separator /> : null}
-                <FileRow entry={entry} now={now} />
-              </Fragment>
-            ))}
-          </Panel>
-        ) : !inventory.isLoading ? (
-          <Text className="text-base text-muted-light dark:text-muted-dark">
-            {filtered ? "No matching files found." : "No files yet."}
-          </Text>
-        ) : null}
-        {inventory.hasNextPage ? (
-          <ActionButton
-            disabled={inventory.isFetchingNextPage}
-            label={inventory.isFetchingNextPage ? "Loading…" : "Show 20 more"}
-            onPress={() => void inventory.fetchNextPage()}
-          />
-        ) : null}
-      </ScrollView>
+          ) : null
+        }
+      />
     </SafeAreaView>
   );
 }

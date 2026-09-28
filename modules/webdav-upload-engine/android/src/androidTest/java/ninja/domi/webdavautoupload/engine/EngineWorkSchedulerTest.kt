@@ -3,6 +3,8 @@ package ninja.domi.webdavautoupload.engine
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.app.ForegroundServiceStartNotAllowedException
+import android.os.Build
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.work.NetworkType
@@ -12,6 +14,9 @@ import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThrows
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -108,6 +113,18 @@ class EngineWorkSchedulerTest {
 
     assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC, info.foregroundServiceType)
     assertEquals("Pause", info.notification.actions.single().title)
+  }
+
+  @Test
+  fun deniedForegroundPromotionFallsBackButDoesNotHideOtherFailures() {
+    assumeTrue(Build.VERSION.SDK_INT >= 31)
+    assertFalse(promoteUploadWorker {
+      throw java.util.concurrent.ExecutionException(ForegroundServiceStartNotAllowedException("background"))
+    })
+    assertTrue(promoteUploadWorker {})
+    assertThrows(IllegalStateException::class.java) {
+      promoteUploadWorker { error("unexpected failure") }
+    }
   }
 
   @Test

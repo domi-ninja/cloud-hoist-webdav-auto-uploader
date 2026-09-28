@@ -72,6 +72,16 @@ class EngineWorkScheduler(
     )
   }
 
+  /** A successful bounded batch is continuation, not an exponentially backed-off failure. */
+  fun continueQueueDrain() {
+    if (preferences.isPaused()) return
+    workManager.enqueueUniqueWork(
+      QUEUE_DRAIN_WORK,
+      ExistingWorkPolicy.APPEND_OR_REPLACE,
+      queueDrainRequest(preferences.constraints()),
+    )
+  }
+
   fun updateDrainConstraints(constraints: TransferConstraints) {
     preferences.setConstraints(constraints)
     val current = workManager.getWorkInfosForUniqueWork(QUEUE_DRAIN_WORK).get()

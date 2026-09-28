@@ -1,12 +1,26 @@
 import { useState } from "react";
-import { Alert, Modal, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
   type AccountSummary,
   type EngineError,
 } from "../../../modules/webdav-upload-engine";
-import { ActionButton, IconAction, Panel, Separator } from "@/components/ui";
+import {
+  ActionButton,
+  FormField,
+  IconAction,
+  Panel,
+  Separator,
+} from "@/components/ui";
 import { formatRelativeTime } from "@/lib/format";
 import { useStoredAccountVerification } from "@/lib/engine-query";
 import { useNow } from "@/lib/use-now";
@@ -47,6 +61,7 @@ export function AccountSettingsModal({
   const canSave = canSaveAccountSettings(account, value) && !busy;
 
   const close = () => {
+    if (busy) return;
     if (!changed) {
       onClose();
       return;
@@ -66,7 +81,6 @@ export function AccountSettingsModal({
     setBusy(true);
     setError(undefined);
     const password = appPassword;
-    setAppPassword("");
     const result = await webDavUploadEngine.replaceManualAccount({
       serverUrl,
       username,
@@ -77,6 +91,7 @@ export function AccountSettingsModal({
       setError(result.error);
       return;
     }
+    setAppPassword("");
     onClose();
   };
 
@@ -84,7 +99,7 @@ export function AccountSettingsModal({
     if (!canSave) return;
     Alert.alert(
       "Replace connected account?",
-      "The app will verify these credentials first. Existing sources and queued uploads will then use the replacement account.",
+      "The app will verify these credentials first. Existing backup folders and queued uploads will then use the replacement account.",
       [
         { text: "Cancel", style: "cancel" },
         { text: "Replace account", onPress: () => void replaceAccount() },
@@ -95,7 +110,7 @@ export function AccountSettingsModal({
   const signOut = () => {
     Alert.alert(
       "Sign out and remove local data?",
-      "This removes the account, sources, queue, and local history. Local files and files already uploaded to Nextcloud stay untouched.",
+      "This removes the account, backup folders, queue, and local history. Local files and files already uploaded to Nextcloud stay untouched.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -133,125 +148,128 @@ export function AccountSettingsModal({
             label="Cancel"
             onPress={close}
           />
-          <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
+          <Text
+            accessibilityRole="header"
+            className="shrink text-base font-semibold text-ink-light dark:text-ink-dark"
+          >
             Account settings
           </Text>
           <IconAction
             icon="check"
             label={busy ? "Saving…" : "Save account settings"}
             disabled={!canSave}
+            loading={busy}
             onPress={save}
           />
         </View>
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="gap-2 p-2"
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <Panel>
-            <View className="flex-row items-center gap-2">
-              <InstanceIcon serverUrl={account.serverUrl} />
-              <View className="shrink gap-2">
-                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                  {account.displayName}
-                </Text>
-                <Text className="text-base text-muted-light dark:text-muted-dark">
-                  {nextcloudInstanceLabel(account.serverUrl)}
-                </Text>
+          <ScrollView
+            className="flex-1"
+            contentContainerClassName="gap-2 p-2"
+            keyboardShouldPersistTaps="handled"
+          >
+            <Panel>
+              <View className="flex-row items-center gap-2">
+                <InstanceIcon serverUrl={account.serverUrl} />
+                <View className="shrink gap-2">
+                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                    {account.displayName}
+                  </Text>
+                  <Text className="text-base text-muted-light dark:text-muted-dark">
+                    {nextcloudInstanceLabel(account.serverUrl)}
+                  </Text>
+                </View>
               </View>
-            </View>
-            <Separator />
-            {verification.isFetching ? (
-              <Text className="text-base text-muted-light dark:text-muted-dark">
-                Checking account…
-              </Text>
-            ) : verification.error ? (
-              <>
-                <Text className="text-base text-red-700 dark:text-red-300">
-                  {verification.error.message}
+              <Separator />
+              {verification.isFetching ? (
+                <Text className="text-base text-muted-light dark:text-muted-dark">
+                  Checking account…
                 </Text>
-                <ActionButton
-                  label="Retry account check"
-                  onPress={() => void verification.refetch()}
-                  tone="primary"
-                />
-              </>
-            ) : (
-              <Text className="text-base text-muted-light dark:text-muted-dark">
-                Last checked{" "}
-                {formatRelativeTime(
-                  verification.data?.checkedAt ?? account.checkedAt,
-                  now,
-                )}
+              ) : verification.error ? (
+                <>
+                  <Text className="text-base text-red-700 dark:text-red-300">
+                    {verification.error.message}
+                  </Text>
+                  <ActionButton
+                    label="Retry account check"
+                    onPress={() => void verification.refetch()}
+                    tone="primary"
+                  />
+                </>
+              ) : (
+                <Text className="text-base text-muted-light dark:text-muted-dark">
+                  Last checked{" "}
+                  {formatRelativeTime(
+                    verification.data?.checkedAt ?? account.checkedAt,
+                    now,
+                  )}
+                </Text>
+              )}
+            </Panel>
+            <Panel>
+              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                Replace connection
               </Text>
-            )}
-          </Panel>
-          <Panel>
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Replace connection
-            </Text>
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              Enter all three values to move the existing sources to another
-              account.
-            </Text>
-            <TextInput
-              accessibilityLabel="Nextcloud server URL"
-              autoCapitalize="none"
-              autoCorrect={false}
-              className="border border-muted-light p-2 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
-              editable={!busy}
-              onChangeText={setServerUrl}
-              placeholder="https://cloud.example.com"
-              placeholderTextColor="#737373"
-              value={serverUrl}
+              <Text className="text-base text-muted-light dark:text-muted-dark">
+                Enter all three values to move the existing backup folders to
+                another account.
+              </Text>
+              <FormField
+                label="Nextcloud server URL"
+                keyboardType="url"
+                accessibilityLabel="Nextcloud server URL"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!busy}
+                onChangeText={setServerUrl}
+                placeholder="https://cloud.example.com"
+                value={serverUrl}
+              />
+              <FormField
+                label="Nextcloud username"
+                autoComplete="username"
+                accessibilityLabel="Nextcloud username"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!busy}
+                onChangeText={setUsername}
+                placeholder="Username"
+                value={username}
+              />
+              <FormField
+                label="Nextcloud app password"
+                autoComplete="current-password"
+                accessibilityLabel="Nextcloud app password"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!busy}
+                onChangeText={setAppPassword}
+                placeholder="App password required to save"
+                secureTextEntry
+                value={appPassword}
+              />
+            </Panel>
+            {error ? (
+              <Text
+                accessibilityLiveRegion="polite"
+                className="text-base text-red-700 dark:text-red-300"
+              >
+                {error.message}
+              </Text>
+            ) : null}
+            <ActionButton
+              icon="logout"
+              accessibilityLabel="Sign out and remove local data"
+              disabled={busy}
+              label="Sign out and remove local data"
+              onPress={signOut}
+              tone="danger"
             />
-            <TextInput
-              accessibilityLabel="Nextcloud username"
-              autoCapitalize="none"
-              autoCorrect={false}
-              className="border border-muted-light p-2 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
-              editable={!busy}
-              onChangeText={setUsername}
-              placeholder="Username"
-              placeholderTextColor="#737373"
-              value={username}
-            />
-            <TextInput
-              accessibilityLabel="Nextcloud app password"
-              autoCapitalize="none"
-              autoCorrect={false}
-              className="border border-muted-light p-2 text-base text-ink-light dark:border-muted-dark dark:text-ink-dark"
-              editable={!busy}
-              onChangeText={setAppPassword}
-              placeholder="App password required to save"
-              placeholderTextColor="#737373"
-              secureTextEntry
-              value={appPassword}
-            />
-          </Panel>
-          {error ? (
-            <Text
-              accessibilityLiveRegion="polite"
-              className="text-base text-red-700 dark:text-red-300"
-            >
-              {error.message}
-            </Text>
-          ) : null}
-          <ActionButton
-            accessibilityLabel="Save account settings at bottom"
-            disabled={!canSave}
-            label={busy ? "Saving…" : "Save"}
-            onPress={save}
-            tone="primary"
-          />
-          <ActionButton
-            accessibilityLabel="Sign out and remove local data"
-            disabled={busy}
-            label="Sign out and remove local data"
-            onPress={signOut}
-            tone="danger"
-          />
-        </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </Modal>
   );

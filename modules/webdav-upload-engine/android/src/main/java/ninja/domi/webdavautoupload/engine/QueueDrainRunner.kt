@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 data class QueueDrainResult(
   val completedJobs: Int,
   val retryWorker: Boolean,
+  val continueImmediately: Boolean = false,
 )
 
 data class TransferProgress(
@@ -17,7 +18,7 @@ data class TransferProgress(
   val totalBytes: Long,
 )
 
-/** Claims and uploads a small batch. Room owns every state transition before this returns. */
+/** Drains a bounded batch; Room owns every state transition before this returns. */
 class QueueDrainRunner(
   private val dao: EngineDao,
   private val accountRepository: AccountRepository,
@@ -146,14 +147,16 @@ class QueueDrainRunner(
 
     return QueueDrainResult(
       completedJobs = completed,
-      retryWorker = dao.eligibleJobCount(now()) > 0,
+      retryWorker = dao.pendingWorkCount() > 0,
+      continueImmediately = dao.eligibleJobCount(now()) > 0,
     )
   }
 
   companion object {
     private val ABANDONED_AFTER_MILLIS = TimeUnit.MINUTES.toMillis(20)
-    private const val DEFAULT_MAX_JOBS = 3
+    private const val DEFAULT_MAX_JOBS = 500
     private val DEFAULT_MAX_RUN_MILLIS = TimeUnit.MINUTES.toMillis(8)
+    private val PROCESS_CLAIM_PREFIX = "${UUID.randomUUID()}:"
 
     fun create(
       context: Context,
@@ -162,6 +165,8 @@ class QueueDrainRunner(
     ): QueueDrainRunner {
       val appContext = context.applicationContext
       val dao = EngineRoomDatabase.open(appContext).engineDao()
+      // A claim owned by another process cannot still have a live uploader in this app.
+      dao.recoverForeignProcessClaims("$PROCESS_CLAIM_PREFIX%")
       val contentSource = AndroidLocalContentSource(appContext.contentResolver)
       val preferences = EnginePreferences(appContext)
       val blockerNotification = BlockerNotification(appContext)
@@ -169,6 +174,7 @@ class QueueDrainRunner(
       return QueueDrainRunner(
         dao = dao,
         accountRepository = AndroidAccountRepository(appContext, dao),
+        newId = { "$PROCESS_CLAIM_PREFIX${UUID.randomUUID()}" },
         davClient = NextcloudUploadClient(contentSource),
         chunkedDavClient = NextcloudChunkUploadClient(
           checkpoints = RoomChunkCheckpointStore(dao),

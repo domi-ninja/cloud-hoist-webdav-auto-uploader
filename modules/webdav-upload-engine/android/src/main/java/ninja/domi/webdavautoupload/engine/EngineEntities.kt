@@ -6,6 +6,8 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+data class SourceQueueCounts(val sourceId: String, val pending: Int, val failed: Int)
+
 @Entity(tableName = "accounts")
 data class AccountEntity(
   @PrimaryKey val id: String,

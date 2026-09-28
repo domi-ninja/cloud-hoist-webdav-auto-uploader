@@ -1,182 +1,230 @@
-import { Fragment, useCallback, useEffect, useState } from "react";
-import { Text, View } from "react-native";
-import { TextInput } from "react-native-paper";
+import { useEffect, useRef, useState } from "react";
+import {
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Text,
+  View,
+} from "react-native";
+import { List } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
-  type EngineError,
   type RemoteFolder,
 } from "../../../modules/webdav-upload-engine";
-import { ActionButton, IconAction, Panel, Separator } from "@/components/ui";
+import {
+  ActionButton,
+  ErrorNotice,
+  FormField,
+  IconAction,
+  LoadingState,
+  Separator,
+} from "@/components/ui";
 
 type RemoteFolderPickerProps = {
   initialPathSegments?: string[];
   onSelect: (pathSegments: string[]) => void;
+  onClose: () => void;
   title?: string;
 };
-
-function displayPath(pathSegments: string[]) {
-  return pathSegments.length ? `/${pathSegments.join("/")}` : "/";
-}
 
 export function RemoteFolderPicker({
   initialPathSegments = [],
   onSelect,
+  onClose,
   title = "Choose upload destination",
 }: RemoteFolderPickerProps) {
-  const [pathSegments, setPathSegments] =
-    useState<string[]>(initialPathSegments);
+  const [pathSegments, setPathSegments] = useState(initialPathSegments);
   const [folders, setFolders] = useState<RemoteFolder[]>([]);
   const [newFolderName, setNewFolderName] = useState("");
+  const [addingFolder, setAddingFolder] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [error, setError] = useState<EngineError>();
-
-  const loadFolders = useCallback(async () => {
-    setLoading(true);
-    setError(undefined);
-    const result = await webDavUploadEngine.listRemoteFolders(pathSegments);
-    setLoading(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
-    setFolders(result.value);
-  }, [pathSegments]);
+  const [error, setError] = useState<string>();
+  const [reload, setReload] = useState(0);
+  const request = useRef(0);
 
   useEffect(() => {
-    let active = true;
-    void webDavUploadEngine.listRemoteFolders(pathSegments).then((result) => {
-      if (!active) return;
-      setLoading(false);
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      setFolders(result.value);
-    });
+    const id = ++request.current;
+    void webDavUploadEngine
+      .listRemoteFolders(pathSegments)
+      .then((result) => {
+        if (request.current !== id) return;
+        if (result.ok) setFolders(result.value);
+        else setError(result.error.message);
+      })
+      .catch(() => {
+        if (request.current === id)
+          setError(
+            "Folders could not be loaded. Check your connection and retry.",
+          );
+      })
+      .finally(() => {
+        if (request.current === id) setLoading(false);
+      });
     return () => {
-      active = false;
+      request.current += 1;
     };
-  }, [pathSegments]);
+  }, [pathSegments, reload]);
 
-  const openPath = (nextPath: string[]) => {
+  const refresh = () => {
     setLoading(true);
     setError(undefined);
-    setPathSegments(nextPath);
+    setReload((value) => value + 1);
   };
-
+  const openPath = (path: string[]) => {
+    setLoading(true);
+    setError(undefined);
+    setFolders([]);
+    setPathSegments(path);
+  };
   const createFolder = async () => {
     const name = newFolderName.trim();
-    if (!name) {
-      setError({ code: "dav_invalid_path", message: "Enter a folder name." });
-      return;
-    }
+    if (!name || creating) return;
     setCreating(true);
     setError(undefined);
-    const result = await webDavUploadEngine.createRemoteFolder(
-      pathSegments,
-      name,
-    );
-    setCreating(false);
-    if (!result.ok) {
-      setError(result.error);
-      return;
+    try {
+      const result = await webDavUploadEngine.createRemoteFolder(
+        pathSegments,
+        name,
+      );
+      if (!result.ok) {
+        setError(result.error.message);
+        return;
+      }
+      setNewFolderName("");
+      setAddingFolder(false);
+      refresh();
+    } catch {
+      setError("The folder could not be created. Please try again.");
+    } finally {
+      setCreating(false);
     }
-    setNewFolderName("");
-    await loadFolders();
   };
 
   return (
-    <Panel>
-      <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-        {title}
-      </Text>
-      <Text className="text-base text-muted-light dark:text-muted-dark">
-        {displayPath(pathSegments)}
-      </Text>
-      {pathSegments.length ? (
-        <IconAction
-          icon="arrow-up"
-          label="Up one folder"
-          onPress={() => openPath(pathSegments.slice(0, -1))}
-        />
-      ) : null}
-
-      {error ? (
-        <View className="gap-2">
-          <Text
-            accessibilityLiveRegion="polite"
-            className="text-base text-red-700 dark:text-red-300"
-          >
-            {error.message}
-          </Text>
-          <IconAction
-            icon="reload"
-            disabled={loading}
-            label="Retry"
-            onPress={() => void loadFolders()}
-            tone="primary"
-          />
-        </View>
-      ) : loading ? (
-        <Text
-          accessibilityLiveRegion="polite"
-          className="text-base text-muted-light dark:text-muted-dark"
+    <Modal
+      visible
+      animationType="slide"
+      onRequestClose={() => {
+        if (!creating) onClose();
+      }}
+    >
+      <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          Loading folders…
-        </Text>
-      ) : (
-        <View className="gap-2">
-          {folders.length ? (
-            folders.map((folder, index) => (
-              <Fragment key={folder.pathSegments.join("\0")}>
-                {index ? <Separator /> : null}
-                <ActionButton
-                  accessibilityLabel={`Open ${folder.name}`}
-                  disabled={creating}
-                  icon="folder-outline"
-                  label={folder.name}
-                  onPress={() => openPath(folder.pathSegments)}
-                />
-              </Fragment>
-            ))
-          ) : (
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              This folder is empty.
+          <View className="flex-row items-center gap-2 p-2">
+            <IconAction
+              icon="close"
+              label="Close folder browser"
+              disabled={creating}
+              onPress={onClose}
+            />
+            <Text
+              accessibilityRole="header"
+              className="flex-1 text-base font-semibold text-ink-light dark:text-ink-dark"
+            >
+              {title}
             </Text>
+            <IconAction
+              icon="folder-plus-outline"
+              label="New folder"
+              accessibilityState={{ expanded: addingFolder }}
+              disabled={loading || creating}
+              onPress={() => setAddingFolder(!addingFolder)}
+            />
+          </View>
+          <View className="gap-2 px-2 pb-2">
+            <View className="flex-row items-center gap-2">
+              <IconAction
+                icon="arrow-up"
+                label="Up one folder"
+                disabled={!pathSegments.length || creating}
+                onPress={() => openPath(pathSegments.slice(0, -1))}
+              />
+              <Text
+                selectable
+                className="flex-1 text-base text-ink-light dark:text-ink-dark"
+              >
+                /{pathSegments.join("/")}
+              </Text>
+            </View>
+            {addingFolder ? (
+              <View className="flex-row items-center gap-2">
+                <FormField
+                  label="New folder name"
+                  autoFocus
+                  autoCapitalize="none"
+                  style={{ flex: 1 }}
+                  editable={!creating}
+                  value={newFolderName}
+                  onChangeText={setNewFolderName}
+                  onSubmitEditing={() => void createFolder()}
+                  returnKeyType="done"
+                />
+                <IconAction
+                  icon="check"
+                  label="Create folder"
+                  loading={creating}
+                  disabled={creating || !newFolderName.trim()}
+                  onPress={() => void createFolder()}
+                />
+              </View>
+            ) : null}
+            {error ? <ErrorNotice message={error} onRetry={refresh} /> : null}
+            <ActionButton
+              icon="check"
+              label="Use this folder"
+              accessibilityLabel="Use current remote folder"
+              tone="primary"
+              disabled={creating || loading || Boolean(error)}
+              onPress={() => onSelect(pathSegments)}
+            />
+          </View>
+          <Separator />
+          {loading ? (
+            <View className="p-2">
+              <LoadingState label="Loading folders…" />
+            </View>
+          ) : (
+            <FlatList
+              data={folders}
+              keyboardShouldPersistTaps="handled"
+              keyExtractor={(folder) => folder.pathSegments.join("/")}
+              initialNumToRender={12}
+              windowSize={5}
+              ItemSeparatorComponent={Separator}
+              ListEmptyComponent={
+                !error ? (
+                  <Text className="p-2 text-base text-muted-light dark:text-muted-dark">
+                    No subfolders. You can use this folder.
+                  </Text>
+                ) : null
+              }
+              renderItem={({ item }) => (
+                <List.Item
+                  title={item.name}
+                  titleStyle={{ fontSize: 16 }}
+                  titleNumberOfLines={3}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open ${item.name}`}
+                  disabled={creating}
+                  onPress={() => openPath(item.pathSegments)}
+                  left={(props) => (
+                    <List.Icon {...props} icon="folder-outline" />
+                  )}
+                  right={(props) => (
+                    <List.Icon {...props} icon="chevron-right" />
+                  )}
+                />
+              )}
+            />
           )}
-        </View>
-      )}
-
-      <View className="flex-row items-center gap-2">
-        <TextInput
-          accessibilityLabel="New remote folder name"
-          dense
-          editable={!creating}
-          mode="outlined"
-          onChangeText={setNewFolderName}
-          onSubmitEditing={() => void createFolder()}
-          placeholder="New folder"
-          returnKeyType="done"
-          style={{ flex: 1, fontSize: 16 }}
-          value={newFolderName}
-        />
-        <IconAction
-          icon="folder-plus-outline"
-          disabled={creating}
-          label={creating ? "Creating…" : "Create folder"}
-          onPress={() => void createFolder()}
-          tone="secondary"
-        />
-      </View>
-
-      <ActionButton
-        accessibilityLabel="Use current remote folder"
-        disabled={creating || loading}
-        label="Use this folder"
-        onPress={() => onSelect(pathSegments)}
-        tone="primary"
-      />
-    </Panel>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </Modal>
   );
 }

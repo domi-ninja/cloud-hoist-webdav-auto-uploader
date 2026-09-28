@@ -29,9 +29,11 @@ function NativeInvalidationBridge() {
   const client = useQueryClient();
 
   useEffect(() => {
-    const subscription = webDavUploadEngine.addSnapshotInvalidatedListener(() => {
-      void client.invalidateQueries({ queryKey: engineKey });
-    });
+    const subscription = webDavUploadEngine.addSnapshotInvalidatedListener(
+      () => {
+        void client.invalidateQueries({ queryKey: engineKey });
+      },
+    );
     return () => subscription.remove();
   }, [client]);
 
@@ -64,7 +66,9 @@ export function useEngineSnapshot() {
   });
 }
 
-export function useStoredAccountVerification(account: AccountHealth | undefined) {
+export function useStoredAccountVerification(
+  account: AccountHealth | undefined,
+) {
   const accountId = account?.status === "connected" ? account.id : null;
 
   return useQuery({
@@ -101,8 +105,11 @@ export function useFileInventoryPages(
 ) {
   return useInfiniteQuery({
     queryKey: [...engineKey, "file-inventory", filter],
-    queryFn: ({ pageParam }) => webDavUploadEngine.getFileInventoryPage(pageParam, filter),
+    queryFn: ({ pageParam }) =>
+      webDavUploadEngine.getFileInventoryPage(pageParam, filter),
     enabled,
+    refetchInterval: enabled ? 15_000 : false,
+    refetchIntervalInBackground: false,
     initialPageParam: 0,
     getNextPageParam: (lastPage) => lastPage.nextOffset ?? undefined,
   });
@@ -115,7 +122,7 @@ export function useRemoteThumbnail(
   enabled: boolean,
 ) {
   return useQuery({
-    queryKey: [...engineKey, "thumbnail", sourceId, relativePath, version],
+    queryKey: ["thumbnail", sourceId, relativePath, version],
     queryFn: async () => {
       const result = await webDavUploadEngine.getRemoteThumbnail(
         sourceId,
@@ -130,8 +137,9 @@ export function useRemoteThumbnail(
   });
 }
 
-export function useUnresolvedFailures() {
+export function useUnresolvedFailures(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: [...engineKey, "failures"],
     queryFn: () => webDavUploadEngine.getUnresolvedFailures(),
   });

@@ -69,7 +69,7 @@ class NextcloudInventoryClient(
   ): List<RemoteInventoryFile> {
     val files = mutableListOf<RemoteInventoryFile>()
     val pending = ArrayDeque<List<String>>().apply { add(rootPathSegments) }
-    while (pending.isNotEmpty() && files.size < MAX_FILES) {
+    while (pending.isNotEmpty()) {
       val folder = pending.removeFirst()
       list(credential, folder).forEach { entry ->
         if (entry.collection) {
@@ -128,7 +128,6 @@ class NextcloudInventoryClient(
   }
 
   private companion object {
-    const val MAX_FILES = 2_000
     val XML_MEDIA_TYPE = "application/xml; charset=utf-8".toMediaType()
     const val INVENTORY_BODY =
       """<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/></d:prop></d:propfind>"""
@@ -185,6 +184,21 @@ class FileInventoryManager(
   private val accountRepository: AccountRepository,
   private val remoteClient: RemoteInventoryClient,
 ) {
+  private data class CachedRemote(val files: List<RemoteInventoryFile>, val loadedAt: Long)
+  private val remoteCache = mutableMapOf<List<String>, CachedRemote>()
+
+  /** Pages share one short-lived DAV listing instead of downloading the whole folder per page. */
+  @Synchronized
+  private fun remoteFiles(credential: StoredAccountCredential, source: SourceEntity): List<RemoteInventoryFile> {
+    val key = listOf(credential.account.id, credential.account.serverUrl, credential.account.davUserId, source.id) + source.remotePathSegments
+    val now = System.currentTimeMillis()
+    remoteCache.entries.removeAll { now - it.value.loadedAt >= 10_000 }
+    remoteCache[key]?.let { return it.files }
+    return remoteClient.listFiles(credential, source.remotePathSegments).also {
+      remoteCache[key] = CachedRemote(it, System.currentTimeMillis())
+    }
+  }
+
   fun page(offset: Int, pageSize: Int = PAGE_SIZE, filter: InventoryFilter = InventoryFilter()): InventoryPage {
     require(offset >= 0)
     val credential = accountRepository.credential() ?: throw AccountNotConfiguredException()
@@ -192,7 +206,7 @@ class FileInventoryManager(
     val errors = mutableListOf<InventoryError>()
     val items = dao.allSources().filter { filter.sourceId == null || it.id == filter.sourceId }.flatMap { source ->
       val remote = try {
-        remoteClient.listFiles(credential, source.remotePathSegments)
+        remoteFiles(credential, source)
       } catch (error: Exception) {
         errors += InventoryError(
           source.id,

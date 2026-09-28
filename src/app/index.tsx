@@ -15,7 +15,13 @@ import {
 } from "@/features/sources/source-editor-state";
 import { useEngineSnapshot } from "@/lib/engine-query";
 import { useNow } from "@/lib/use-now";
-import { ActionButton, IconAction, Panel } from "@/components/ui";
+import {
+  ActionButton,
+  ErrorNotice,
+  IconAction,
+  LoadingState,
+  Panel,
+} from "@/components/ui";
 import { engineStatus, queueSummary } from "@/lib/upload-status";
 
 export default function HomeScreen() {
@@ -25,6 +31,7 @@ export default function HomeScreen() {
   const [editingSourceId, setEditingSourceId] = useState<string | "new">();
   const [pickerMode, setPickerMode] = useState<SourcePickerMode>("all");
   const [scanning, setScanning] = useState(false);
+  const [pausing, setPausing] = useState(false);
   const now = useNow();
 
   const togglePaused = async () => {
@@ -32,13 +39,21 @@ export default function HomeScreen() {
       return;
     }
 
-    const result =
-      snapshot.engine.state === "paused"
-        ? await webDavUploadEngine.resume()
-        : await webDavUploadEngine.pause();
+    setPausing(true);
+    setErrorMessage(undefined);
+    try {
+      const result =
+        snapshot.engine.state === "paused"
+          ? await webDavUploadEngine.resume()
+          : await webDavUploadEngine.pause();
 
-    if (!result.ok) {
-      setErrorMessage(result.error.message);
+      if (!result.ok) {
+        setErrorMessage(result.error.message);
+      }
+    } catch {
+      setErrorMessage("Could not change backup state. Please try again.");
+    } finally {
+      setPausing(false);
     }
   };
 
@@ -52,6 +67,8 @@ export default function HomeScreen() {
         setErrorMessage(result.error.message);
       }
       await refetch();
+    } catch {
+      setErrorMessage("Could not scan backup folders. Please try again.");
     } finally {
       setScanning(false);
     }
@@ -88,7 +105,10 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
+    <SafeAreaView
+      edges={["top", "left", "right"]}
+      className="flex-1 bg-canvas-light dark:bg-canvas-dark"
+    >
       <FlatList
         className="flex-1"
         contentContainerClassName="flex-grow p-2"
@@ -99,7 +119,10 @@ export default function HomeScreen() {
         ListHeaderComponent={
           <View className="mb-2 gap-2">
             <View className="flex-row items-center justify-between gap-2">
-              <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
+              <Text
+                accessibilityRole="header"
+                className="shrink text-base font-semibold text-ink-light dark:text-ink-dark"
+              >
                 {project.displayName}
               </Text>
               {connected ? (
@@ -121,6 +144,7 @@ export default function HomeScreen() {
                     <IconAction
                       icon="folder-search-outline"
                       disabled={scanning}
+                      loading={scanning}
                       label={scanning ? "Scanning…" : "Scan now"}
                       onPress={() => void scanNow()}
                       tone="primary"
@@ -129,7 +153,8 @@ export default function HomeScreen() {
                       icon={
                         snapshot.engine.state === "paused" ? "play" : "pause"
                       }
-                      disabled={scanning}
+                      disabled={pausing}
+                      loading={pausing}
                       label={
                         snapshot.engine.state === "paused" ? "Resume" : "Pause"
                       }
@@ -146,24 +171,23 @@ export default function HomeScreen() {
                 ) : null}
               </Panel>
             ) : (
-              <Text className="text-base text-muted-light dark:text-muted-dark">
-                Loading…
-              </Text>
+              <LoadingState label="Loading backups…" />
             )}
             {errorMessage || snapshotError ? (
-              <Text
-                accessibilityLiveRegion="polite"
-                className="text-base text-red-700 dark:text-red-300"
-              >
-                {errorMessage ?? "Native engine contract failed."}
-              </Text>
+              <ErrorNotice
+                message={errorMessage ?? "Backups could not be loaded."}
+                onRetry={() => void refetch()}
+              />
             ) : null}
             {snapshot && snapshot.account.status !== "connected" ? (
               <AccountConnection account={snapshot.account} />
             ) : null}
             {connected ? (
               <View className="gap-2">
-                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                <Text
+                  accessibilityRole="header"
+                  className="text-base font-semibold text-ink-light dark:text-ink-dark"
+                >
                   Backup folders
                 </Text>
                 <View className="flex-row flex-wrap gap-2">

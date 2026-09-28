@@ -9,7 +9,7 @@ import webDavUploadEngine, {
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
 import { RadioButton, Switch } from "react-native-paper";
-import { IconAction, Panel } from "@/components/ui";
+import { ActionButton, IconAction, LoadingState, Panel } from "@/components/ui";
 import { formatBytes } from "@/lib/format";
 import { useAppPreferences } from "@/lib/app-preferences";
 import {
@@ -69,6 +69,10 @@ export function SourceEditor({
     initialValue.collisionPolicy,
   );
   const [preview, setPreview] = useState<SourcePreview>();
+  const [previewLoading, setPreviewLoading] = useState(
+    Boolean(initialValue.selection),
+  );
+  const [previewAttempt, setPreviewAttempt] = useState(0);
   const [choosingLocal, setChoosingLocal] = useState(!initialValue.selection);
   const [choosingRemote, setChoosingRemote] = useState(false);
   const [destinationCustomized, setDestinationCustomized] = useState(
@@ -77,47 +81,60 @@ export function SourceEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
   useEffect(() => {
-    const initialSelection = initialValue.selection;
+    const initialSelection = selection;
     if (!initialSelection) return;
     let cancelled = false;
 
     const loadPreview = async () => {
-      if (initialSelection.type !== "document_tree") {
-        const currentPermission = await webDavUploadEngine.getMediaPermission();
-        if (cancelled) return;
-        if (!currentPermission.ok) {
-          setError(currentPermission.error);
-          return;
-        }
-        if (currentPermission.value.access === "denied") {
-          const requestedPermission =
-            await webDavUploadEngine.requestMediaPermission();
+      setPreviewLoading(true);
+      setError(undefined);
+      try {
+        if (initialSelection.type !== "document_tree") {
+          const currentPermission =
+            await webDavUploadEngine.getMediaPermission();
           if (cancelled) return;
-          if (!requestedPermission.ok) {
-            setError(requestedPermission.error);
+          if (!currentPermission.ok) {
+            setError(currentPermission.error);
             return;
           }
-          if (requestedPermission.value.access === "denied") {
-            setError({
-              code: "source_permission_revoked",
-              message: "Allow photo and video access to preview this backup.",
-            });
-            return;
+          if (currentPermission.value.access === "denied") {
+            const requestedPermission =
+              await webDavUploadEngine.requestMediaPermission();
+            if (cancelled) return;
+            if (!requestedPermission.ok) {
+              setError(requestedPermission.error);
+              return;
+            }
+            if (requestedPermission.value.access === "denied") {
+              setError({
+                code: "source_permission_revoked",
+                message: "Allow photo and video access to preview this backup.",
+              });
+              return;
+            }
           }
         }
-      }
 
-      const result = await webDavUploadEngine.previewSource(initialSelection);
-      if (cancelled) return;
-      if (result.ok) setPreview(result.value);
-      else setError(result.error);
+        const result = await webDavUploadEngine.previewSource(initialSelection);
+        if (cancelled) return;
+        if (result.ok) setPreview(result.value);
+        else setError(result.error);
+      } catch {
+        if (!cancelled)
+          setError({
+            code: "source_permission_revoked",
+            message: "Could not read this folder. Check access and try again.",
+          });
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
     };
 
     void loadPreview();
     return () => {
       cancelled = true;
     };
-  }, [initialValue.selection]);
+  }, [selection, previewAttempt]);
 
   const currentValue = {
     name: selection ? sourceSelectionLabel(selection) : "",
@@ -127,17 +144,18 @@ export function SourceEditor({
     collisionPolicy,
   };
   const dirty = sourceEditorValueKey(currentValue) !== initialKey;
-  const canSave = Boolean(selection) && !busy;
+  const canSave = Boolean(selection && preview) && !busy && !previewLoading;
   const previewFileName = preview?.files[0]?.fileName ?? "example.txt";
   const keepBothPreview = `${previewFileName} -> ${keepBothPreviewName(previewFileName)}`;
 
   const close = () => {
+    if (busy) return;
     if (!dirty) {
       onClose();
       return;
     }
     Alert.alert(
-      "Discard source changes?",
+      "Discard backup changes?",
       "Your unsaved changes will be lost.",
       [
         { text: "Keep editing", style: "cancel" },
@@ -150,43 +168,51 @@ export function SourceEditor({
     if (!selection || !canSave) return;
     setBusy(true);
     setError(undefined);
+    try {
+      const destination = await ensureRemoteDestination(
+        remotePathSegments,
+        webDavUploadEngine.createRemoteFolder,
+      );
+      if (!destination.ok) {
+        setBusy(false);
+        setError(destination.error);
+        return;
+      }
 
-    const destination = await ensureRemoteDestination(
-      remotePathSegments,
-      webDavUploadEngine.createRemoteFolder,
-    );
-    if (!destination.ok) {
-      setBusy(false);
-      setError(destination.error);
-      return;
-    }
-
-    const result = source
-      ? await webDavUploadEngine.addOrUpdateSource(
-          sourceInputFromEditor(source.id, {
+      const result = source
+        ? await webDavUploadEngine.addOrUpdateSource(
+            sourceInputFromEditor(source.id, {
+              name: sourceSelectionLabel(selection),
+              selection,
+              remotePathSegments: destination.value,
+              enabled,
+              collisionPolicy,
+            }),
+          )
+        : await webDavUploadEngine.commitSource({
             name: sourceSelectionLabel(selection),
             selection,
             remotePathSegments: destination.value,
-            enabled,
             collisionPolicy,
-          }),
-        )
-      : await webDavUploadEngine.commitSource({
-          name: sourceSelectionLabel(selection),
-          selection,
-          remotePathSegments: destination.value,
-          collisionPolicy,
-        });
+          });
 
-    if (!result.ok) {
+      if (!result.ok) {
+        setBusy(false);
+        setError(result.error);
+        return;
+      }
+
+      if (!source) await webDavUploadEngine.requestNotificationPermission();
       setBusy(false);
-      setError(result.error);
-      return;
+      onSaved();
+    } catch {
+      setError({
+        code: "native_failure",
+        message: "The backup folder could not be saved. Please try again.",
+      });
+    } finally {
+      setBusy(false);
     }
-
-    if (!source) await webDavUploadEngine.requestNotificationPermission();
-    setBusy(false);
-    onSaved();
   };
 
   const resetHistory = () => {
@@ -204,9 +230,15 @@ export function SourceEditor({
             void webDavUploadEngine
               .resetSourceHistory(source.id)
               .then((result) => {
-                setBusy(false);
                 if (!result.ok) setError(result.error);
-              });
+              })
+              .catch(() =>
+                setError({
+                  code: "native_failure",
+                  message: "History could not be reset. Please try again.",
+                }),
+              )
+              .finally(() => setBusy(false));
           },
         },
       ],
@@ -217,7 +249,7 @@ export function SourceEditor({
     if (!source) return;
     Alert.alert(
       `Remove ${sourceSelectionLabel(selection)}?`,
-      "This stops watching the source. Files already uploaded to Nextcloud are not deleted.",
+      "This stops backing up this folder and removes its queue and history. Files on your phone and Nextcloud are not deleted.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -225,11 +257,20 @@ export function SourceEditor({
           style: "destructive",
           onPress: () => {
             setBusy(true);
-            void webDavUploadEngine.removeSource(source.id).then((result) => {
-              setBusy(false);
-              if (!result.ok) setError(result.error);
-              else onSaved();
-            });
+            void webDavUploadEngine
+              .removeSource(source.id)
+              .then((result) => {
+                if (!result.ok) setError(result.error);
+                else onSaved();
+              })
+              .catch(() =>
+                setError({
+                  code: "native_failure",
+                  message:
+                    "The backup folder could not be removed. Please try again.",
+                }),
+              )
+              .finally(() => setBusy(false));
           },
         },
       ],
@@ -251,13 +292,17 @@ export function SourceEditor({
             label="Cancel"
             onPress={close}
           />
-          <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
+          <Text
+            accessibilityRole="header"
+            className="shrink text-base font-semibold text-ink-light dark:text-ink-dark"
+          >
             {source ? "Edit backup folder" : "Add backup folder"}
           </Text>
           <IconAction
             icon="check"
             label={busy ? "Saving…" : "Save backup folder"}
             disabled={!canSave}
+            loading={busy}
             onPress={() => void save()}
           />
         </View>
@@ -290,11 +335,22 @@ export function SourceEditor({
                     ) : null}
                   </>
                 ) : null}
+                {previewLoading ? (
+                  <LoadingState label="Checking files…" />
+                ) : null}
+                {!previewLoading && selection && !preview ? (
+                  <ActionButton
+                    icon="reload"
+                    label="Retry preview"
+                    onPress={() => setPreviewAttempt((value) => value + 1)}
+                  />
+                ) : null}
               </View>
               <IconAction
                 icon={choosingLocal ? "chevron-up" : "folder-edit-outline"}
                 disabled={busy}
-                label={choosingLocal ? "Hide choices" : "Change source"}
+                label={choosingLocal ? "Hide choices" : "Change backup folder"}
+                accessibilityState={{ expanded: choosingLocal }}
                 onPress={() => setChoosingLocal((open) => !open)}
               />
             </View>
@@ -338,12 +394,16 @@ export function SourceEditor({
                 label={
                   choosingRemote ? "Hide folder browser" : "Change destination"
                 }
+                accessibilityState={{ expanded: choosingRemote }}
                 onPress={() => setChoosingRemote((open) => !open)}
               />
             </View>
           </Panel>
           {choosingRemote ? (
             <RemoteFolderPicker
+              onClose={() => setChoosingRemote(false)}
+              title="Choose destination parent folder"
+              initialPathSegments={remoteRootPath}
               onSelect={(pathSegments) => {
                 setRemotePathSegments(
                   selection
@@ -404,7 +464,8 @@ export function SourceEditor({
                   </Text>
                 </View>
                 <Switch
-                  accessibilityLabel="Enable upload source"
+                  hitSlop={8}
+                  accessibilityLabel="Enable backup folder"
                   disabled={busy}
                   onValueChange={setEnabled}
                   value={enabled}
@@ -436,7 +497,7 @@ export function SourceEditor({
                   <IconAction
                     icon="delete-outline"
                     disabled={busy}
-                    label="Remove source"
+                    label="Remove backup folder"
                     onPress={remove}
                     tone="danger"
                   />

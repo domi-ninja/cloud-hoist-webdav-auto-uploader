@@ -1,6 +1,8 @@
 package ninja.domi.webdavautoupload.engine
 
 import android.content.Context
+import android.app.ForegroundServiceStartNotAllowedException
+import android.os.Build
 import androidx.work.ListenableWorker
 import androidx.work.Worker
 import androidx.work.WorkerParameters
@@ -73,11 +75,10 @@ class QueueDrainWorker(
 ) : Worker(context, parameters) {
   override fun doWork(): Result {
     val queueCount = EngineRoomDatabase.open(applicationContext).engineDao()
-      .eligibleJobCount(System.currentTimeMillis())
+      .pendingWorkCount()
     val notification = if (queueCount > 0) {
-      TransferNotification(applicationContext).also {
-        setForegroundAsync(it.foregroundInfo(queueCount)).get()
-      }
+      val candidate = TransferNotification(applicationContext)
+      if (promoteUploadWorker { setForegroundAsync(candidate.foregroundInfo(queueCount)).get() }) candidate else null
     } else {
       null
     }
@@ -86,6 +87,25 @@ class QueueDrainWorker(
       isStopped = { isStopped },
       onProgress = { progress -> notification?.update(progress, queueCount) },
     ).run()
-    return if (drain.retryWorker) Result.retry() else Result.success()
+    return when {
+      drain.continueImmediately -> {
+        EngineWorkScheduler(applicationContext).continueQueueDrain()
+        Result.success()
+      }
+      drain.retryWorker -> Result.retry()
+      else -> Result.success()
+    }
   }
+}
+
+/** Android may deny notification-service promotion on a background retry.
+ * The upload batch still fits the ordinary worker's time limit (eight minutes).
+ */
+internal fun promoteUploadWorker(promote: () -> Unit): Boolean = try {
+  promote()
+  true
+} catch (error: Exception) {
+  if (Build.VERSION.SDK_INT >= 31 &&
+    generateSequence(error as Throwable?) { it.cause }.any { it is ForegroundServiceStartNotAllowedException }
+  ) false else throw error
 }

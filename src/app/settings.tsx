@@ -36,9 +36,9 @@ export default function SettingsScreen() {
   const selectRemoteRoot = async (pathSegments: string[]) => {
     setSavingRoot(true);
     setRootError(undefined);
+    setChoosingRoot(false);
     try {
       await setRemoteRootPath(pathSegments);
-      setChoosingRoot(false);
     } catch {
       setRootError("The upload root could not be saved.");
     } finally {
@@ -55,12 +55,17 @@ export default function SettingsScreen() {
     if (!snapshot) return;
     setSaving(key);
     setErrorMessage(undefined);
-    const result = await webDavUploadEngine.setTransferConstraints({
-      ...snapshot.scheduler.constraints,
-      [key]: !snapshot.scheduler.constraints[key],
-    });
-    setSaving(undefined);
-    if (!result.ok) setErrorMessage(result.error.message);
+    try {
+      const result = await webDavUploadEngine.setTransferConstraints({
+        ...snapshot.scheduler.constraints,
+        [key]: !snapshot.scheduler.constraints[key],
+      });
+      if (!result.ok) setErrorMessage(result.error.message);
+    } catch {
+      setErrorMessage("Transfer rules could not be saved. Please try again.");
+    } finally {
+      setSaving(undefined);
+    }
   };
 
   const options: { key: ConstraintKey; label: string }[] = [
@@ -82,6 +87,10 @@ export default function SettingsScreen() {
         message: report.value,
         title: "WebDAV Auto Upload diagnostics",
       });
+    } catch {
+      setErrorMessage(
+        "The diagnostic report could not be shared. Please try again.",
+      );
     } finally {
       setSharing(false);
     }
@@ -99,11 +108,18 @@ export default function SettingsScreen() {
           onPress: () => {
             setClearing(true);
             setErrorMessage(undefined);
-            void webDavUploadEngine.clearCompletedHistory().then((result) => {
-              setClearing(false);
-              if (!result.ok) setErrorMessage(result.error.message);
-              else void refetch();
-            });
+            void webDavUploadEngine
+              .clearCompletedHistory()
+              .then((result) => {
+                if (!result.ok) setErrorMessage(result.error.message);
+                else void refetch();
+              })
+              .catch(() =>
+                setErrorMessage(
+                  "History could not be cleared. Please try again.",
+                ),
+              )
+              .finally(() => setClearing(false));
           },
         },
       ],
@@ -111,9 +127,19 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas-light dark:bg-canvas-dark">
-      <ScrollView className="flex-1" contentContainerClassName="gap-2 p-2">
-        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+    <SafeAreaView
+      edges={["top", "left", "right"]}
+      className="flex-1 bg-canvas-light dark:bg-canvas-dark"
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        className="flex-1"
+        contentContainerClassName="gap-2 p-2"
+      >
+        <Text
+          accessibilityRole="header"
+          className="text-base font-semibold text-ink-light dark:text-ink-dark"
+        >
           Settings
         </Text>
         {error || errorMessage ? (
@@ -157,6 +183,7 @@ export default function SettingsScreen() {
             <IconAction
               icon={choosingRoot ? "chevron-up" : "folder-edit-outline"}
               disabled={savingRoot || snapshot?.account.status !== "connected"}
+              accessibilityState={{ expanded: choosingRoot }}
               label={
                 choosingRoot ? "Hide folder browser" : "Choose upload root"
               }
@@ -179,6 +206,7 @@ export default function SettingsScreen() {
         </Panel>
         {choosingRoot ? (
           <RemoteFolderPicker
+            onClose={() => setChoosingRoot(false)}
             initialPathSegments={remoteRootPath}
             onSelect={(pathSegments) => void selectRemoteRoot(pathSegments)}
             title="Choose upload root"
@@ -202,11 +230,12 @@ export default function SettingsScreen() {
               return (
                 <Fragment key={option.key}>
                   {index ? <Separator /> : null}
-                  <View className="flex-row items-center justify-between gap-2">
+                  <View className="min-h-12 flex-row items-center justify-between gap-2">
                     <Text className="shrink text-base text-ink-light dark:text-ink-dark">
                       {option.label}
                     </Text>
                     <Switch
+                      hitSlop={8}
                       accessibilityLabel={option.label}
                       disabled={saving !== undefined}
                       onValueChange={() => void toggle(option.key)}

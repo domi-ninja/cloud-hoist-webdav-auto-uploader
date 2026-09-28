@@ -71,10 +71,19 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
   ) => {
     setBusy(true);
     setError(undefined);
-    const result = await command();
-    setBusy(false);
-    if (!result.ok) setError(result.error);
-    return result.ok;
+    try {
+      const result = await command();
+      if (!result.ok) setError(result.error);
+      return result.ok;
+    } catch {
+      setError({
+        code: "native_failure",
+        message: "Could not update this backup folder. Please try again.",
+      });
+      return false;
+    } finally {
+      setBusy(false);
+    }
   };
 
   const updateSource = (changes: Partial<SourceSummary>) =>
@@ -95,6 +104,7 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
             onPress={onEdit}
           />
           <Switch
+            hitSlop={8}
             accessibilityLabel={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
             disabled={busy}
             onValueChange={(enabled) => void updateSource({ enabled })}
@@ -105,6 +115,16 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {sourceStatus(snapshot, source, now)}
       </Text>
+      {source.queue && (source.queue.pending > 0 || source.queue.failed > 0) ? (
+        <Text className="text-base text-muted-light dark:text-muted-dark">
+          {[
+            source.queue.pending ? `${source.queue.pending} pending` : null,
+            source.queue.failed ? `${source.queue.failed} failed` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </Text>
+      ) : null}
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {sourceLocalLabel(source)} → {source.remotePath}
       </Text>

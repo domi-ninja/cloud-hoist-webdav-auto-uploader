@@ -70,6 +70,17 @@ class RoomEngineViewTest {
   }
 
   @Test
+  fun activeUploadRemainsVisibleBehindThousandsOfNewerJobs() {
+    enqueue("old-running", JobState.RUNNING, 1, 50)
+    repeat(2000) { enqueue("queued-$it", JobState.QUEUED, it.toLong() + 2, 10) }
+    val snapshot = RoomEngineView(dao, onInvalidated = {}).snapshot(CONNECTED_ACCOUNT, SchedulerStatus())
+    assertEquals("old-running", (snapshot["worker"] as Map<*, *>)["jobId"])
+    val source = (snapshot["sources"] as List<*>).single() as Map<*, *>
+    assertEquals(2001, (source["queue"] as Map<*, *>)["pending"])
+    assertEquals(100, (snapshot["recentJobs"] as List<*>).size)
+  }
+
+  @Test
   fun retryResetAndRemoveMutateTheWorkerDatabase() {
     enqueue("blocked", JobState.BLOCKED, 10, 30, error = "quota")
     dao.upsertChunkCheckpoint(

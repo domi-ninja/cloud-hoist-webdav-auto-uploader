@@ -27,6 +27,7 @@ export function SourcePreviewThumbnails({
               accessibilityLabel={file.fileName}
               className="h-16 w-16"
               resizeMode="cover"
+              resizeMethod="resize"
               source={{ uri: file.localUri }}
             />
           ) : (

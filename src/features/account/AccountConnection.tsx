@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Linking, Text, TextInput } from "react-native";
+import { Linking, Text } from "react-native";
 
 import webDavUploadEngine, {
   type AccountHealth,
   type EngineError,
 } from "../../../modules/webdav-upload-engine";
-import { ActionButton, Panel } from "@/components/ui";
+import { ActionButton, FormField, LoadingState, Panel } from "@/components/ui";
 import { ConnectedAccountButton } from "./ConnectedAccountButton";
 
 type AccountConnectionProps = {
@@ -45,8 +45,15 @@ export function AccountConnection({ account }: AccountConnectionProps) {
     if (!loginAttemptId) {
       return;
     }
-    const interval = setInterval(() => void pollLogin(), 2_000);
-    return () => clearInterval(interval);
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      try { await pollLogin(); }
+      catch { if (active) setMessage("The account check failed. You can retry signing in."); }
+      finally { if (active) timer = setTimeout(() => void poll(), 2_000); }
+    };
+    timer = setTimeout(() => void poll(), 2_000);
+    return () => { active = false; clearTimeout(timer); };
   }, [loginAttemptId, pollLogin]);
 
   const startBrowserLogin = async () => {
@@ -89,7 +96,6 @@ export function AccountConnection({ account }: AccountConnectionProps) {
     setBusy(true);
     setMessage(undefined);
     const password = appPassword;
-    setAppPassword("");
     const result = await webDavUploadEngine.connectManual({
       serverUrl,
       username,
@@ -98,7 +104,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
     setBusy(false);
     if (!result.ok) {
       setMessage(errorText(result.error));
-    }
+    } else setAppPassword("");
   };
 
   if (account.status === "connected") {
@@ -107,17 +113,13 @@ export function AccountConnection({ account }: AccountConnectionProps) {
 
   return (
     <Panel>
-      <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+      <Text
+        accessibilityRole="header"
+        className="text-base font-semibold text-ink-light dark:text-ink-dark"
+      >
         Connect Nextcloud
       </Text>
-      {busy ? (
-        <Text
-          accessibilityLiveRegion="polite"
-          className="text-base text-muted-light dark:text-muted-dark"
-        >
-          Checking account…
-        </Text>
-      ) : null}
+      {busy ? <LoadingState label="Checking account…" /> : null}
       {message ? (
         <Text
           accessibilityLiveRegion="polite"
@@ -126,37 +128,40 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           {message}
         </Text>
       ) : null}
-      <TextInput
+      <FormField
+        label="Nextcloud server URL"
+        keyboardType="url"
+        autoComplete="url"
         autoCapitalize="none"
         autoCorrect={false}
-        className="border border-accent p-2 text-base text-ink-light dark:text-ink-dark"
         editable={!busy}
         onChangeText={setServerUrl}
         placeholder="https://cloud.example.com"
-        placeholderTextColor="#737373"
         value={serverUrl}
       />
 
       {showManual ? (
         <>
-          <TextInput
+          <FormField
+            label="Nextcloud username"
+            autoComplete="username"
             autoCapitalize="none"
             autoCorrect={false}
-            className="border border-accent p-2 text-base text-ink-light dark:text-ink-dark"
             editable={!busy}
             onChangeText={setUsername}
             placeholder="Username"
-            placeholderTextColor="#737373"
             value={username}
           />
-          <TextInput
+          <FormField
+            label="Nextcloud app password"
+            autoComplete="current-password"
+            onSubmitEditing={() => void connectManual()}
+            returnKeyType="done"
             autoCapitalize="none"
             autoCorrect={false}
-            className="border border-accent p-2 text-base text-ink-light dark:text-ink-dark"
             editable={!busy}
             onChangeText={setAppPassword}
             placeholder="App password"
-            placeholderTextColor="#737373"
             secureTextEntry
             value={appPassword}
           />
@@ -165,15 +170,24 @@ export function AccountConnection({ account }: AccountConnectionProps) {
           </Text>
           <ActionButton
             disabled={busy}
+            loading={busy}
+            icon="login"
             label="Connect with app password"
             onPress={() => void connectManual()}
             tone="primary"
+          />
+          <ActionButton
+            disabled={busy}
+            label="Use browser login"
+            icon="web"
+            onPress={() => setShowManual(false)}
           />
         </>
       ) : loginAttemptId ? (
         <>
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            Finish signing in in your browser. This screen will update automatically.
+            Finish signing in in your browser. This screen will update
+            automatically.
           </Text>
           <ActionButton
             label="Cancel browser login"

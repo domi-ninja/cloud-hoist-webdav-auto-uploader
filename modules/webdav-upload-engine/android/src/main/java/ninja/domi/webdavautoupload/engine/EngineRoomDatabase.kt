@@ -149,6 +149,14 @@ interface EngineDao {
   @Query("SELECT COUNT(*) FROM upload_jobs WHERE state IN (:states)")
   fun jobCountInStates(states: List<String>): Int
 
+  @Query("""
+    SELECT sourceId,
+      SUM(CASE WHEN state IN ('queued', 'running', 'retry_wait') THEN 1 ELSE 0 END) AS pending,
+      SUM(CASE WHEN state = 'blocked' THEN 1 ELSE 0 END) AS failed
+    FROM upload_jobs GROUP BY sourceId
+  """)
+  fun sourceQueueCounts(): List<SourceQueueCounts>
+
   @Query(
     """
     SELECT upload_jobs.id, upload_jobs.sourceId, upload_jobs.remoteFileName,
@@ -159,7 +167,8 @@ interface EngineDao {
     FROM upload_jobs
     INNER JOIN local_revisions ON local_revisions.id = upload_jobs.revisionId
     LEFT JOIN chunk_checkpoints ON chunk_checkpoints.jobId = upload_jobs.id
-    ORDER BY upload_jobs.createdAt DESC, upload_jobs.id DESC
+    ORDER BY CASE WHEN upload_jobs.state = 'running' THEN 0 ELSE 1 END,
+      upload_jobs.createdAt DESC, upload_jobs.id DESC
     LIMIT :limit
     """,
   )
@@ -234,6 +243,21 @@ interface EngineDao {
       "(upload_jobs.state = 'retry_wait' AND upload_jobs.retryAt <= :now))",
   )
   fun eligibleJobCount(now: Long): Int
+
+  @Query("""
+    SELECT COUNT(*) FROM upload_jobs
+    INNER JOIN sources ON sources.id = upload_jobs.sourceId
+    INNER JOIN accounts ON accounts.id = upload_jobs.accountId
+    WHERE sources.enabled = 1 AND sources.blockerCode IS NULL AND accounts.blockerCode IS NULL
+      AND upload_jobs.state IN ('queued', 'retry_wait', 'running')
+  """)
+  fun pendingWorkCount(): Int
+
+  @Query("""
+    UPDATE upload_jobs SET state = 'queued', claimToken = NULL, startedAt = NULL, retryAt = NULL
+    WHERE state = 'running' AND (claimToken IS NULL OR claimToken NOT LIKE :processPattern)
+  """)
+  fun recoverForeignProcessClaims(processPattern: String): Int
 
   @Query("SELECT * FROM chunk_checkpoints WHERE jobId = :jobId")
   fun chunkCheckpoint(jobId: String): ChunkCheckpointEntity?

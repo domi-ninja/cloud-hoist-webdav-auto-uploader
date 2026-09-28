@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Text, View } from "react-native";
+import { Linking, Text, View } from "react-native";
 
-import { IconAction } from "@/components/ui";
+import { ActionButton, IconAction } from "@/components/ui";
 import webDavUploadEngine, {
   type EngineSnapshot,
   type SourceSummary,
@@ -33,6 +33,7 @@ export function RestoreSourcePermission({
           return;
         }
         if (result.value.access === "denied") {
+          if (!result.value.canAskAgain) await Linking.openSettings();
           setError(
             "Allow photo and video access in Android Settings to continue.",
           );
@@ -64,6 +65,8 @@ export function RestoreSourcePermission({
           "Access is still unavailable. Check the selected folder or Android permissions.",
         );
       }
+    } catch {
+      setError("Could not restore access. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -79,12 +82,19 @@ export function RestoreSourcePermission({
         tone="primary"
       />
       {error ? (
-        <Text
-          accessibilityLiveRegion="polite"
-          className="text-base text-red-700 dark:text-red-300"
-        >
-          {error}
-        </Text>
+        <>
+          <Text
+            accessibilityLiveRegion="polite"
+            className="text-base text-red-700 dark:text-red-300"
+          >
+            {error}
+          </Text>
+          <ActionButton
+            icon="cog-outline"
+            label="Open Android settings"
+            onPress={() => void Linking.openSettings()}
+          />
+        </>
       ) : null}
     </View>
   );

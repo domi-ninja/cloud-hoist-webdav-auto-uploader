@@ -45,6 +45,7 @@ class QueueDrainRunnerTest {
 
     assertEquals(1, first.completedJobs)
     assertTrue(first.retryWorker)
+    assertTrue(first.continueImmediately)
     assertEquals("older.jpg", uploaded.single().fileName)
     assertEquals("image/jpeg", uploaded.single().mimeType)
     assertEquals(99L, uploaded.single().createdAtEpochSeconds)
@@ -69,10 +70,32 @@ class QueueDrainRunnerTest {
     val result = runner.run()
 
     assertTrue(result.retryWorker)
+    assertFalse(result.continueImmediately)
     assertEquals(JobState.RETRY_WAIT, dao.job("job")?.state)
     assertEquals("timeout", dao.job("job")?.lastErrorCode)
     assertEquals(clock + 30_000, dao.job("job")?.retryAt)
     assertEquals(1, dao.attemptCount("job"))
+  }
+
+  @Test
+  fun futureRetryRemainsScheduledWhenNothingIsEligibleYet() {
+    enqueue("job", "revision", 10)
+    runner(davClient = DavClient { _, _ -> throw AccountTimeoutException() }).run()
+    val waiting = runner().run()
+    assertEquals(0, waiting.completedJobs)
+    assertTrue(waiting.retryWorker)
+    assertFalse(waiting.continueImmediately)
+  }
+
+  @Test
+  fun processRecoveryRequeuesOnlyClaimsOwnedByTheDeadProcess() {
+    enqueue("old", "old-revision", 10)
+    enqueue("current", "current-revision", 20)
+    dao.claimNext(clock, "old:claim")
+    dao.claimNext(clock, "current:claim")
+    assertEquals(1, dao.recoverForeignProcessClaims("current:%"))
+    assertEquals(JobState.QUEUED, dao.job("old")?.state)
+    assertEquals(JobState.RUNNING, dao.job("current")?.state)
   }
 
   @Test

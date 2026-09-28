@@ -49,7 +49,9 @@ class RoomEngineView(
     )
   }
 
-  fun sources(): List<Map<String, Any?>> = dao.allSources().map { source ->
+  fun sources(): List<Map<String, Any?>> {
+    val counts = dao.sourceQueueCounts().associateBy { it.sourceId }
+    return dao.allSources().map { source ->
     mapOf(
       "id" to source.id,
       "name" to source.name,
@@ -59,7 +61,9 @@ class RoomEngineView(
       "enabled" to source.enabled,
       "collisionPolicy" to source.collisionPolicy,
       "lastScanAt" to source.lastScanAt?.let(::instant),
+      "queue" to mapOf("pending" to (counts[source.id]?.pending ?: 0), "failed" to (counts[source.id]?.failed ?: 0)),
     )
+    }
   }
 
   fun activityPage(offset: Int, pageSize: Int = ACTIVITY_PAGE_SIZE): Map<String, Any?> {

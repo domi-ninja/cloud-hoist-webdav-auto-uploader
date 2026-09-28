@@ -117,6 +117,7 @@ export function LocalSourcePicker({
               accessibilityLabel="Choose Camera source"
               disabled={busy}
               label="Camera"
+              icon="camera-outline"
               onPress={() => void chooseMedia({ type: "camera" })}
             />
           ) : null}
@@ -127,6 +128,7 @@ export function LocalSourcePicker({
                 accessibilityLabel="Choose Screenshots source"
                 disabled={busy}
                 label="Screenshots"
+                icon="cellphone-screenshot"
                 onPress={() => void chooseMedia({ type: "screenshots" })}
               />
             </>
@@ -140,6 +142,7 @@ export function LocalSourcePicker({
             accessibilityLabel="Choose local folder source"
             disabled={busy}
             label="Choose folder"
+            icon="folder-outline"
             onPress={() => void chooseFolder()}
           />
         </>
