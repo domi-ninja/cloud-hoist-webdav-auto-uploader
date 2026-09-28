@@ -19,6 +19,44 @@ import org.junit.Test
 
 class NextcloudUploadClientTest {
   @Test
+  fun retryAfterRestartReusesItsStagingFileInsteadOfLeavingAnOrphan() {
+    val staging = mutableSetOf<String>()
+    val puts = mutableListOf<String>()
+    var failMove = true
+    val transport = OkHttpClient.Builder().addInterceptor { chain ->
+      val request = chain.request()
+      when (request.method) {
+        "MKCOL" -> response(request, 405)
+        "PUT" -> {
+          puts += request.url.encodedPath
+          staging += request.url.encodedPath
+          response(request, 201)
+        }
+        "MOVE" -> if (failMove) {
+          failMove = false
+          response(request, 503)
+        } else {
+          staging.remove(request.url.encodedPath)
+          response(request, 201)
+        }
+        else -> error("Unexpected ${request.method}")
+      }
+    }.build()
+    fun freshClient(token: String) = NextcloudUploadClient(
+      LocalContentSource { ByteArrayInputStream(CONTENT) }, transport, uploadId = { token },
+    )
+    val upload = UPLOAD.copy(transferId = "durable-job")
+    assertThrows(AccountServerException::class.java) { freshClient("first-process").upload(CREDENTIAL, upload) }
+    assertEquals(1, staging.size)
+
+    freshClient("second-process").upload(CREDENTIAL, upload)
+
+    assertEquals(puts[0], puts[1])
+    assertTrue(puts[0].endsWith("webdav-auto-upload-durable-job"))
+    assertTrue(staging.isEmpty())
+  }
+
+  @Test
   fun streamsToATemporarySiblingThenMovesOverTheDestination() {
     val requests = mutableListOf<CapturedRequest>()
     val client = client { request ->

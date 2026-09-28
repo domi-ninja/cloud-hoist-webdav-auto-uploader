@@ -47,6 +47,7 @@ class QueueDrainRunnerTest {
     assertTrue(first.retryWorker)
     assertTrue(first.continueImmediately)
     assertEquals("older.jpg", uploaded.single().fileName)
+    assertEquals("older", uploaded.single().transferId)
     assertEquals("image/jpeg", uploaded.single().mimeType)
     assertEquals(99L, uploaded.single().createdAtEpochSeconds)
     assertEquals(JobState.COMPLETED, dao.job("older")?.state)
@@ -248,9 +249,9 @@ class QueueDrainRunnerTest {
   }
 
   @Test
-  fun elapsedBudgetCancelsTheCurrentStreamIntoRetryWait() {
+  fun elapsedBudgetContinuesImmediatelyWithoutNetworkBackoff() {
     enqueue("large", "revision-large", 10)
-    val elapsedValues = listOf(0L, 0L, 100L).iterator()
+    val elapsedValues = listOf(0L, 0L, 100L, 100L).iterator()
     val runner = runner(
       davClient = DavClient { _, request ->
         if (request.isCancelled()) throw TransferCancelledException()
@@ -263,7 +264,9 @@ class QueueDrainRunnerTest {
     val result = runner.run()
 
     assertTrue(result.retryWorker)
+    assertTrue(result.continueImmediately)
     assertEquals(JobState.RETRY_WAIT, dao.job("large")?.state)
+    assertEquals(clock, dao.job("large")?.retryAt)
     assertEquals("cancelled", dao.job("large")?.lastErrorCode)
   }
 

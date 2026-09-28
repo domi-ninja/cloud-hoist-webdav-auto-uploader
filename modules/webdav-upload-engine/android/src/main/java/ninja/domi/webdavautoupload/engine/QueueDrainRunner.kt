@@ -49,7 +49,7 @@ class QueueDrainRunner(
       if (isPaused()) return QueueDrainResult(completed, retryWorker = false)
       if (isStopped()) return QueueDrainResult(completed, retryWorker = true)
       if (!canStartNextFile()) {
-        return QueueDrainResult(completed, retryWorker = dao.eligibleJobCount(now()) > 0)
+        return QueueDrainResult(completed, retryWorker = dao.pendingWorkCount() > 0)
       }
 
       val claimToken = newId()
@@ -71,6 +71,7 @@ class QueueDrainRunner(
           mimeType = revision.mimeType ?: mimeType(revision.localUri),
           modifiedAtEpochSeconds = revision.modifiedAt,
           createdAtEpochSeconds = revision.createdAt,
+          transferId = job.id,
           collisionPolicy = CollisionPolicy.fromValue(
             dao.source(job.sourceId)?.collisionPolicy ?: CollisionPolicy.REPLACE.value,
           ),
@@ -105,6 +106,13 @@ class QueueDrainRunner(
         dao.insertAttempt(
           UploadAttemptEntity(attemptId, job.id, claimedAt, finishedAt, failure.code),
         )
+        if (error is TransferCancelledException && !isPaused() && !isStopped() &&
+          elapsed() - startedAt >= maxRunMillis
+        ) {
+          // A normal time-slice rollover must not accumulate network-error backoff.
+          dao.retryClaim(job.id, claimToken, finishedAt, failure.code)
+          return QueueDrainResult(completed, retryWorker = true, continueImmediately = true)
+        }
         if (failure.retryable) {
           dao.retryClaim(
             job.id,

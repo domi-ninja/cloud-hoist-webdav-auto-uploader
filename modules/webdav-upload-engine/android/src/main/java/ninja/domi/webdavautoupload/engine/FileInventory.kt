@@ -265,6 +265,8 @@ internal fun inventoryPage(
   )
 }
 
+private val uploadStagingName = Regex("^\\..+\\.webdav-auto-upload-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
 internal fun reconcileInventory(
   source: SourceEntity,
   localFiles: List<LocalInventoryView>,
@@ -272,7 +274,10 @@ internal fun reconcileInventory(
 ): List<Map<String, Any?>> {
   val localByRemotePath = localFiles.associateBy(::targetRelativePath)
   val remoteByPath = remoteFiles.associateBy(RemoteInventoryFile::relativePath)
-  return (localByRemotePath.keys + remoteByPath.keys).map { relativePath ->
+  // A temporary upload is not a second remote photo. Keep ordinary hidden/local files visible.
+  return (localByRemotePath.keys + remoteByPath.keys).filterNot { path ->
+    path !in localByRemotePath && uploadStagingName.matches(path.substringAfterLast('/'))
+  }.map { relativePath ->
     val local = localByRemotePath[relativePath]
     val remote = remoteByPath[relativePath]
     val modifiedAt = maxOfOrNull(

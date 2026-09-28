@@ -38,7 +38,8 @@ class NextcloudUploadClient(
     createParentFolders(credential, remotePath)
     if (request.isCancelled()) throw TransferCancelledException()
 
-    val temporaryName = ".$fileName.webdav-auto-upload-${uploadId()}"
+    val stagingId = request.transferId?.let(DavPath::validateName) ?: uploadId()
+    val temporaryName = ".$fileName.webdav-auto-upload-$stagingId"
     val temporaryUrl = NextcloudDavUrl.file(credential.account, remotePath, temporaryName)
     try {
       val uploadResponse = putTemporary(credential, request, temporaryUrl)

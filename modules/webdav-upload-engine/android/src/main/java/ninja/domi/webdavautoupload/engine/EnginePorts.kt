@@ -29,6 +29,8 @@ data class DavUploadRequest(
   val mimeType: String?,
   val modifiedAtEpochSeconds: Long?,
   val createdAtEpochSeconds: Long?,
+  // A queued revision keeps this ID across attempts and process restarts.
+  val transferId: String? = null,
   val collisionPolicy: CollisionPolicy = CollisionPolicy.REPLACE,
   val isCancelled: () -> Boolean = { false },
   val onProgress: (uploadedBytes: Long) -> Unit = {},

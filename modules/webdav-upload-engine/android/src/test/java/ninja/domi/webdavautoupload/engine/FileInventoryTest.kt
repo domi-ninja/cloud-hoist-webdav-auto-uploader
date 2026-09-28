@@ -7,6 +7,16 @@ import org.junit.Test
 
 class FileInventoryTest {
   @Test
+  fun doesNotPresentAnInFlightStagingObjectAsAnotherPhoto() {
+    val entries = reconcileInventory(source(), emptyList(), listOf(
+      RemoteInventoryFile("photo.jpg", "image/jpeg", 10, 1),
+      RemoteInventoryFile(".keep-me.jpg", "image/jpeg", 10, 1),
+      RemoteInventoryFile(".photo.jpg.webdav-auto-upload-01838989-173a-436a-94dd-9377d3db7a25", "image/jpeg", 10, 1),
+    ))
+    assertEquals(listOf("photo.jpg", ".keep-me.jpg"), entries.map { it["fileName"] })
+  }
+
+  @Test
   fun reconcilesLocalRemoteAndSharedFiles() {
     val source = source()
     val local = listOf(
