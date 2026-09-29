@@ -298,13 +298,17 @@ export function SourceEditor({
           >
             {source ? "Edit backup folder" : "Add backup folder"}
           </Text>
-          <IconAction
-            icon="check"
-            label={busy ? "Saving…" : "Save backup folder"}
-            disabled={!canSave}
-            loading={busy}
-            onPress={() => void save()}
-          />
+          {selection ? (
+            <IconAction
+              icon="check"
+              label={busy ? "Saving…" : "Save backup folder"}
+              disabled={!canSave}
+              loading={busy}
+              onPress={() => void save()}
+            />
+          ) : (
+            <View className="size-12" />
+          )}
         </View>
         <ScrollView
           contentContainerClassName="gap-2 p-2"
@@ -378,83 +382,87 @@ export function SourceEditor({
               />
             ) : null}
           </Panel>
-          <Panel>
-            <View className="flex-row items-center gap-2">
-              <View className="flex-1">
+          {selection ? (
+            <>
+              <Panel>
+                <View className="flex-row items-center gap-2">
+                  <View className="flex-1">
+                    <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+                      Nextcloud folder
+                    </Text>
+                    <Text className="text-base text-muted-light dark:text-muted-dark">
+                      {displayPath(remotePathSegments)}
+                    </Text>
+                  </View>
+                  <IconAction
+                    icon="folder-edit-outline"
+                    disabled={busy}
+                    label={
+                      choosingRemote ? "Hide folder browser" : "Change destination"
+                    }
+                    accessibilityState={{ expanded: choosingRemote }}
+                    onPress={() => setChoosingRemote((open) => !open)}
+                  />
+                </View>
+              </Panel>
+              {choosingRemote ? (
+                <RemoteFolderPicker
+                  onClose={() => setChoosingRemote(false)}
+                  title="Choose destination parent folder"
+                  initialPathSegments={remoteRootPath}
+                  onSelect={(pathSegments) => {
+                    setRemotePathSegments(
+                      selection
+                        ? defaultRemotePath(selection, pathSegments)
+                        : pathSegments,
+                    );
+                    setDestinationCustomized(true);
+                    setChoosingRemote(false);
+                  }}
+                />
+              ) : null}
+              <Panel>
                 <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                  Nextcloud folder
+                  What to do with files that you change on the phone?
                 </Text>
-                <Text className="text-base text-muted-light dark:text-muted-dark">
-                  {displayPath(remotePathSegments)}
-                </Text>
-              </View>
-              <IconAction
-                icon="folder-edit-outline"
-                disabled={busy}
-                label={
-                  choosingRemote ? "Hide folder browser" : "Change destination"
-                }
-                accessibilityState={{ expanded: choosingRemote }}
-                onPress={() => setChoosingRemote((open) => !open)}
-              />
-            </View>
-          </Panel>
-          {choosingRemote ? (
-            <RemoteFolderPicker
-              onClose={() => setChoosingRemote(false)}
-              title="Choose destination parent folder"
-              initialPathSegments={remoteRootPath}
-              onSelect={(pathSegments) => {
-                setRemotePathSegments(
-                  selection
-                    ? defaultRemotePath(selection, pathSegments)
-                    : pathSegments,
-                );
-                setDestinationCustomized(true);
-                setChoosingRemote(false);
-              }}
-            />
+                <View>
+                  <RadioButton.Item
+                    label="Update files"
+                    value="replace"
+                    status={collisionPolicy === "replace" ? "checked" : "unchecked"}
+                    labelStyle={{ fontSize: 16 }}
+                    style={{
+                      minHeight: 48,
+                      paddingVertical: 0,
+                      paddingHorizontal: 8,
+                    }}
+                    accessibilityLabel="Update files on Nextcloud"
+                    disabled={busy}
+                    onPress={() => setCollisionPolicy("replace")}
+                  />
+                  <RadioButton.Item
+                    label="Add a number to the name."
+                    value="keep_both"
+                    status={
+                      collisionPolicy === "keep_both" ? "checked" : "unchecked"
+                    }
+                    labelStyle={{ fontSize: 16 }}
+                    style={{
+                      minHeight: 48,
+                      paddingVertical: 0,
+                      paddingHorizontal: 8,
+                    }}
+                    accessibilityLabel={`Add a number to the name. Preview: ${keepBothPreview}`}
+                    disabled={busy}
+                    onPress={() => setCollisionPolicy("keep_both")}
+                  />
+                  <Text className="px-2 pb-2 text-sm text-muted-light dark:text-muted-dark">
+                    Preview: {keepBothPreview}
+                  </Text>
+                </View>
+              </Panel>
+            </>
           ) : null}
-          <Panel>
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              What to do with files that you change on the phone?
-            </Text>
-            <View>
-              <RadioButton.Item
-                label="Update files"
-                value="replace"
-                status={collisionPolicy === "replace" ? "checked" : "unchecked"}
-                labelStyle={{ fontSize: 16 }}
-                style={{
-                  minHeight: 48,
-                  paddingVertical: 0,
-                  paddingHorizontal: 8,
-                }}
-                accessibilityLabel="Update files on Nextcloud"
-                disabled={busy}
-                onPress={() => setCollisionPolicy("replace")}
-              />
-              <RadioButton.Item
-                label="Add a number to the name."
-                value="keep_both"
-                status={
-                  collisionPolicy === "keep_both" ? "checked" : "unchecked"
-                }
-                labelStyle={{ fontSize: 16 }}
-                style={{
-                  minHeight: 48,
-                  paddingVertical: 0,
-                  paddingHorizontal: 8,
-                }}
-                accessibilityLabel={`Add a number to the name. Preview: ${keepBothPreview}`}
-                disabled={busy}
-                onPress={() => setCollisionPolicy("keep_both")}
-              />
-              <Text className="px-2 pb-2 text-sm text-muted-light dark:text-muted-dark">
-                Preview: {keepBothPreview}
-              </Text>
-            </View>
-          </Panel>
           {source ? (
             <Panel>
               <View className="flex-row items-center justify-between gap-2">
