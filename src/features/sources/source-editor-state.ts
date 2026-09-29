@@ -79,8 +79,12 @@ export function existingPresetSource(
 ) {
   if (selection.type === "document_tree") return undefined;
   const localUri = `mediastore://${selection.type}`;
+  const folderPath = sourceFolderPathSegments(selection).join("/");
   return sources.find(
-    (source) => source.kind === "media_store" && source.localUri === localUri,
+    (source) =>
+      (source.kind === "media_store" && source.localUri === localUri) ||
+      (source.kind === "saf" &&
+        sourceSelectionPath(selectionForSource(source)) === `primary:${folderPath}`),
   );
 }
 

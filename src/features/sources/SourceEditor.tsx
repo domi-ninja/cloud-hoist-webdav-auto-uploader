@@ -8,7 +8,7 @@ import webDavUploadEngine, {
   type SourceSelection,
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
-import { RadioButton, Switch } from "react-native-paper";
+import { RadioButton } from "react-native-paper";
 import { ActionButton, IconAction, LoadingState, Panel } from "@/components/ui";
 import { formatBytes } from "@/lib/format";
 import { useAppPreferences } from "@/lib/app-preferences";
@@ -66,7 +66,7 @@ export function SourceEditor({
   const [remotePathSegments, setRemotePathSegments] = useState(
     initialValue.remotePathSegments,
   );
-  const [enabled, setEnabled] = useState(initialValue.enabled);
+  const enabled = initialValue.enabled;
   const [collisionPolicy, setCollisionPolicy] = useState(
     initialValue.collisionPolicy,
   );
@@ -218,68 +218,6 @@ export function SourceEditor({
     }
   };
 
-  const resetHistory = () => {
-    if (!source) return;
-    Alert.alert(
-      "Upload existing files again?",
-      "The next scan will reconsider files from this source. Files already on the server may be overwritten.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Reset history",
-          style: "destructive",
-          onPress: () => {
-            setBusy(true);
-            void webDavUploadEngine
-              .resetSourceHistory(source.id)
-              .then((result) => {
-                if (!result.ok) setError(result.error);
-              })
-              .catch(() =>
-                setError({
-                  code: "native_failure",
-                  message: "History could not be reset. Please try again.",
-                }),
-              )
-              .finally(() => setBusy(false));
-          },
-        },
-      ],
-    );
-  };
-
-  const remove = () => {
-    if (!source) return;
-    Alert.alert(
-      `Remove ${sourceSelectionLabel(selection)}?`,
-      "This stops backing up this folder and removes its queue and history. Files on your phone and Nextcloud are not deleted.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: () => {
-            setBusy(true);
-            void webDavUploadEngine
-              .removeSource(source.id)
-              .then((result) => {
-                if (!result.ok) setError(result.error);
-                else onSaved();
-              })
-              .catch(() =>
-                setError({
-                  code: "native_failure",
-                  message:
-                    "The backup folder could not be removed. Please try again.",
-                }),
-              )
-              .finally(() => setBusy(false));
-          },
-        },
-      ],
-    );
-  };
-
   return (
     <Modal
       animationType="slide"
@@ -304,6 +242,7 @@ export function SourceEditor({
           {selection ? (
             <IconAction
               icon="check"
+              tone="primary"
               label={busy ? "Saving…" : "Save backup folder"}
               disabled={!canSave}
               loading={busy}
@@ -465,24 +404,6 @@ export function SourceEditor({
               </Panel>
             </>
           ) : null}
-          {source ? (
-            <Panel>
-              <View className="flex-row items-center justify-between gap-2">
-                <View className="shrink gap-2">
-                  <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                    Enabled
-                  </Text>
-                </View>
-                <Switch
-                  hitSlop={8}
-                  accessibilityLabel="Enable backup folder"
-                  disabled={busy}
-                  onValueChange={setEnabled}
-                  value={enabled}
-                />
-              </View>
-            </Panel>
-          ) : null}
           {error ? (
             <Text
               accessibilityLiveRegion="polite"
@@ -491,29 +412,17 @@ export function SourceEditor({
               {error.message}
             </Text>
           ) : null}
-          {source ? (
-            <Panel>
-              <View className="flex-row items-center justify-between gap-2">
-                <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
-                  Maintenance
-                </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  <IconAction
-                    icon="history"
-                    disabled={busy}
-                    label="Reset upload history"
-                    onPress={resetHistory}
-                  />
-                  <IconAction
-                    icon="delete-outline"
-                    disabled={busy}
-                    label="Remove backup folder"
-                    onPress={remove}
-                    tone="danger"
-                  />
-                </View>
-              </View>
-            </Panel>
+          {selection ? (
+            <View className="flex-row justify-end">
+              <ActionButton
+                icon="check"
+                label={busy ? "Saving…" : "Save backup folder"}
+                tone="primary"
+                disabled={!canSave}
+                loading={busy}
+                onPress={() => void save()}
+              />
+            </View>
           ) : null}
         </ScrollView>
       </SafeAreaView>

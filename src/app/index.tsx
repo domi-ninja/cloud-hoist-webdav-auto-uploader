@@ -191,16 +191,20 @@ export default function HomeScreen() {
                   Backup folders
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
-                  <ActionButton
-                    icon="camera-outline"
-                    label="Backup camera"
-                    onPress={() => addSource("camera")}
-                  />
-                  <ActionButton
-                    icon="cellphone-screenshot"
-                    label="Backup screenshots"
-                    onPress={() => addSource("screenshots")}
-                  />
+                  {!existingPresetSource(visibleSources, { type: "camera" }) ? (
+                    <ActionButton
+                      icon="camera-outline"
+                      label="Backup camera"
+                      onPress={() => addSource("camera")}
+                    />
+                  ) : null}
+                  {!existingPresetSource(visibleSources, { type: "screenshots" }) ? (
+                    <ActionButton
+                      icon="cellphone-screenshot"
+                      label="Backup screenshots"
+                      onPress={() => addSource("screenshots")}
+                    />
+                  ) : null}
                   <ActionButton
                     icon="folder-outline"
                     label="Backup other directory"

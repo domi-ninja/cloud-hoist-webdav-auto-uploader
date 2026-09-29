@@ -181,7 +181,14 @@ export function IconAction({
               ? "contained-tonal"
               : undefined
         }
-        iconColor={tone === "danger" ? theme.colors.error : undefined}
+        containerColor={tone === "primary" ? theme.colors.primary : undefined}
+        iconColor={
+          tone === "primary"
+            ? theme.colors.onPrimary
+            : tone === "danger"
+              ? theme.colors.error
+              : undefined
+        }
         size={24}
         style={{ margin: 0, width: 48, height: 48 }}
         {...props}

@@ -1,6 +1,11 @@
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
 import { formatBytes, formatRelativeTime } from "./format";
 
+// Waiting for transfer rules or an automatic retry does not require user action.
+export function attentionBlockers(blockers: EngineSnapshot["blockers"]) {
+  return blockers.filter((blocker) => blocker.kind !== "network");
+}
+
 export function engineStatus(snapshot: EngineSnapshot, now: number) {
   if (snapshot.account.status !== "connected") return "Connect an account to begin";
   if (snapshot.engine.state === "paused") {
@@ -13,7 +18,7 @@ export function engineStatus(snapshot: EngineSnapshot, now: number) {
     return `Uploading ${formatBytes(snapshot.worker.bytesSent)} of ${formatBytes(snapshot.worker.totalBytes)}`;
   }
   if (snapshot.worker.state === "waiting") return snapshot.worker.reason;
-  if (snapshot.engine.state === "blocked") return "Uploads need attention";
+  if (attentionBlockers(snapshot.blockers).length) return "Uploads need attention";
   if (!snapshot.sources.length) return "Choose a folder to start uploading";
   if (snapshot.queue.queued) return "Waiting for Android to start uploads";
   if (snapshot.scheduler.lastScanCompletedAt) {

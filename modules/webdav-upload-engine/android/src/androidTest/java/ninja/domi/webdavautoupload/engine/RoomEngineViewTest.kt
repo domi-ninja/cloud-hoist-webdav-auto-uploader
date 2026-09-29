@@ -168,6 +168,36 @@ class RoomEngineViewTest {
     assertNull(second["nextOffset"])
   }
 
+  @Test
+  fun retryBackoffOnAllowedWifiIsNotANetworkBlocker() {
+    enqueue("retry", JobState.RETRY_WAIT, 10, 10, error = "server", retryAt = 500)
+    var clock = 100L
+    val view = RoomEngineView(dao, onInvalidated = {}, now = { clock })
+    val snapshot = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus(), waitingReason = null)
+    assertTrue((snapshot["blockers"] as List<*>).isEmpty())
+    assertEquals("running", (snapshot["engine"] as Map<*, *>)["state"])
+    assertEquals("Waiting to retry upload", (snapshot["worker"] as Map<*, *>)["reason"])
+    clock = 600L
+    val ready = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus(), waitingReason = null)
+    assertEquals("idle", (ready["worker"] as Map<*, *>)["state"])
+    assertEquals(1, dao.eligibleJobCount(clock))
+  }
+
+  @Test
+  fun networkAndChargingWaitsClearWhenDeviceConstraintsAreSatisfied() {
+    enqueue("queued", JobState.QUEUED, 10, 10)
+    val view = RoomEngineView(dao, onInvalidated = {})
+    listOf("Waiting for an unmetered network", "Waiting for charging").forEach { reason ->
+      val waiting = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus(), waitingReason = reason)
+      assertEquals(reason, (waiting["worker"] as Map<*, *>)["reason"])
+      assertTrue((waiting["blockers"] as List<*>).isEmpty())
+      assertEquals("running", (waiting["engine"] as Map<*, *>)["state"])
+    }
+    val ready = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus(), waitingReason = null)
+    assertEquals("idle", (ready["worker"] as Map<*, *>)["state"])
+    assertTrue((ready["blockers"] as List<*>).isEmpty())
+  }
+
   private fun enqueue(
     id: String,
     state: String,
@@ -175,6 +205,7 @@ class RoomEngineViewTest {
     byteCount: Long,
     error: String? = null,
     completedAt: Long? = null,
+    retryAt: Long? = null,
   ) {
     val revisionId = "revision-$id"
     dao.enqueueRevision(
@@ -200,7 +231,7 @@ class RoomEngineViewTest {
         createdAt = createdAt,
         startedAt = if (state == JobState.RUNNING) createdAt else null,
         completedAt = completedAt,
-        retryAt = null,
+        retryAt = retryAt,
         attemptCount = 1,
         claimToken = if (state == JobState.RUNNING) "worker" else null,
         blockerCode = error,

@@ -179,15 +179,6 @@ class RoomEngineView(
         ),
       )
     }
-    jobs.filter { it.state == JobState.RETRY_WAIT }.minByOrNull { it.retryAt ?: Long.MAX_VALUE }
-      ?.let { waiting ->
-        add(
-          mapOf(
-            "kind" to "network",
-            "retryAt" to waiting.retryAt?.let(::instant),
-          ),
-        )
-      }
   }
 
   private fun jobMap(job: UploadJobView): Map<String, Any?> = mapOf(
@@ -247,8 +238,10 @@ class RoomEngineView(
         "scope" to scheduler.workerScope,
         "startedAt" to scheduler.lastScanRequestedAt,
       )
-    scheduler.pausedAt == null && waitingReason != null && dao.eligibleJobCount(now()) > 0 ->
+    scheduler.pausedAt == null && waitingReason != null && dao.pendingWorkCount() > 0 ->
       mapOf("state" to "waiting", "reason" to waitingReason)
+    scheduler.pausedAt == null && dao.pendingWorkCount() > 0 && dao.eligibleJobCount(now()) == 0 ->
+      mapOf("state" to "waiting", "reason" to "Waiting to retry upload")
     else -> mapOf("state" to "idle")
   }
 

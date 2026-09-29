@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
-import { engineStatus } from "./upload-status";
+import { attentionBlockers, engineStatus } from "./upload-status";
 
 function snapshot(worker: EngineSnapshot["worker"]): EngineSnapshot {
   return {
@@ -47,6 +47,20 @@ function snapshot(worker: EngineSnapshot["worker"]): EngineSnapshot {
 }
 
 describe("upload status", () => {
+  it("does not classify a network wait as needing attention", () => {
+    const state = snapshot({ state: "idle" });
+    state.engine = { state: "blocked", blockerCount: 1 };
+    state.blockers = [{ kind: "network", retryAt: null }];
+    expect(attentionBlockers(state.blockers)).toEqual([]);
+    expect(engineStatus(state, 0)).toBe("Waiting for Android to start uploads");
+  });
+
+  it("keeps real blockers actionable", () => {
+    const state = snapshot({ state: "idle" });
+    state.blockers = [{ kind: "permission", sourceId: "camera", permission: "media" }];
+    expect(attentionBlockers(state.blockers)).toHaveLength(1);
+    expect(engineStatus(state, 0)).toBe("Uploads need attention");
+  });
   it("shows the native waiting reason", () => {
     expect(engineStatus(snapshot({ state: "waiting", reason: "Waiting for charging" }), 0))
       .toBe("Waiting for charging");

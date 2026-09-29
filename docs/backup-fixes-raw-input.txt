@@ -1,0 +1,9 @@
+fix on live phone: "waiting for an allowed netowrk". FUCKING BUULLSHIT YOUR ON WIFI AN PLUGGED IN!!!!!!!!!! HOW DARE!!!!!! FIX!!!!!!!!!!!!!!!! Add test suite to never have shit like this again! ALSO THATS NOT A "NEED ATTENTION" thing! ITS FUCKING WORKING AS INTENDED--IF I WAS ON MOBILE DATA. Anyway. Fix
+Top right, edit backup folder, confirm button: Is way too subtle. Duplicate confirm button on bottom right, end of screen, as well. Make them both have some sort of fucking primary color you nitwit
+Bottom of edit backup folder: "Maintenance". What the fuck is that supposed to be? Take a note: Deleting the folder does not belong into the FUCKING EDIT MODAL! Debugging shit DOES NOT BELOGN INTO THE APP!!!!!!!!!!!!! ENABLED DOES NOT BELONG ON THE BOTTOM OF THIS SCREEN, EITHER! OR ANYWWHERE IN GTHIS SCREEN!! WE HAEB A FUCKING TOGGLE ON THE BAKUPS SCREEN ON EACH BACKED UP DIR!
+Speacking of backups screen: We have SET UP THE FUCKING DEFAULT CAM FOLDER AS A BACKUP DIR< HOW ABOUT YOU STOP OFFERING THE DEFAULT PRESET "Backup camera" you retarded piece of shit?
+In Backups screen, add a hamburger on each backup, where you will put the delete / edit backup stuff. Move shit like "Waiting for network" and "15 pending" into the SAME LINE SO IT DOESNTG WASTE SO MUCH VERTICAL SPACE!!!!
+
+here you go. Move it.
+
+First, you will copy my raw input text into a text file. Then, you will process it as normal and do all the things at once, i guess, since the harness has done a bit fat shit into the bed

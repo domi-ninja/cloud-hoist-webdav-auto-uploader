@@ -5,7 +5,6 @@ import { Chip, Icon } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
-  type EngineSnapshot,
   type FileInventoryEntry,
   type FileInventoryFilter,
 } from "../../modules/webdav-upload-engine";
@@ -25,18 +24,14 @@ import {
   Separator,
 } from "@/components/ui";
 import { RestoreSourcePermission } from "@/features/sources/RestoreSourcePermission";
-import { engineStatus, queueSummary } from "@/lib/upload-status";
+import { attentionBlockers, engineStatus, queueSummary } from "@/lib/upload-status";
 
-function blockerText(blocker: EngineSnapshot["blockers"][number], now: number) {
+function blockerText(blocker: ReturnType<typeof attentionBlockers>[number]) {
   switch (blocker.kind) {
     case "account":
       return blocker.message;
     case "permission":
       return `${blocker.permission === "media" ? "Photo access" : "Folder access"} must be restored.`;
-    case "network":
-      return blocker.retryAt
-        ? `Waiting for an allowed network. Retry ${formatRelativeTime(blocker.retryAt, now)}.`
-        : "Waiting for an allowed network.";
     case "storage":
       return `Not enough local storage. ${formatBytes(blocker.requiredBytes)} required, ${formatBytes(blocker.availableBytes)} available.`;
     case "job":
@@ -177,8 +172,10 @@ export default function ActivityScreen() {
     [inventory.data],
   );
   const inventoryErrors = inventory.data?.pages[0]?.errors ?? [];
-  const hasFailures = Boolean(failures.data?.length);
-  const failureDetails = failures.data?.filter(
+  const blockers = attentionBlockers(snapshot.data?.blockers ?? []);
+  const actionableFailures = failures.data?.filter((failure) => !failure.retryable);
+  const hasFailures = Boolean(actionableFailures?.length);
+  const failureDetails = actionableFailures?.filter(
     (failure) =>
       !snapshot.data?.blockers.some(
         (blocker) => blocker.kind === "job" && blocker.jobId === failure.jobId,
@@ -283,7 +280,7 @@ export default function ActivityScreen() {
                 {errorMessage ?? "The file inventory could not be loaded."}
               </Text>
             ) : null}
-            {snapshot.data?.blockers.length || hasFailures ? (
+            {blockers.length || hasFailures ? (
               <View className="gap-2">
                 <View className="flex-row flex-wrap items-center justify-between gap-2">
                   <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
@@ -300,10 +297,10 @@ export default function ActivityScreen() {
                   ) : null}
                 </View>
                 <Panel>
-                  {snapshot.data?.blockers.map((blocker, index) => {
+                  {blockers.map((blocker, index) => {
                     const source =
                       blocker.kind === "permission"
-                        ? snapshot.data.sources.find(
+                        ? snapshot.data?.sources.find(
                             (item) => item.id === blocker.sourceId,
                           )
                         : undefined;
@@ -312,7 +309,7 @@ export default function ActivityScreen() {
                         {index ? <Separator /> : null}
                         <View className="gap-2">
                           <Text className="text-base text-ink-light dark:text-ink-dark">
-                            {blockerText(blocker, now)}
+                            {blockerText(blocker)}
                           </Text>
                           {blocker.kind === "account" ? (
                             <ActionButton
@@ -337,7 +334,7 @@ export default function ActivityScreen() {
                   })}
                   {failureDetails?.slice(0, 10).map((failure, index) => (
                     <Fragment key={failure.id}>
-                      {index || snapshot.data?.blockers.length ? (
+                      {index || blockers.length ? (
                         <Separator />
                       ) : null}
                       <Text className="text-base text-ink-light dark:text-ink-dark">

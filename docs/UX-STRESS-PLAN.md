@@ -28,7 +28,7 @@ Initial findings: inconsistent account inputs; unvirtualized Activity rows; invi
 | --- | --- |
 | Backups | Explicit initial loading/retry, guarded scan/pause actions, per-folder pending/failed counts. Keep approved preset labels and edit immediately beside the toggle. |
 | Activity | Virtualized, bounded rendering; cached thumbnails; collapsed filter icon; clear-filter action; grouped screen-reader row descriptions; bounded failure summaries. Remote queries stop when this tab is inactive. |
-| Settings | Consistent root browser, accessible transfer switches, guarded asynchronous actions and diagnostic sharing. |
+| Settings | Consistent root browser, accessible transfer switches, guarded asynchronous actions. Diagnostic sharing and history-reset controls were removed from the user UI on 2026-09-29. |
 | Account setup | Labeled Paper fields, correct keyboard/autofill hints, retain entered credentials after a failed connection; browser-login polls no longer overlap. |
 | Account settings | One toolbar save action, keyboard-aware scrolling, labeled fields, guarded dismissal, existing sign-out confirmation retained. |
 | Backup editor | Immediate preset thumbnail preview, visible preview loading/retry, save readiness tied to successful preview, guarded save/dismissal/maintenance, compact controls with large-text scrolling. Keep parent/folder naming and destination rules. |

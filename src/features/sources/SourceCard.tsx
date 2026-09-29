@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Text, View } from "react-native";
-import { Switch } from "react-native-paper";
+import { Alert, Text, View } from "react-native";
+import { Menu, Switch } from "react-native-paper";
 
 import webDavUploadEngine, {
   type EngineError,
@@ -56,6 +56,7 @@ function sourceStatus(
 
 export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
   const [busy, setBusy] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<EngineError>();
   const permissionBlocker = snapshot.blockers.find(
     (
@@ -89,6 +90,24 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
   const updateSource = (changes: Partial<SourceSummary>) =>
     run(() => webDavUploadEngine.addOrUpdateSource({ ...source, ...changes }));
 
+  const remove = () => {
+    setMenuOpen(false);
+    Alert.alert(
+      `Remove ${source.name}?`,
+      "This stops backing up this folder and removes its queue and history. Files on your phone and Nextcloud are not deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => {
+            void run(() => webDavUploadEngine.removeSource(source.id));
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <Panel>
       <View className="flex-row items-center justify-between gap-2">
@@ -96,13 +115,35 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
           {source.name}
         </Text>
         <View className="flex-row items-center gap-2">
-          <IconAction
-            icon="pencil-outline"
-            accessibilityLabel={`Edit ${source.name}`}
-            disabled={busy}
-            label="Edit"
-            onPress={onEdit}
-          />
+          <Menu
+            visible={menuOpen}
+            onDismiss={() => setMenuOpen(false)}
+            anchor={
+              <IconAction
+                icon="menu"
+                label={`Actions for ${source.name}`}
+                accessibilityState={{ expanded: menuOpen }}
+                disabled={busy}
+                onPress={() => setMenuOpen(true)}
+              />
+            }
+          >
+            <Menu.Item
+              leadingIcon="pencil-outline"
+              title="Edit backup folder"
+              accessibilityLabel="Edit backup folder"
+              onPress={() => {
+                setMenuOpen(false);
+                onEdit();
+              }}
+            />
+            <Menu.Item
+              leadingIcon="delete-outline"
+              title="Remove backup folder"
+              accessibilityLabel="Remove backup folder"
+              onPress={remove}
+            />
+          </Menu>
           <Switch
             hitSlop={8}
             accessibilityLabel={`${source.enabled ? "Disable" : "Enable"} ${source.name}`}
@@ -113,18 +154,12 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
         </View>
       </View>
       <Text className="text-base text-muted-light dark:text-muted-dark">
-        {sourceStatus(snapshot, source, now)}
+        {[
+          sourceStatus(snapshot, source, now),
+          source.queue?.pending ? `${source.queue.pending} pending` : null,
+          source.queue?.failed ? `${source.queue.failed} failed` : null,
+        ].filter(Boolean).join(" · ")}
       </Text>
-      {source.queue && (source.queue.pending > 0 || source.queue.failed > 0) ? (
-        <Text className="text-base text-muted-light dark:text-muted-dark">
-          {[
-            source.queue.pending ? `${source.queue.pending} pending` : null,
-            source.queue.failed ? `${source.queue.failed} failed` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </Text>
-      ) : null}
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {sourceLocalLabel(source)} → {source.remotePath}
       </Text>

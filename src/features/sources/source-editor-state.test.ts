@@ -132,4 +132,14 @@ describe("source editor state", () => {
       }),
     ).toBeUndefined();
   });
+
+  it("recognizes the default Camera directory selected through the folder browser", () => {
+    const camera = {
+      ...source,
+      localUri: "content://com.android.externalstorage.documents/tree/primary%3ADCIM%2FCamera",
+    };
+    expect(existingPresetSource([camera], { type: "camera" })).toBe(camera);
+    expect(existingPresetSource([camera], { type: "screenshots" })).toBeUndefined();
+    expect(existingPresetSource([source], { type: "camera" })).toBeUndefined();
+  });
 });

@@ -1,7 +1,7 @@
 import { Fragment, useState } from "react";
 import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, ScrollView, Share, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -21,13 +21,11 @@ type ConstraintKey = keyof TransferConstraints;
 export default function SettingsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ account?: string }>();
-  const { data: snapshot, error, refetch } = useEngineSnapshot();
+  const { data: snapshot, error } = useEngineSnapshot();
   const { remoteRootPath, setRemoteRootPath } = useAppPreferences();
   const [saving, setSaving] = useState<ConstraintKey>();
-  const [sharing, setSharing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [accountOpen, setAccountOpen] = useState(false);
-  const [clearing, setClearing] = useState(false);
   const [choosingRoot, setChoosingRoot] = useState(false);
   const [rootError, setRootError] = useState<string>();
   const [savingRoot, setSavingRoot] = useState(false);
@@ -73,57 +71,6 @@ export default function SettingsScreen() {
     { key: "requiresCharging", label: "Upload only while charging" },
   ];
 
-  const shareDiagnostics = async () => {
-    setSharing(true);
-    setErrorMessage(undefined);
-    try {
-      const report = await webDavUploadEngine.getDiagnosticReport();
-      if (!report.ok) {
-        setErrorMessage(report.error.message);
-        return;
-      }
-      await Share.share({
-        message: report.value,
-        title: "WebDAV Auto Upload diagnostics",
-      });
-    } catch {
-      setErrorMessage(
-        "The diagnostic report could not be shared. Please try again.",
-      );
-    } finally {
-      setSharing(false);
-    }
-  };
-
-  const clearCompleted = () => {
-    Alert.alert(
-      "Clear completed history?",
-      "Completed transfer records are removed. Files on your phone and Nextcloud stay, and the file inventory remains available.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: () => {
-            setClearing(true);
-            setErrorMessage(undefined);
-            void webDavUploadEngine
-              .clearCompletedHistory()
-              .then((result) => {
-                if (!result.ok) setErrorMessage(result.error.message);
-                else void refetch();
-              })
-              .catch(() =>
-                setErrorMessage(
-                  "History could not be cleared. Please try again.",
-                ),
-              )
-              .finally(() => setClearing(false));
-          },
-        },
-      ],
-    );
-  };
 
   return (
     <SafeAreaView
@@ -249,44 +196,6 @@ export default function SettingsScreen() {
                 Saving transfer rules…
               </Text>
             ) : null}
-          </Panel>
-        ) : null}
-        <Panel>
-          <View className="flex-row items-center justify-between gap-2">
-            <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-              Diagnostics
-            </Text>
-            <IconAction
-              icon="share-variant-outline"
-              accessibilityLabel="Share diagnostic report"
-              disabled={sharing}
-              label={sharing ? "Opening share sheet…" : "Share diagnostics"}
-              onPress={() => void shareDiagnostics()}
-            />
-          </View>
-          <Text className="text-base text-muted-light dark:text-muted-dark">
-            Share app and Android versions, queue counts, transfer rules, and
-            recent engine codes. Account, file, and folder details are excluded.
-          </Text>
-        </Panel>
-        {snapshot?.queue.uploaded ? (
-          <Panel>
-            <View className="flex-row items-center justify-between gap-2">
-              <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                Transfer history
-              </Text>
-              <IconAction
-                icon="delete-outline"
-                disabled={clearing}
-                label={clearing ? "Clearing…" : "Clear completed history"}
-                onPress={clearCompleted}
-                tone="danger"
-              />
-            </View>
-            <Text className="text-base text-muted-light dark:text-muted-dark">
-              Clear completed transfer records. Files on your phone and
-              Nextcloud stay untouched.
-            </Text>
           </Panel>
         ) : null}
         <Panel>
