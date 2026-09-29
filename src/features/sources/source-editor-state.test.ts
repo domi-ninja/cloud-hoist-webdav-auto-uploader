@@ -9,7 +9,10 @@ import {
   sourceEditorInitialValue,
   sourceEditorValueKey,
   sourceInputFromEditor,
+  sourceSelectionLabel,
+  sourceSelectionPath,
 } from "./source-editor-state";
+import { defaultRemotePath } from "./default-destination";
 
 const source: SourceSummary = {
   id: "source-1",
@@ -24,6 +27,34 @@ const source: SourceSummary = {
 };
 
 describe("source editor state", () => {
+  it("shows the full selected path while deriving the backup name from its last two folders", () => {
+    const selection = {
+      type: "document_tree" as const,
+      treeUri: "content://com.android.externalstorage.documents/tree/primary%3ADocuments%2F2026%2FReceipts",
+    };
+    expect(sourceSelectionPath(selection)).toBe("primary:Documents/2026/Receipts");
+    expect(sourceSelectionLabel(selection)).toBe("2026/Receipts");
+    expect(sourceSelectionPath({ type: "screenshots" })).toBe("Pictures/Screenshots");
+  });
+
+  it("saves a changed preset as the selected folder without occupying the screenshots preset", () => {
+    const initial = sourceEditorInitialValue(undefined, "screenshots", ["backup"]);
+    const selection = selectionForSource(source);
+    const saved = sourceInputFromEditor("new-folder", {
+      ...initial,
+      selection,
+      name: sourceSelectionLabel(selection),
+      remotePathSegments: defaultRemotePath(selection, ["backup"]),
+    });
+    expect(saved).toMatchObject({
+      kind: "saf",
+      localUri: source.localUri,
+      name: "Documents/Receipts",
+      remotePath: "/backup/Documents/Receipts",
+    });
+    expect(existingPresetSource([{ ...saved, lastScanAt: null }], { type: "screenshots" })).toBeUndefined();
+  });
+
   it("turns media presets into selected sources", () => {
     expect(selectionForPickerMode("camera")).toEqual({ type: "camera" });
     expect(selectionForPickerMode("screenshots")).toEqual({

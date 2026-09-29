@@ -35,6 +35,18 @@ export function sourceSelectionLabel(selection: SourceSelection | undefined) {
   return segments.length ? segments.join("/") : "Choose a local folder";
 }
 
+export function sourceSelectionPath(selection: SourceSelection) {
+  if (selection.type !== "document_tree") {
+    return sourceFolderPathSegments(selection).join("/");
+  }
+  try {
+    const documentId = selection.treeUri.split("/tree/")[1]?.split("/document/")[0];
+    return documentId ? decodeURIComponent(documentId) : selection.treeUri;
+  } catch {
+    return selection.treeUri;
+  }
+}
+
 export function sourceFolderPathSegments(selection: SourceSelection) {
   switch (selection?.type) {
     case "camera":

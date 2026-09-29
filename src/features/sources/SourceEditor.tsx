@@ -26,6 +26,8 @@ import {
   sourceEditorValueKey,
   sourceInputFromEditor,
   sourceSelectionLabel,
+  sourceSelectionPath,
+  sourceFolderPathSegments,
   type SourcePickerMode,
 } from "./source-editor-state";
 
@@ -73,7 +75,7 @@ export function SourceEditor({
     Boolean(initialValue.selection),
   );
   const [previewAttempt, setPreviewAttempt] = useState(0);
-  const [choosingLocal, setChoosingLocal] = useState(!initialValue.selection);
+  const [selectingLocal, setSelectingLocal] = useState(false);
   const [choosingRemote, setChoosingRemote] = useState(false);
   const [destinationCustomized, setDestinationCustomized] = useState(
     Boolean(source),
@@ -144,7 +146,8 @@ export function SourceEditor({
     collisionPolicy,
   };
   const dirty = sourceEditorValueKey(currentValue) !== initialKey;
-  const canSave = Boolean(selection && preview) && !busy && !previewLoading;
+  const canSave =
+    Boolean(selection && preview) && !busy && !previewLoading && !selectingLocal;
   const previewFileName = preview?.files[0]?.fileName ?? "example.txt";
   const keepBothPreview = `${previewFileName} -> ${keepBothPreviewName(previewFileName)}`;
 
@@ -322,9 +325,17 @@ export function SourceEditor({
                 </Text>
                 <Text className="text-base text-muted-light dark:text-muted-dark">
                   {selection
-                    ? `Upload photos in ${sourceSelectionLabel(selection)}.`
+                    ? `Upload photos in ${sourceFolderPathSegments(selection).at(-1)}.`
                     : "Choose a folder."}
                 </Text>
+                {selection ? (
+                  <Text
+                    selectable
+                    className="text-base text-muted-light dark:text-muted-dark"
+                  >
+                    {sourceSelectionPath(selection)}
+                  </Text>
+                ) : null}
                 {preview ? (
                   <>
                     <SourcePreviewThumbnails files={preview.files} />
@@ -350,37 +361,28 @@ export function SourceEditor({
                   />
                 ) : null}
               </View>
-              <IconAction
-                icon={choosingLocal ? "chevron-up" : "folder-edit-outline"}
-                disabled={busy}
-                label={choosingLocal ? "Hide choices" : "Change backup folder"}
-                accessibilityState={{ expanded: choosingLocal }}
-                onPress={() => setChoosingLocal((open) => !open)}
-              />
             </View>
-            {choosingLocal ? (
-              <LocalSourcePicker
-                embedded
-                mode={pickerMode}
-                onSelect={(nextSelection, nextPreview) => {
-                  const existing = !source
-                    ? existingPresetSource(sources, nextSelection)
-                    : undefined;
-                  if (existing) {
-                    onEditExisting(existing.id);
-                    return;
-                  }
-                  setSelection(nextSelection);
-                  setPreview(nextPreview);
-                  if (!destinationCustomized) {
-                    setRemotePathSegments(
-                      defaultRemotePath(nextSelection, remoteRootPath),
-                    );
-                  }
-                  setChoosingLocal(false);
-                }}
-              />
-            ) : null}
+            <LocalSourcePicker
+              disabled={busy || selectingLocal}
+              onBusyChange={setSelectingLocal}
+              onSelect={(nextSelection) => {
+                const existing = !source
+                  ? existingPresetSource(sources, nextSelection)
+                  : undefined;
+                if (existing) {
+                  onEditExisting(existing.id);
+                  return;
+                }
+                setSelection(nextSelection);
+                setPreview(undefined);
+                setPreviewLoading(true);
+                if (!destinationCustomized) {
+                  setRemotePathSegments(
+                    defaultRemotePath(nextSelection, remoteRootPath),
+                  );
+                }
+              }}
+            />
           </Panel>
           {selection ? (
             <>
