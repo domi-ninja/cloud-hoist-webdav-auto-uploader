@@ -36,6 +36,8 @@
     "android": "./scripts/android/run.sh",
     "android:seed-account": "./scripts/android/seed-debug-account.sh",
     "android:seed-photos": "./scripts/android/seed-random-photos.sh",
+    "android:signing": "sh scripts/android/release.sh init",
+    "android:beta": "sh scripts/android/release.sh build",
     "check": "./scripts/test/all.sh",
     "icons": "node scripts/assets/generate-icons.mjs",
     "icons:check": "node scripts/assets/generate-icons.mjs --check",

@@ -14,6 +14,7 @@ expo-env.d.ts
 *.orig.*
 
 # Android signing and local SDK configuration
+/.signing/
 *.jks
 *.keystore
 *.p8

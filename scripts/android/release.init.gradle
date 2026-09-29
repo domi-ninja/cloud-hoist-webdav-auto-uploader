@@ -1,0 +1,21 @@
+// Applied only by the beta build command; Expo-generated local test builds stay debug-signed.
+gradle.beforeProject { project ->
+    if (project.path == ':app') {
+        project.afterEvaluate {
+            def credentialsFile = new File(project.rootDir.parentFile, '.signing/release.json')
+            def credentials = new groovy.json.JsonSlurper().parse(credentialsFile)
+            ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].each { key ->
+                if (!credentials[key]) throw new GradleException("Missing signing property: ${key}")
+            }
+            def keyFile = new File(credentialsFile.parentFile, credentials.storeFile)
+            if (!keyFile.isFile()) throw new GradleException('Release keystore is missing')
+            def signing = project.android.signingConfigs.create('privateBeta')
+            signing.storeFile = keyFile
+            signing.storeType = 'PKCS12'
+            signing.storePassword = credentials.storePassword
+            signing.keyAlias = credentials.keyAlias
+            signing.keyPassword = credentials.keyPassword
+            project.android.buildTypes.release.signingConfig = signing
+        }
+    }
+}

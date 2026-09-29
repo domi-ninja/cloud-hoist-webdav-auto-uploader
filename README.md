@@ -2,7 +2,27 @@
 
 WebDAV Auto Upload is an Android app for automatic uploads to Nextcloud servers. It is an independent project and is not affiliated with or endorsed by Nextcloud GmbH.
 
-The app is being tested locally on Android phones and emulators. Release infrastructure is deferred. Product decisions live in [PLAN.md](PLAN.md), and [project tracking](docs/tickets/README.md) records implemented work, outstanding validation, and archived tickets.
+The app is being tested locally on Android phones and emulators. Signed APKs can be built for a private beta; store publishing is deferred. Product decisions live in [PLAN.md](PLAN.md), and [project tracking](docs/tickets/README.md) records implemented work, outstanding validation, and archived tickets.
+
+## Private beta signing
+
+Run `pnpm android:signing` once to create the private release key. It refuses to
+overwrite an existing `.signing/` directory. Back up the entire directory securely
+in a password manager or encrypted offline storage. It contains both the keystore
+and its password, is owner-only, and is ignored by Git. Losing it prevents signing
+compatible updates. Never share it with testers.
+
+Run `pnpm android:beta` to generate the Android project, build and verify the signed
+APK, and copy it to `dist/webdav-auto-upload-beta.apk`. Share only that APK.
+The command never installs or uninstalls anything on connected devices.
+Before each subsequent distributed build, increase `expo.android.versionCode`
+in `app.json`; update `expo.version` there for a new visible version.
+
+Only this beta command applies the private signing configuration. Ordinary local
+Gradle/test builds retain the debug key so device tests remain compatible. Do not
+distribute their APKs. A beta cannot update an existing debug-signed installation;
+switching requires uninstalling it first, which removes app settings and history.
+Future beta updates use the same private key and can install over the previous beta.
 
 ## Development requirements
 

@@ -12,6 +12,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "android": {
+      "versionCode": 1,
       "package": "ninja.domi.webdavautoupload",
       "predictiveBackGestureEnabled": false,
       "blockedPermissions": [
