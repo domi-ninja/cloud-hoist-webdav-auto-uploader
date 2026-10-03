@@ -1,8 +1,9 @@
 // Private beta signing. Credentials stay in ignored, owner-only files, never CLI arguments.
 import { randomBytes, X509Certificate } from 'node:crypto';
-import { mkdir, writeFile, readFile, chmod, copyFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, chmod, copyFile, rmdir } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
+import { checkPublishDestination, loadPublishConfig, publishBeta } from './publish.mjs';
 
 process.umask(0o077);
 const signingDir = resolve('.signing');
@@ -33,9 +34,23 @@ async function main() {
     console.log('Signing identity created in .signing/. Back up BOTH files securely before distributing builds.');
     return;
   }
-  if (mode !== 'build' && mode !== 'verify') throw new Error('Usage: pnpm android:signing OR pnpm android:beta');
+  if (!['build', 'verify', 'publish'].includes(mode)) throw new Error('Usage: pnpm android:signing, pnpm android:beta, or pnpm android:publish');
   const credentials = JSON.parse(await readFile(credentialsPath, 'utf8'));
-  if (mode === 'build') {
+  let publishConfig;
+  let versionCode;
+  if (mode === 'publish') {
+    publishConfig = await loadPublishConfig();
+    await checkPublishDestination(publishConfig);
+    const app = JSON.parse(await readFile('app.json', 'utf8'));
+    versionCode = app.expo.android.versionCode + 1;
+    if (!Number.isSafeInteger(versionCode) || versionCode < 2 || versionCode > 2100000000) {
+      throw new Error('app.json must contain a valid Android versionCode with room to increment.');
+    }
+    app.expo.android.versionCode = versionCode;
+    await writeFile('app.json', JSON.stringify(app, null, 2) + '\n');
+    console.log(`Building beta ${versionCode}. Keep this version bump even if publishing fails.`);
+  }
+  if (mode === 'build' || mode === 'publish') {
     run('pnpm', ['prebuild']);
     run('./android/gradlew', ['-p', 'android', '-I', '../scripts/android/release.init.gradle', ':app:assembleRelease'], {
       ...process.env, NODE_ENV: 'production',
@@ -58,6 +73,17 @@ async function main() {
   await mkdir('dist', { recursive: true });
   await copyFile(apk, 'dist/webdav-auto-upload-beta.apk');
   console.log('Signed beta: dist/webdav-auto-upload-beta.apk. No devices were changed.');
+  if (publishConfig) await publishBeta(publishConfig, apk, versionCode);
 }
 
-main().catch((error) => { console.error(error.message); process.exitCode = 1; });
+async function guardedMain() {
+  if (!['build', 'publish'].includes(process.argv[2])) return main();
+  await mkdir('dist', { recursive: true });
+  const lock = 'dist/.beta-build-lock';
+  try { await mkdir(lock); } catch {
+    throw new Error('Another beta build is running, or dist/.beta-build-lock remains from an interrupted build.');
+  }
+  try { await main(); } finally { await rmdir(lock); }
+}
+
+guardedMain().catch((error) => { console.error(error.message); process.exitCode = 1; });

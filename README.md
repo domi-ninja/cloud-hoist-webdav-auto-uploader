@@ -24,6 +24,54 @@ distribute their APKs. A beta cannot update an existing debug-signed installatio
 switching requires uninstalling it first, which removes app settings and history.
 Future beta updates use the same private key and can install over the previous beta.
 
+## Publish a beta
+
+Run `pnpm android:publish` to build locally, sign with the existing key, and upload
+to Nextcloud. No GitHub, CI service, or phone connection is involved.
+
+One-time setup:
+
+1. Complete the development setup below and ensure `.signing/release.json` and
+   `.signing/release.p12` exist. On this machine the signing key already exists;
+   do not regenerate it. Keep an encrypted backup.
+2. Create a dedicated beta folder in Nextcloud. Give testers a read-only,
+   password-protected folder share. The script does not create or change shares.
+3. Create `.signing/publish.json` locally with the following structure. Use the
+   actual URL-encoded WebDAV folder URL, not the tester share link. Use a dedicated
+   Nextcloud app password, preferably for an account limited to this folder.
+
+```json
+{
+  "folderUrl": "https://cloud.example.com/remote.php/dav/files/USERNAME/Beta/",
+  "username": "USERNAME",
+  "appPassword": "YOUR-NEXTCLOUD-APP-PASSWORD"
+}
+```
+
+Protect that file with `chmod 600 .signing/publish.json`. The whole `.signing/`
+directory is ignored by Git. Never send these credentials or the signing key to testers.
+
+Each `pnpm android:publish` run checks the destination, increments
+`expo.android.versionCode` in `app.json`, builds and verifies the APK signature,
+uploads a unique temporary file, downloads it to verify SHA-256, and renames it to
+`webdav-auto-upload-<versionCode>.apk` without replacing an existing beta.
+Keep and commit the version bump, even after a failed build/upload. Use this one
+checkout for publishing, or synchronize `app.json` before publishing elsewhere.
+Update `expo.version` manually when you want a new user-visible version label.
+
+The local APK remains at `dist/webdav-auto-upload-beta.apk`. On failure the command
+exits nonzero and attempts to remove only its own temporary upload. It never deletes
+previous betas. A lost response to the final rename may mean publication succeeded;
+check the remote folder before retrying. Old versions remain for manual cleanup.
+If the process is killed, check that no build is still running before removing the
+empty `dist/.beta-build-lock` directory with `rmdir dist/.beta-build-lock`.
+
+Testers open the shared folder, download the highest-numbered APK, and approve the
+Android update. This publishes downloads; it does not silently install or send
+push notifications. `pnpm android:beta` still builds locally without uploading or
+incrementing the version. `pnpm test:publish` tests the upload protocol with a fake
+server, without touching Nextcloud.
+
 ## Development requirements
 
 - Linux on x86-64 with KVM available
