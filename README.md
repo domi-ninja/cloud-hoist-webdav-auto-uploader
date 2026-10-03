@@ -56,7 +56,9 @@ are encoded automatically; use normal folder names in `NEXTCLOUD_DIRECTORY`.
 Each `pnpm android:publish` run checks the destination, increments
 `expo.android.versionCode` in `app.json`, builds and verifies the APK signature,
 uploads a unique temporary file, downloads it to verify SHA-256, and renames it to
-`webdav-auto-upload-<versionCode>.apk` without replacing an existing beta.
+`webdav-auto-upload-<YYYY-MM-DDTHHmmssZ>-<versionCode>.apk` without replacing an existing beta.
+For example, `webdav-auto-upload-2026-10-03T195219Z-2.apk`. The date and time are
+UTC, taken from the local APK's modification time so upload retries keep the same name.
 Keep and commit the version bump, even after a failed build/upload. Use this one
 checkout for publishing, or synchronize `app.json` before publishing elsewhere.
 Update `expo.version` manually when you want a new user-visible version label.

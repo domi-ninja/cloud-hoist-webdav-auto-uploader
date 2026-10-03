@@ -2,6 +2,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { Buffer } from 'node:buffer';
 import { createReadStream } from 'node:fs';
+import { stat } from 'node:fs/promises';
 import { loadEnvFile } from 'node:process';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -97,7 +98,9 @@ async function sha256(stream) {
 export async function publishBeta(config, apk, versionCode, request = fetch) {
   if (!Number.isSafeInteger(versionCode) || versionCode < 1) throw new Error('Invalid Android version code.');
   const send = client(config, request);
-  const fileName = `webdav-auto-upload-${versionCode}.apk`;
+  // Use the artifact timestamp so retrying the same APK keeps its release filename.
+  const timestamp = (await stat(apk)).mtime.toISOString().replace(/:/g, '').replace(/\.\d{3}Z$/, 'Z');
+  const fileName = `webdav-auto-upload-${timestamp}-${versionCode}.apk`;
   const target = new URL(fileName, config.folderUrl).href;
   // Nextcloud reserves .part paths for its own upload handling.
   const staging = new URL(`.beta-${randomUUID()}.apk`, config.folderUrl).href;

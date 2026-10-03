@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import { Buffer } from 'node:buffer';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, utimes, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkPublishDestination, publishBeta, publishConfigFromEnv, validatePublishConfig } from './publish.mjs';
@@ -50,6 +50,9 @@ for (const failure of [null, 'checksum', 'conflict', 'upload', 'refused']) {
     try {
       const apk = join(directory, 'test.apk');
       await writeFile(apk, 'signed apk fixture');
+      const builtAt = new Date('2026-10-04T01:52:19+06:00');
+      await utimes(apk, builtAt, builtAt);
+      const fileName = 'webdav-auto-upload-2026-10-03T195219Z-2.apk';
       const calls = [];
       let uploaded;
       const request = async (url, options) => {
@@ -71,7 +74,7 @@ for (const failure of [null, 'checksum', 'conflict', 'upload', 'refused']) {
         if (options.method === 'GET') return new Response(failure === 'checksum' ? 'broken' : uploaded);
         if (options.method === 'MOVE') {
           assert.equal(options.headers.Overwrite, 'F');
-          assert.equal(options.headers.Destination, config.folderUrl + 'webdav-auto-upload-2.apk');
+          assert.equal(options.headers.Destination, config.folderUrl + fileName);
           return new Response(null, { status: failure === 'conflict' ? 412 : 201 });
         }
         assert.equal(options.method, 'DELETE');
@@ -84,7 +87,7 @@ for (const failure of [null, 'checksum', 'conflict', 'upload', 'refused']) {
         if (failure !== 'conflict') assert.ok(!calls.some(call => call.method === 'MOVE'));
       } else {
         const result = await publishBeta(config, apk, 2, request);
-        assert.equal(result.fileName, 'webdav-auto-upload-2.apk');
+        assert.equal(result.fileName, fileName);
         assert.deepEqual(calls.map(call => call.method), failure === 'refused'
           ? ['PUT', 'PUT', 'GET', 'MOVE'] : ['PUT', 'GET', 'MOVE']);
       }
