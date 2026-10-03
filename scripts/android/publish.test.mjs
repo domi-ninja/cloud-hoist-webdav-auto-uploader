@@ -4,7 +4,18 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkPublishDestination, publishBeta, validatePublishConfig } from './publish.mjs';
+import { checkPublishDestination, publishBeta, publishConfigFromEnv, validatePublishConfig } from './publish.mjs';
+
+test('builds the beta folder URL from dotenv variables without discarding the DAV root', () => {
+  const env = {
+    NEXTCLOUD_WEBDAV_URL: 'https://example.test/remote.php/dav/files/prime',
+    NEXTCLOUD_USERNAME: 'prime', NEXTCLOUD_PASSWORD: 'secret', NEXTCLOUD_DIRECTORY: 'beta_apps',
+  };
+  assert.equal(publishConfigFromEnv(env).folderUrl, 'https://example.test/remote.php/dav/files/prime/beta_apps/');
+  assert.equal(publishConfigFromEnv({ ...env, NEXTCLOUD_DIRECTORY: 'Beta apps/Android' }).folderUrl,
+    'https://example.test/remote.php/dav/files/prime/Beta%20apps/Android/');
+  assert.throws(() => publishConfigFromEnv({ ...env, NEXTCLOUD_DIRECTORY: '../other' }));
+});
 
 const config = validatePublishConfig({
   folderUrl: 'https://example.test/dav/Beta', username: 'tester', appPassword: 'secret',
@@ -23,7 +34,17 @@ test('preflight requires a WebDAV response and rejects authentication failures',
   await assert.rejects(checkPublishDestination(config, async () => new Response('', { status: 401 })), /HTTP 401/);
 });
 
-for (const failure of [null, 'checksum', 'conflict', 'upload']) {
+test('creates only the configured destination when it is missing', async () => {
+  const methods = [];
+  await checkPublishDestination(config, async (url, options) => {
+    assert.equal(url, config.folderUrl);
+    methods.push(options.method);
+    return new Response(null, { status: options.method === 'PROPFIND' ? 404 : 201 });
+  });
+  assert.deepEqual(methods, ['PROPFIND', 'MKCOL']);
+});
+
+for (const failure of [null, 'checksum', 'conflict', 'upload', 'refused']) {
   test(`publishing ${failure ?? 'success'} verifies bytes and never overwrites existing betas`, async () => {
     const directory = await mkdtemp(join(tmpdir(), 'beta-publish-test-'));
     try {
@@ -36,9 +57,14 @@ for (const failure of [null, 'checksum', 'conflict', 'upload']) {
         assert.equal(options.redirect, 'error');
         assert.equal(options.headers.Authorization, 'Basic ' + Buffer.from('tester:secret').toString('base64'));
         if (options.method === 'PUT') {
+          assert.match(new URL(url).pathname, /\/\.beta-[a-f0-9-]+\.apk$/);
           const chunks = [];
           for await (const chunk of options.body) chunks.push(chunk);
           uploaded = Buffer.concat(chunks);
+          if (failure === 'refused' && calls.filter(call => call.method === 'PUT').length === 1) {
+            throw new Error('Connection refused', { cause: { code: 'ECONNREFUSED' } });
+          }
+          assert.equal(uploaded.toString(), 'signed apk fixture');
           assert.equal(options.headers['If-None-Match'], '*');
           return new Response(null, { status: failure === 'upload' ? 503 : 201 });
         }
@@ -51,7 +77,7 @@ for (const failure of [null, 'checksum', 'conflict', 'upload']) {
         assert.equal(options.method, 'DELETE');
         return new Response(null, { status: 204 });
       };
-      if (failure) {
+      if (failure && failure !== 'refused') {
         await assert.rejects(publishBeta(config, apk, 2, request));
         assert.equal(calls.at(-1).method, 'DELETE');
         assert.equal(calls.at(-1).url, calls[0].url);
@@ -59,7 +85,8 @@ for (const failure of [null, 'checksum', 'conflict', 'upload']) {
       } else {
         const result = await publishBeta(config, apk, 2, request);
         assert.equal(result.fileName, 'webdav-auto-upload-2.apk');
-        assert.deepEqual(calls.map(call => call.method), ['PUT', 'GET', 'MOVE']);
+        assert.deepEqual(calls.map(call => call.method), failure === 'refused'
+          ? ['PUT', 'PUT', 'GET', 'MOVE'] : ['PUT', 'GET', 'MOVE']);
       }
     } finally {
       await rm(directory, { recursive: true, force: true });

@@ -34,22 +34,24 @@ One-time setup:
 1. Complete the development setup below and ensure `.signing/release.json` and
    `.signing/release.p12` exist. On this machine the signing key already exists;
    do not regenerate it. Keep an encrypted backup.
-2. Create a dedicated beta folder in Nextcloud. Give testers a read-only,
+2. Choose a dedicated beta folder in Nextcloud. The script creates it if missing;
+   its parent must already exist. Give testers a read-only,
    password-protected folder share. The script does not create or change shares.
-3. Create `.signing/publish.json` locally with the following structure. Use the
-   actual URL-encoded WebDAV folder URL, not the tester share link. Use a dedicated
+3. Set these variables in the repository's `.env`. Use the actual URL-encoded
+   WebDAV account root, not the tester share link. Use a dedicated
    Nextcloud app password, preferably for an account limited to this folder.
 
-```json
-{
-  "folderUrl": "https://cloud.example.com/remote.php/dav/files/USERNAME/Beta/",
-  "username": "USERNAME",
-  "appPassword": "YOUR-NEXTCLOUD-APP-PASSWORD"
-}
+```dotenv
+NEXTCLOUD_WEBDAV_URL="https://cloud.domi.ninja/remote.php/dav/files/prime"
+NEXTCLOUD_USERNAME="prime"
+NEXTCLOUD_PASSWORD="YOUR-NEXTCLOUD-APP-PASSWORD"
+NEXTCLOUD_DIRECTORY="beta_apps"
 ```
 
-Protect that file with `chmod 600 .signing/publish.json`. The whole `.signing/`
-directory is ignored by Git. Never send these credentials or the signing key to testers.
+Protect that file with `chmod 600 .env`. Both `.env` and the `.signing/`
+directory are ignored by Git. Never send these credentials or the signing key to testers.
+Existing shell environment variables take precedence over `.env`. Directory names
+are encoded automatically; use normal folder names in `NEXTCLOUD_DIRECTORY`.
 
 Each `pnpm android:publish` run checks the destination, increments
 `expo.android.versionCode` in `app.json`, builds and verifies the APK signature,
@@ -61,7 +63,10 @@ Update `expo.version` manually when you want a new user-visible version label.
 
 The local APK remains at `dist/webdav-auto-upload-beta.apk`. On failure the command
 exits nonzero and attempts to remove only its own temporary upload. It never deletes
-previous betas. A lost response to the final rename may mean publication succeeded;
+previous betas. Refused connections are retried up to three times with short backoff;
+other failures stop the command. Nextcloud reserves `.part`, so staging uses a unique
+`.beta-<UUID>.apk` filename.
+A lost response to the final rename may mean publication succeeded;
 check the remote folder before retrying. Old versions remain for manual cleanup.
 If the process is killed, check that no build is still running before removing the
 empty `dist/.beta-build-lock` directory with `rmdir dist/.beta-build-lock`.

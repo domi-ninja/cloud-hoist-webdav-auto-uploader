@@ -34,5 +34,6 @@ yarn-error.*
 .DS_Store
 
 # Local environment and acceptance credentials
+.env
 .env*.local
 test-creds.tct
