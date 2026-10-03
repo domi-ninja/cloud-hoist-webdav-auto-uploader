@@ -36,12 +36,12 @@ async function main() {
   }
   if (!['build', 'verify', 'publish'].includes(mode)) throw new Error('Usage: pnpm android:signing, pnpm android:beta, or pnpm android:publish');
   const credentials = JSON.parse(await readFile(credentialsPath, 'utf8'));
+  const app = JSON.parse(await readFile('app.json', 'utf8'));
   let publishConfig;
   let versionCode;
   if (mode === 'publish') {
     publishConfig = await loadPublishConfig();
     await checkPublishDestination(publishConfig);
-    const app = JSON.parse(await readFile('app.json', 'utf8'));
     versionCode = app.expo.android.versionCode + 1;
     if (!Number.isSafeInteger(versionCode) || versionCode < 2 || versionCode > 2100000000) {
       throw new Error('app.json must contain a valid Android versionCode with room to increment.');
@@ -51,9 +51,10 @@ async function main() {
     console.log(`Building beta ${versionCode}. Keep this version bump even if publishing fails.`);
   }
   if (mode === 'build' || mode === 'publish') {
-    run('pnpm', ['prebuild']);
+    const betaEnv = { ...process.env, EXPO_PUBLIC_RELEASE_CHANNEL: 'beta' };
+    run('pnpm', ['prebuild'], betaEnv);
     run('./android/gradlew', ['-p', 'android', '-I', '../scripts/android/release.init.gradle', ':app:assembleRelease'], {
-      ...process.env, NODE_ENV: 'production',
+      ...betaEnv, NODE_ENV: 'production',
     });
   }
   const apk = resolve('android/app/build/outputs/apk/release/app-release.apk');
@@ -73,7 +74,7 @@ async function main() {
   await mkdir('dist', { recursive: true });
   await copyFile(apk, 'dist/webdav-auto-upload-beta.apk');
   console.log('Signed beta: dist/webdav-auto-upload-beta.apk. No devices were changed.');
-  if (publishConfig) await publishBeta(publishConfig, apk, versionCode);
+  if (publishConfig) await publishBeta(publishConfig, apk, { version: app.expo.version, versionCode });
 }
 
 async function guardedMain() {

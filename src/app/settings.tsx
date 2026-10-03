@@ -206,7 +206,9 @@ export default function SettingsScreen() {
             {project.displayName} · {project.license}
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            Version {Constants.expoConfig?.version ?? "unknown"}
+            {process.env.EXPO_PUBLIC_RELEASE_CHANNEL === "beta" ? "Beta" : "Version"}{" "}
+            {Constants.expoConfig?.version ?? "unknown"} · Build{" "}
+            {Constants.expoConfig?.android?.versionCode ?? "unknown"}
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
             {project.compatibilityNotice}

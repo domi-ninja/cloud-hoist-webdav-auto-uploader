@@ -21,6 +21,12 @@ const config = validatePublishConfig({
   folderUrl: 'https://example.test/dav/Beta', username: 'tester', appPassword: 'secret',
 });
 
+test('rejects missing or unsafe app versions before accessing the APK or server', async () => {
+  for (const version of [undefined, '', '../0.1.0', '0.1.0/other']) {
+    await assert.rejects(publishBeta(config, 'unused.apk', { version, versionCode: 2 }), /Invalid app version/);
+  }
+});
+
 test('rejects insecure URLs and keeps the destination inside the configured folder', () => {
   assert.equal(config.folderUrl, 'https://example.test/dav/Beta/');
   for (const folderUrl of ['http://example.test/', 'https://user:pass@example.test/', 'https://example.test/?token=secret']) {
@@ -52,7 +58,8 @@ for (const failure of [null, 'checksum', 'conflict', 'upload', 'refused']) {
       await writeFile(apk, 'signed apk fixture');
       const builtAt = new Date('2026-10-04T01:52:19+06:00');
       await utimes(apk, builtAt, builtAt);
-      const fileName = 'webdav-auto-upload-2026-10-03T195219Z-2.apk';
+      const release = { version: '0.1.0', versionCode: 2 };
+      const fileName = 'webdav-auto-upload-0.1.0-2026-10-03T195219Z-build-2.apk';
       const calls = [];
       let uploaded;
       const request = async (url, options) => {
@@ -81,12 +88,12 @@ for (const failure of [null, 'checksum', 'conflict', 'upload', 'refused']) {
         return new Response(null, { status: 204 });
       };
       if (failure && failure !== 'refused') {
-        await assert.rejects(publishBeta(config, apk, 2, request));
+        await assert.rejects(publishBeta(config, apk, release, request));
         assert.equal(calls.at(-1).method, 'DELETE');
         assert.equal(calls.at(-1).url, calls[0].url);
         if (failure !== 'conflict') assert.ok(!calls.some(call => call.method === 'MOVE'));
       } else {
-        const result = await publishBeta(config, apk, 2, request);
+        const result = await publishBeta(config, apk, release, request);
         assert.equal(result.fileName, fileName);
         assert.deepEqual(calls.map(call => call.method), failure === 'refused'
           ? ['PUT', 'PUT', 'GET', 'MOVE'] : ['PUT', 'GET', 'MOVE']);
