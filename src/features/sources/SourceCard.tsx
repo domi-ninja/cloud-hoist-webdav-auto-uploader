@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
-import { Menu, Switch } from "react-native-paper";
+import { Icon, Menu, Switch, useTheme } from "react-native-paper";
 
 import webDavUploadEngine, {
   type EngineError,
   type EngineSnapshot,
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
-import { formatRelativeTime } from "@/lib/format";
 import { IconAction, Panel } from "@/components/ui";
 import { RestoreSourcePermission } from "./RestoreSourcePermission";
 import { sourceLocalLabel } from "./source-editor-state";
@@ -22,7 +21,6 @@ type SourceCardProps = {
 function sourceStatus(
   snapshot: EngineSnapshot,
   source: SourceSummary,
-  now: number,
 ) {
   const permissionBlocker = snapshot.blockers.some(
     (blocker) =>
@@ -50,13 +48,11 @@ function sourceStatus(
   if (snapshot.blockers.some((blocker) => blocker.kind === "network")) {
     return "Waiting for network";
   }
-  if (source.lastScanAt) {
-    return `Last scanned ${formatRelativeTime(source.lastScanAt, now)}`;
-  }
-  return "Ready to scan";
+  return null;
 }
 
-export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
+export function SourceCard({ snapshot, source, onEdit }: SourceCardProps) {
+  const theme = useTheme();
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [error, setError] = useState<EngineError>();
@@ -69,7 +65,7 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
     > => blocker.kind === "permission" && blocker.sourceId === source.id,
   );
   const status = [
-    sourceStatus(snapshot, source, now),
+    sourceStatus(snapshot, source),
     source.queue?.failed ? `${source.queue.failed} failed` : null,
   ].filter(Boolean).join(" · ");
 
@@ -121,11 +117,14 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
           <Text className="min-w-0 flex-1 text-base font-semibold text-ink-light dark:text-ink-dark">
             {source.name}
           </Text>
-          {source.queue?.pending ? (
+          <View className="flex-row items-center gap-2">
+            {(source.queue?.pending ?? 0) === 0 && !source.queue?.failed ? (
+              <Icon source="check-circle" size={20} color={theme.colors.primary} />
+            ) : null}
             <Text className="shrink-0 text-base text-muted-light dark:text-muted-dark">
-              {source.queue.pending} {source.queue.pending === 1 ? "file" : "files"} pending
+              {source.queue?.pending ?? 0} {source.queue?.pending === 1 ? "file" : "files"} pending
             </Text>
-          ) : null}
+          </View>
         </View>
         <View className="shrink-0 flex-row items-center gap-2">
           <Menu
@@ -133,7 +132,7 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
             onDismiss={() => setMenuOpen(false)}
             anchor={
               <IconAction
-                icon="menu"
+                icon="dots-vertical"
                 label={`Actions for ${source.name}`}
                 accessibilityState={{ expanded: menuOpen }}
                 disabled={busy}

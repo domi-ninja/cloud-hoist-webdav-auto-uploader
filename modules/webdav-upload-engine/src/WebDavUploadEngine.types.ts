@@ -167,6 +167,7 @@ export const fileInventoryFilterSchema = z.object({
 export type FileInventoryFilter = z.infer<typeof fileInventoryFilterSchema>;
 
 export const fileInventoryEntrySchema = z.object({
+  jobId: z.string().nullable().optional(),
   id: z.string().min(1),
   sourceId: z.string().min(1),
   sourceName: z.string().min(1),
@@ -190,6 +191,13 @@ export const fileInventoryPageSchema = z.object({
   items: fileInventoryEntrySchema.array(),
   errors: inventoryErrorSchema.array(),
   nextOffset: z.number().int().nonnegative().nullable(),
+});
+
+export const uploadDetailSchema = z.object({
+  jobId: z.string(), sourceId: z.string(), fileName: z.string(), sourceName: z.string().nullable(),
+  localUri: z.string().nullable(), byteCount: z.number().nonnegative(), remotePath: z.string(),
+  state: z.enum(["queued", "running", "retry_wait", "blocked", "completed", "cancelled"]),
+  attemptCount: z.number().int().nonnegative(), errorCode: z.string().nullable(), errorMessage: z.string().nullable(),
 });
 
 export const unresolvedFailureSchema = z.object({
@@ -264,7 +272,20 @@ export const selectedDocumentTreeSchema = z.object({
   treeUri: z.string().startsWith("content://"),
 });
 
+export const mediaFolderSchema = z.object({
+  volumeName: z.string().min(1),
+  relativePath: z.string().min(1),
+  fileCount: z.number().int().positive(),
+  totalBytes: z.number().int().nonnegative(),
+});
+export type MediaFolder = z.infer<typeof mediaFolderSchema>;
+
 export const sourceSelectionSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("media_folder"),
+    volumeName: z.string().min(1),
+    relativePath: z.string().min(1),
+  }),
   z.object({ type: z.literal("camera") }),
   z.object({ type: z.literal("screenshots") }),
   z.object({

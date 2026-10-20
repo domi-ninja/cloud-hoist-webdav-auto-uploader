@@ -92,6 +92,7 @@ class SourceDiscoveryModelsTest {
         33,
         Manifest.permission.READ_MEDIA_IMAGES,
         Manifest.permission.READ_MEDIA_VIDEO,
+        Manifest.permission.READ_MEDIA_AUDIO,
       ),
     )
     assertEquals(

@@ -49,6 +49,23 @@ class AndroidMediaStoreDiscoveryTest {
     assertEquals(MediaPermissionAccess.PARTIAL, camera.preview.permissionAccess)
   }
 
+  @Test
+  fun discoversArbitraryFoldersAndReadsOnlyTheSelectedDirectory() {
+    val directory = "CloudHoistFolderTest-${System.nanoTime()}"
+    insertImage(directory, "first.jpg", 7)
+    insertImage(directory, "second.jpg", 11)
+    val discovery = AndroidMediaStoreDiscovery(context, permissionAccess = { MediaPermissionAccess.PARTIAL })
+    val folder = discovery.folders().single { it.relativePath == "Pictures/$directory/" }
+    assertEquals(2, folder.fileCount)
+    assertEquals(18L, folder.totalBytes)
+    val selected = discovery.discoverFolder(folder.volumeName, folder.relativePath)
+    assertEquals(setOf("first.jpg", "second.jpg"), selected.files.map { it.fileName }.toSet())
+    val restored = mediaFolderSelection(mediaFolderUri(folder.volumeName, folder.relativePath))
+    assertEquals(SourceType.MEDIA_FOLDER, restored.type)
+    assertEquals(folder.relativePath, restored.relativePath)
+    assertEquals(folder.volumeName, restored.volumeName)
+  }
+
   private fun insertImage(directory: String, name: String, byteCount: Int) {
     val values = ContentValues().apply {
       put(MediaStore.Images.Media.DISPLAY_NAME, name)

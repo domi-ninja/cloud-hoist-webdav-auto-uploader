@@ -287,6 +287,7 @@ internal fun reconcileInventory(
     )
     mapOf(
       "id" to "${source.id}:$relativePath",
+      "jobId" to local?.jobId,
       "sourceId" to source.id,
       "sourceName" to source.name,
       "fileName" to relativePath.substringAfterLast('/'),

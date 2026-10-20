@@ -33,6 +33,7 @@ import {
 
 type SourceEditorProps = {
   source?: SourceSummary;
+  initialSelection?: SourceSelection;
   sources: SourceSummary[];
   visible: boolean;
   onClose: () => void;
@@ -47,6 +48,7 @@ function displayPath(pathSegments: string[]) {
 
 export function SourceEditor({
   source,
+  initialSelection,
   sources,
   visible,
   onClose,
@@ -56,8 +58,8 @@ export function SourceEditor({
 }: SourceEditorProps) {
   const { remoteRootPath } = useAppPreferences();
   const initialValue = useMemo(
-    () => sourceEditorInitialValue(source, pickerMode, remoteRootPath),
-    [pickerMode, remoteRootPath, source],
+    () => sourceEditorInitialValue(source, pickerMode, remoteRootPath, initialSelection),
+    [pickerMode, remoteRootPath, source, initialSelection],
   );
   const initialKey = sourceEditorValueKey(initialValue);
   const [selection, setSelection] = useState<SourceSelection | undefined>(
@@ -258,7 +260,7 @@ export function SourceEditor({
                 </Text>
                 <Text className="text-base text-muted-light dark:text-muted-dark">
                   {selection
-                    ? `Upload photos in ${sourceFolderPathSegments(selection).at(-1)}.`
+                    ? `Files in ${sourceFolderPathSegments(selection).at(-1)}`
                     : "Choose a folder."}
                 </Text>
                 {selection ? (
@@ -282,7 +284,7 @@ export function SourceEditor({
                     </Text>
                     {preview.permissionAccess === "partial" ? (
                       <Text className="text-base text-muted-light dark:text-muted-dark">
-                        Only photos allowed by Android will be backed up.
+                        Only media allowed by Android will be backed up.
                       </Text>
                     ) : null}
                   </>

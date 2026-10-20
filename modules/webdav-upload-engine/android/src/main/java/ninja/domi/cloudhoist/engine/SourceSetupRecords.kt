@@ -10,14 +10,23 @@ class SourceSelectionRecord : Record {
   @Field
   val treeUri: String? = null
 
+  @Field
+  val volumeName: String? = null
+
+  @Field
+  val relativePath: String? = null
+
   fun toSelection() = SourceSelection(
     type = when (type) {
       "camera" -> SourceType.CAMERA
       "screenshots" -> SourceType.SCREENSHOTS
       "document_tree" -> SourceType.DOCUMENT_TREE
+      "media_folder" -> SourceType.MEDIA_FOLDER
       else -> throw EngineInvalidInputException("Source type is invalid.")
     },
     treeUri = treeUri,
+    volumeName = volumeName,
+    relativePath = relativePath,
   )
 }
 

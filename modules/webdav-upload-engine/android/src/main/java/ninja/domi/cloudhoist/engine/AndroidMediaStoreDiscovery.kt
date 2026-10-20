@@ -23,13 +23,26 @@ class AndroidMediaStoreDiscovery(
     currentMediaPermissionAccess(context)
   },
 ) : MediaPresetDiscovery {
-  override fun discover(preset: MediaPreset): MediaDiscovery {
-    val items = buildList {
+  override fun discover(preset: MediaPreset) = MediaDiscovery(
+    queryItems().mapNotNull { it.forPreset(preset) }, permissionAccess(),
+  )
+
+  override fun discoverFolder(volumeName: String, relativePath: String): MediaDiscovery {
+    validateMediaFolder(volumeName, relativePath)
+    val items = queryItems(volumeName, relativePath)
+    return MediaDiscovery(items.mapNotNull { it.asDiscoveredFile() }, permissionAccess())
+  }
+
+  fun folders(): List<MediaFolder> = groupMediaFolders(queryItems())
+
+  private fun queryItems(volumeName: String? = null, relativePath: String? = null): List<MediaStoreItem> {
+    return buildList {
       contentResolver.query(
         MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL),
         PROJECTION,
-        MEDIA_SELECTION,
-        MEDIA_SELECTION_ARGS,
+        if (relativePath == null) MEDIA_SELECTION else
+          "$MEDIA_SELECTION AND ${MediaStore.MediaColumns.VOLUME_NAME} = ? AND ${MediaStore.MediaColumns.RELATIVE_PATH} = ?",
+        if (relativePath == null) MEDIA_SELECTION_ARGS else MEDIA_SELECTION_ARGS + arrayOf(volumeName!!, relativePath),
         "${MediaStore.MediaColumns.DATE_MODIFIED} ASC, ${MediaStore.MediaColumns._ID} ASC",
       )?.use { cursor ->
         val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
@@ -47,6 +60,7 @@ class AndroidMediaStoreDiscovery(
           val volumeName = cursor.getString(volumeColumn)
           val item = MediaStoreItem(
             providerId = "$volumeName:$id",
+            volumeName = volumeName,
             localUri = ContentUris.withAppendedId(
               MediaStore.Files.getContentUri(volumeName),
               id,
@@ -59,12 +73,11 @@ class AndroidMediaStoreDiscovery(
             bucketDisplayName = cursor.getString(bucketColumn),
             createdAtEpochSeconds = cursor.nullableLong(createdColumn),
           )
-          item.forPreset(preset)?.let(::add)
+          add(item)
         }
       }
     }
 
-    return MediaDiscovery(items, permissionAccess())
   }
 
   private fun android.database.Cursor.nullableLong(column: Int): Long? =
@@ -83,10 +96,11 @@ class AndroidMediaStoreDiscovery(
       MediaStore.MediaColumns.BUCKET_DISPLAY_NAME,
     )
     const val MEDIA_SELECTION =
-      "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?)"
+      "${MediaStore.Files.FileColumns.MEDIA_TYPE} IN (?, ?, ?)"
     val MEDIA_SELECTION_ARGS = arrayOf(
       MediaStore.Files.FileColumns.MEDIA_TYPE_IMAGE.toString(),
       MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
+      MediaStore.Files.FileColumns.MEDIA_TYPE_AUDIO.toString(),
     )
   }
 }
@@ -107,10 +121,11 @@ fun mediaPermissionAccess(
       val fullTypes = listOf(
         Manifest.permission.READ_MEDIA_IMAGES,
         Manifest.permission.READ_MEDIA_VIDEO,
+        Manifest.permission.READ_MEDIA_AUDIO,
       ).count { permission -> granted(permission) }
       when {
-        fullTypes == 2 -> MediaPermissionAccess.FULL
-        fullTypes == 1 || granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) ->
+        fullTypes == 3 -> MediaPermissionAccess.FULL
+        fullTypes > 0 || granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) ->
           MediaPermissionAccess.PARTIAL
         else -> MediaPermissionAccess.DENIED
       }
@@ -119,10 +134,11 @@ fun mediaPermissionAccess(
       val grantedTypes = listOf(
         Manifest.permission.READ_MEDIA_IMAGES,
         Manifest.permission.READ_MEDIA_VIDEO,
+        Manifest.permission.READ_MEDIA_AUDIO,
       ).count { permission -> granted(permission) }
-      when (grantedTypes) {
-        2 -> MediaPermissionAccess.FULL
-        1 -> MediaPermissionAccess.PARTIAL
+      when {
+        grantedTypes == 3 -> MediaPermissionAccess.FULL
+        grantedTypes > 0 -> MediaPermissionAccess.PARTIAL
         else -> MediaPermissionAccess.DENIED
       }
     }

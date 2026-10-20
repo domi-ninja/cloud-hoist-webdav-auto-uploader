@@ -26,7 +26,7 @@ class BlockerNotification(context: Context) {
   }
 
   fun show(job: UploadJobEntity, failure: TransferFailure) {
-    val route = blockerDeepLink(failure.scope)
+    val route = blockerDeepLink(job.id)
     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(route))
       .setPackage(appContext.packageName)
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -38,7 +38,7 @@ class BlockerNotification(context: Context) {
     )
     val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
       .setSmallIcon(android.R.drawable.stat_notify_error)
-      .setContentTitle("Auto upload needs attention")
+      .setContentTitle("Upload failed: ${safeTransferFileName(job.remoteFileName)}")
       .setContentText(blockerNotificationMessage(failure.code))
       .setContentIntent(contentIntent)
       .setAutoCancel(true)
@@ -47,16 +47,17 @@ class BlockerNotification(context: Context) {
     notifications.notify(NOTIFICATION_BASE_ID + job.id.hashCode().ushr(1) % 10_000, notification)
   }
 
+  fun dismiss(jobId: String) {
+    notifications.cancel(NOTIFICATION_BASE_ID + jobId.hashCode().ushr(1) % 10_000)
+  }
+
   companion object {
     const val CHANNEL_ID = "cloud_hoist_attention"
     const val NOTIFICATION_BASE_ID = 8_000
   }
 }
 
-internal fun blockerDeepLink(scope: BlockerScope?) = when (scope) {
-  BlockerScope.JOB, null -> "cloud-hoist:///activity"
-  BlockerScope.ACCOUNT, BlockerScope.SOURCE -> "cloud-hoist:///"
-}
+internal fun blockerDeepLink(jobId: String) = "cloud-hoist:///upload-failure?jobId=${java.net.URLEncoder.encode(jobId, "UTF-8")}"
 
 internal fun blockerNotificationMessage(code: String) = when (code) {
   "invalid_credentials" -> "Reconnect your Nextcloud account."
@@ -64,5 +65,5 @@ internal fun blockerNotificationMessage(code: String) = when (code) {
   "remote_permission", "remote_missing" -> "Repair the upload destination."
   "local_missing" -> "Restore access to the local source."
   "quota" -> "Nextcloud storage is full."
-  else -> "Open Activity to review the upload problem."
+  else -> "Open this file to review why the upload failed."
 }

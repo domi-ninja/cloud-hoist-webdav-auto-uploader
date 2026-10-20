@@ -26,6 +26,10 @@ export function selectionForSource(source: SourceSummary): SourceSelection {
   if (source.kind === "saf") {
     return { type: "document_tree", treeUri: source.localUri };
   }
+  if (source.localUri.startsWith("mediastore://folder/")) {
+    const [volumeName, relativePath] = source.localUri.slice("mediastore://folder/".length).split("/").map(decodeURIComponent);
+    return { type: "media_folder", volumeName, relativePath };
+  }
   if (source.localUri === "mediastore://camera") return { type: "camera" };
   return { type: "screenshots" };
 }
@@ -36,6 +40,7 @@ export function sourceSelectionLabel(selection: SourceSelection | undefined) {
 }
 
 export function sourceSelectionPath(selection: SourceSelection) {
+  if (selection.type === "media_folder") return selection.relativePath.replace(/\/$/, "");
   if (selection.type !== "document_tree") {
     return sourceFolderPathSegments(selection).join("/");
   }
@@ -49,6 +54,8 @@ export function sourceSelectionPath(selection: SourceSelection) {
 
 export function sourceFolderPathSegments(selection: SourceSelection) {
   switch (selection?.type) {
+    case "media_folder":
+      return selection.relativePath.split("/").filter(Boolean).slice(-2);
     case "camera":
       return ["DCIM", "Camera"];
     case "screenshots":
@@ -78,7 +85,7 @@ export function existingPresetSource(
   selection: SourceSelection,
 ) {
   if (selection.type === "document_tree") return undefined;
-  const localUri = `mediastore://${selection.type}`;
+  const localUri = sourceSelectionUri(selection);
   const folderPath = sourceFolderPathSegments(selection).join("/");
   return sources.find(
     (source) =>
@@ -92,10 +99,11 @@ export function sourceEditorInitialValue(
   source: SourceSummary | undefined,
   pickerMode: SourcePickerMode = "all",
   remoteRootPath: string[] = ["Cloud Hoist"],
+  initialSelection?: SourceSelection,
 ): SourceEditorValue {
   const selection = source
     ? selectionForSource(source)
-    : selectionForPickerMode(pickerMode);
+    : initialSelection ?? selectionForPickerMode(pickerMode);
   return {
     name: selection ? sourceSelectionLabel(selection) : "",
     selection,
@@ -123,12 +131,17 @@ export function sourceInputFromEditor(
     id: sourceId,
     name: value.name,
     kind: selection.type === "document_tree" ? "saf" : "media_store",
-    localUri:
-      selection.type === "document_tree"
-        ? selection.treeUri
-        : `mediastore://${selection.type}`,
+    localUri: sourceSelectionUri(selection),
     remotePath: `/${value.remotePathSegments.join("/")}`,
     enabled: value.enabled,
     collisionPolicy: value.collisionPolicy,
   } as const;
+}
+
+export function sourceSelectionUri(selection: SourceSelection) {
+  if (selection.type === "document_tree") return selection.treeUri;
+  if (selection.type === "media_folder") {
+    return `mediastore://folder/${encodeURIComponent(selection.volumeName)}/${encodeURIComponent(selection.relativePath)}`;
+  }
+  return `mediastore://${selection.type}`;
 }

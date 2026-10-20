@@ -144,3 +144,20 @@ export function useUnresolvedFailures(enabled = true) {
     queryFn: () => webDavUploadEngine.getUnresolvedFailures(),
   });
 }
+
+/** Refresh the complete media-folder index while the suggestions screen is open. */
+export function useMediaFolders(enabled: boolean) {
+  return useQuery({
+    queryKey: ["media-folders"],
+    queryFn: async () => {
+      const permission = await webDavUploadEngine.getMediaPermission();
+      if (!permission.ok) throw new Error(permission.error.message);
+      if (permission.value.access === "denied") return { permission: permission.value, folders: [] };
+      const result = await webDavUploadEngine.getMediaFolders();
+      if (!result.ok) throw new Error(result.error.message);
+      return { permission: permission.value, folders: result.value };
+    },
+    enabled,
+    refetchInterval: enabled ? 30_000 : false,
+  });
+}

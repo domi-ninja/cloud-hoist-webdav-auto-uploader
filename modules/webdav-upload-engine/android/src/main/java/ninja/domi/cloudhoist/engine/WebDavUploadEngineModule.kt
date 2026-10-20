@@ -225,6 +225,14 @@ class WebDavUploadEngineModule : Module() {
       engine.invalidate()
     }
 
+    AsyncFunction("getUploadDetailAsync") { jobId: String -> engine.uploadDetail(jobId) }
+
+    AsyncFunction("retryUploadAsync") { jobId: String ->
+      if (!engine.retryJob(jobId)) throw EngineInvalidInputException("Restore the account or folder access, then retry this file.")
+      BlockerNotification(appContext.reactContext ?: throw AccountStorageException()).dismiss(jobId)
+      workScheduler.requestQueueDrain()
+    }
+
     AsyncFunction("retryFailedAsync") {
       engine.retryFailed()
       workScheduler.requestQueueDrain()
@@ -316,6 +324,18 @@ class WebDavUploadEngineModule : Module() {
         is DocumentTreePickerResult.Selected -> {
           documentTreeGateway.persistReadPermission(result.treeUri, result.resultFlags)
           mapOf("treeUri" to result.treeUri)
+        }
+      }
+    }
+
+    AsyncFunction("getMediaFoldersAsync") Coroutine { ->
+      withContext(Dispatchers.IO) {
+        val context = appContext.reactContext ?: throw AccountStorageException()
+        AndroidMediaStoreDiscovery(context).folders().map { folder ->
+          mapOf(
+            "volumeName" to folder.volumeName, "relativePath" to folder.relativePath,
+            "fileCount" to folder.fileCount, "totalBytes" to folder.totalBytes,
+          )
         }
       }
     }

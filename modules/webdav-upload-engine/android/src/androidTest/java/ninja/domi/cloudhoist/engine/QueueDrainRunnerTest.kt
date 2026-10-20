@@ -125,12 +125,13 @@ class QueueDrainRunnerTest {
     dao.claimNext(clock, "current:claim")
     assertEquals(1, dao.recoverForeignProcessClaims("current:%"))
     assertEquals(JobState.QUEUED, dao.job("old")?.state)
+    assertEquals(0, dao.job("old")?.attemptCount)
     assertEquals(JobState.RUNNING, dao.job("current")?.state)
   }
 
   @Test
   fun permanentFailureBlocksTheJobAndContinues() {
-    enqueue("bad", "revision-bad", 10)
+    enqueue("bad", "revision-bad", 10, attemptCount = 3)
     enqueue("good", "revision-good", 20)
     val runner = runner(
       davClient = DavClient { _, request ->
@@ -150,7 +151,7 @@ class QueueDrainRunnerTest {
   }
 
   @Test
-  fun permanentFailureRequestsAnActionableNotification() {
+  fun firstPermanentFailureStaysSilent() {
     enqueue("blocked", "revision-blocked", 10)
     val notices = mutableListOf<Pair<String, TransferFailure>>()
     val runner = runner(
@@ -160,13 +161,13 @@ class QueueDrainRunnerTest {
 
     runner.run()
 
-    assertEquals("blocked", notices.single().first)
-    assertEquals(TransferFailure("quota", false, BlockerScope.JOB), notices.single().second)
+    assertTrue(notices.isEmpty())
+    assertEquals(JobState.RETRY_WAIT, dao.job("blocked")?.state)
   }
 
   @Test
   fun recordsOnlyClassifiedAttemptOutcomes() {
-    enqueue("blocked", "revision-blocked", 10)
+    enqueue("blocked", "revision-blocked", 10, attemptCount = 3)
     enqueue("uploaded", "revision-uploaded", 20)
     val outcomes = mutableListOf<String>()
     val runner = runner(
@@ -183,8 +184,8 @@ class QueueDrainRunnerTest {
   }
 
   @Test
-  fun thirdRetryableFailureRequestsAnActionableNotification() {
-    enqueue("retrying", "revision-retrying", 10, attemptCount = 2)
+  fun exhaustedRetriesBlockTheFileAndNotifyOnce() {
+    enqueue("retrying", "revision-retrying", 10, attemptCount = 3)
     val notices = mutableListOf<Pair<String, TransferFailure>>()
     val runner = runner(
       davClient = DavClient { _, _ -> throw AccountTimeoutException() },
@@ -193,12 +194,15 @@ class QueueDrainRunnerTest {
 
     runner.run()
 
+    assertEquals(JobState.BLOCKED, dao.job("retrying")?.state)
+    runner.run()
+    assertEquals(1, notices.size)
     assertEquals("retrying", notices.single().first)
     assertEquals(TransferFailure("timeout", true), notices.single().second)
   }
 
   @Test
-  fun dayOldRetryableFailureRequestsAnActionableNotification() {
+  fun oldFirstFailureStillStaysSilent() {
     clock = java.util.concurrent.TimeUnit.HOURS.toMillis(24) + 10
     enqueue("old", "revision-old", 10)
     val notices = mutableListOf<String>()
@@ -209,7 +213,33 @@ class QueueDrainRunnerTest {
 
     runner.run()
 
-    assertEquals(listOf("old"), notices)
+    assertTrue(notices.isEmpty())
+  }
+
+  @Test
+  fun retriesThreeTimesThenStopsAndManualRetryResetsOnlyThatFile() {
+    enqueue("retrying", "revision-retrying", 10)
+    val notices = mutableListOf<String>()
+    val runner = runner(
+      davClient = DavClient { _, _ -> throw AccountTimeoutException() },
+      onFailure = { job, _ -> notices += job.id },
+    )
+    repeat(3) {
+      runner.run()
+      assertEquals(JobState.RETRY_WAIT, dao.job("retrying")?.state)
+      assertTrue(notices.isEmpty())
+      clock += 1_000_000
+    }
+    runner.run()
+    assertEquals(JobState.BLOCKED, dao.job("retrying")?.state)
+    assertEquals(listOf("retrying"), notices)
+    val detail = RoomEngineView(dao, {}).uploadDetail("retrying")!!
+    assertEquals("retrying.jpg", detail["fileName"])
+    assertEquals("The Nextcloud server did not respond in time.", detail["errorMessage"])
+    assertEquals(4, detail["attemptCount"])
+    assertEquals(1, dao.retryJob("retrying"))
+    assertEquals(0, dao.job("retrying")?.attemptCount)
+    assertEquals(JobState.QUEUED, dao.job("retrying")?.state)
   }
 
   @Test
@@ -228,7 +258,7 @@ class QueueDrainRunnerTest {
 
   @Test
   fun credentialFailureBlocksTheAccountAndStopsNewClaims() {
-    enqueue("bad", "revision-bad", 10)
+    enqueue("bad", "revision-bad", 10, attemptCount = 3)
     enqueue("waiting", "revision-waiting", 20)
     val runner = runner(
       davClient = DavClient { _, _ -> throw AccountInvalidCredentialsException() },
@@ -245,7 +275,7 @@ class QueueDrainRunnerTest {
 
   @Test
   fun missingContentBlocksItsSourceAndStopsNewClaims() {
-    enqueue("missing", "revision-missing", 10)
+    enqueue("missing", "revision-missing", 10, attemptCount = 3)
     enqueue("waiting", "revision-waiting", 20)
     val runner = runner(
       davClient = DavClient { _, _ -> throw LocalContentMissingException() },

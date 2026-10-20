@@ -6,11 +6,14 @@ enum class SourceType {
   CAMERA,
   SCREENSHOTS,
   DOCUMENT_TREE,
+  MEDIA_FOLDER,
 }
 
 data class SourceSelection(
   val type: SourceType,
   val treeUri: String? = null,
+  val volumeName: String? = null,
+  val relativePath: String? = null,
 )
 
 data class SourceCommit(
@@ -111,6 +114,12 @@ class SourceDiscoveryManager(
   }
 
   private fun discover(selection: SourceSelection): SelectedSourceDiscovery = when (selection.type) {
+    SourceType.MEDIA_FOLDER -> {
+      val discovery = mediaDiscovery.discoverFolder(
+        checkNotNull(selection.volumeName), checkNotNull(selection.relativePath),
+      )
+      requireMediaAccess(discovery)
+    }
     SourceType.CAMERA -> media(MediaPreset.CAMERA)
     SourceType.SCREENSHOTS -> media(MediaPreset.SCREENSHOTS)
     SourceType.DOCUMENT_TREE -> {
@@ -123,6 +132,10 @@ class SourceDiscoveryManager(
 
   private fun media(preset: MediaPreset): SelectedSourceDiscovery {
     val discovery = mediaDiscovery.discover(preset)
+    return requireMediaAccess(discovery)
+  }
+
+  private fun requireMediaAccess(discovery: MediaDiscovery): SelectedSourceDiscovery {
     if (discovery.permissionAccess == MediaPermissionAccess.DENIED) {
       throw SourceAccessException(
         SourceAccessBlocker.PERMISSION_REVOKED,
@@ -133,6 +146,7 @@ class SourceDiscoveryManager(
   }
 
   private fun SourceSelection.localUri() = when (type) {
+    SourceType.MEDIA_FOLDER -> mediaFolderUri(checkNotNull(volumeName), checkNotNull(relativePath))
     SourceType.CAMERA -> "mediastore://camera"
     SourceType.SCREENSHOTS -> "mediastore://screenshots"
     SourceType.DOCUMENT_TREE -> checkNotNull(treeUri)
@@ -143,6 +157,7 @@ class SourceDiscoveryManager(
       SourceSelection(SourceType.CAMERA)
     kind == "media_store" && localUri == "mediastore://screenshots" ->
       SourceSelection(SourceType.SCREENSHOTS)
+    kind == "media_store" && localUri.startsWith("mediastore://folder/") -> mediaFolderSelection(localUri)
     kind == "saf" -> SourceSelection(SourceType.DOCUMENT_TREE, localUri)
     else -> throw SourceAccessException(
       SourceAccessBlocker.FOLDER_UNAVAILABLE,

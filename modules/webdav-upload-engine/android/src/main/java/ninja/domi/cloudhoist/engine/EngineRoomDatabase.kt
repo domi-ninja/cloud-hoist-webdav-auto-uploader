@@ -293,7 +293,8 @@ interface EngineDao {
   fun nextRetryJob(): UploadJobEntity?
 
   @Query("""
-    UPDATE upload_jobs SET state = 'queued', claimToken = NULL, startedAt = NULL, retryAt = NULL
+    UPDATE upload_jobs SET state = 'queued', claimToken = NULL, startedAt = NULL, retryAt = NULL,
+      attemptCount = MAX(0, attemptCount - 1)
     WHERE state = 'running' AND (claimToken IS NULL OR claimToken NOT LIKE :processPattern)
   """)
   fun recoverForeignProcessClaims(processPattern: String): Int
@@ -346,7 +347,7 @@ interface EngineDao {
     """
     UPDATE upload_jobs
     SET state = 'queued', startedAt = NULL, claimToken = NULL,
-        lastErrorCode = 'process_died'
+        lastErrorCode = 'process_died', attemptCount = MAX(0, attemptCount - 1)
     WHERE state = 'running' AND startedAt < :startedBefore
     """,
   )
@@ -382,6 +383,22 @@ interface EngineDao {
   )
   fun blockClaim(jobId: String, claimToken: String, blockerCode: String, errorCode: String): Int
 
+  @Query("""
+    UPDATE upload_jobs SET state = 'retry_wait', retryAt = :now, startedAt = NULL,
+      claimToken = NULL, attemptCount = MAX(0, attemptCount - 1), lastErrorCode = 'cancelled'
+    WHERE id = :jobId AND state = 'running' AND claimToken = :claimToken
+  """)
+  fun releaseCancelledClaim(jobId: String, claimToken: String, now: Long): Int
+
+  @Query("""
+    UPDATE upload_jobs SET state = 'queued', retryAt = NULL, blockerCode = NULL,
+      lastErrorCode = NULL, attemptCount = 0
+    WHERE id = :jobId AND state IN ('blocked', 'retry_wait')
+      AND accountId IN (SELECT id FROM accounts WHERE blockerCode IS NULL)
+      AND sourceId IN (SELECT id FROM sources WHERE enabled = 1 AND blockerCode IS NULL)
+  """)
+  fun retryJob(jobId: String): Int
+
   @Query("UPDATE accounts SET blockerCode = :blockerCode WHERE id = :accountId")
   fun markAccountBlocked(accountId: String, blockerCode: String): Int
 
@@ -403,7 +420,7 @@ interface EngineDao {
   @Query(
     """
     UPDATE upload_jobs
-    SET state = 'queued', retryAt = NULL, blockerCode = NULL, lastErrorCode = NULL
+    SET state = 'queued', retryAt = NULL, blockerCode = NULL, lastErrorCode = NULL, attemptCount = 0
     WHERE (state = 'blocked' OR state = 'retry_wait')
       AND accountId IN (SELECT id FROM accounts WHERE blockerCode IS NULL)
       AND sourceId IN (SELECT id FROM sources WHERE enabled = 1 AND blockerCode IS NULL)

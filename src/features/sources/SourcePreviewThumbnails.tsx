@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
-import { FlatList, Image, Text, View } from "react-native";
+import { FlatList, Image, Pressable, Text, View } from "react-native";
 import { Icon } from "react-native-paper";
 
 import webDavUploadEngine, {
   type SourcePreview,
   type SourceSelection,
 } from "../../../modules/webdav-upload-engine";
+import { SourceImageViewer } from "./SourceImageViewer";
 import { ActionButton, LoadingState } from "@/components/ui";
 
 export function SourcePreviewThumbnails({
@@ -15,6 +16,7 @@ export function SourcePreviewThumbnails({
   preview: SourcePreview;
   selection: SourceSelection;
 }) {
+  const [viewingImage, setViewingImage] = useState<string>();
   const [files, setFiles] = useState(preview.files);
   const [nextOffset, setNextOffset] = useState(preview.nextOffset);
   const [loading, setLoading] = useState(false);
@@ -48,7 +50,9 @@ export function SourcePreviewThumbnails({
   );
   if (!files.length) return null;
 
+  const images = files.filter((file) => file.mimeType?.startsWith("image/"));
   return (
+    <>
     <FlatList
       accessibilityLabel="Files in this backup folder"
       horizontal
@@ -71,13 +75,16 @@ export function SourcePreviewThumbnails({
               style={{ width: 96, height: 96 }}
             >
               {file.mimeType?.startsWith("image/") ? (
+                <Pressable accessibilityRole="button" accessibilityLabel={`Enlarge ${file.fileName}`}
+                  onPress={() => setViewingImage(file.localUri)}>
                 <Image
-                  accessibilityLabel={file.fileName}
+                  accessible={false}
                   style={{ width: 96, height: 96 }}
                   resizeMode="cover"
                   resizeMethod="resize"
                   source={{ uri: file.localUri }}
                 />
+                </Pressable>
               ) : (
                 <>
                   <Icon source="file-outline" size={32} />
@@ -96,5 +103,11 @@ export function SourcePreviewThumbnails({
         ) : null
       }
     />
+    {viewingImage ? (
+      <SourceImageViewer files={images} initialIndex={Math.max(0, images.findIndex((file) => file.localUri === viewingImage))}
+        hasMore={nextOffset != null} loading={loading} error={error}
+        onLoadMore={() => void loadMore()} onClose={() => setViewingImage(undefined)} />
+    ) : null}
+    </>
   );
 }

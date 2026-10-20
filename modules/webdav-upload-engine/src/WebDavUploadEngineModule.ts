@@ -2,6 +2,8 @@ import { NativeModule, requireNativeModule } from "expo";
 import { z } from "zod";
 
 import {
+  mediaFolderSchema,
+  uploadDetailSchema,
   activityPageSchema,
   fileInventoryPageSchema,
   fileInventoryFilterSchema,
@@ -69,6 +71,8 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   pauseAsync(): Promise<void>;
   resumeAsync(): Promise<void>;
   scanNowAsync(): Promise<void>;
+  getUploadDetailAsync(jobId: string): Promise<unknown>;
+  retryUploadAsync(jobId: string): Promise<void>;
   retryFailedAsync(): Promise<void>;
   clearCompletedHistoryAsync(): Promise<void>;
   setTransferConstraintsAsync(input: TransferConstraints): Promise<void>;
@@ -85,6 +89,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   listRemoteFoldersAsync(pathSegments: string[]): Promise<unknown>;
   createRemoteFolderAsync(parentPathSegments: string[], name: string): Promise<unknown>;
   pickDocumentTreeAsync(initialUri: string | null): Promise<unknown>;
+  getMediaFoldersAsync(): Promise<unknown>;
   previewSourceAsync(selection: SourceSelection, offset: number): Promise<unknown>;
   commitSourceAsync(source: SourceCommit): Promise<unknown>;
   getMediaPermissionAsync(): Promise<unknown>;
@@ -286,6 +291,14 @@ export const webDavUploadEngine = {
       (value): SelectedDocumentTree | null =>
         selectedDocumentTreeSchema.nullable().parse(value),
     ),
+  getUploadDetail: (jobId: string) => runValueCommand(
+    () => nativeModule.getUploadDetailAsync(jobId), (value) => uploadDetailSchema.nullable().parse(value),
+  ),
+  retryUpload: (jobId: string) => runCommand(() => nativeModule.retryUploadAsync(jobId)),
+  getMediaFolders: () => runValueCommand(
+    () => nativeModule.getMediaFoldersAsync(),
+    (value) => mediaFolderSchema.array().parse(value),
+  ),
   previewSource: (selection: SourceSelection, offset = 0) => {
     const input = sourceSelectionSchema.parse(selection);
     return runValueCommand(

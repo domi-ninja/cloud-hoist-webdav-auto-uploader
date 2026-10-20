@@ -144,6 +144,23 @@ class RoomEngineView(
     invalidate()
   }
 
+  fun uploadDetail(jobId: String): Map<String, Any?>? {
+    val job = dao.job(jobId) ?: return null
+    val revision = dao.revision(job.revisionId)
+    val source = dao.source(job.sourceId)
+    return mapOf(
+      "jobId" to job.id, "sourceId" to job.sourceId,
+      "fileName" to job.remoteFileName, "sourceName" to source?.name,
+      "localUri" to revision?.localUri, "byteCount" to (revision?.byteCount ?: 0),
+      "remotePath" to (job.remotePathSegments + job.remoteFileName).joinToString("/", prefix = "/"),
+      "state" to job.state, "attemptCount" to job.attemptCount,
+      "errorCode" to job.lastErrorCode,
+      "errorMessage" to job.lastErrorCode?.let(::failureMessage),
+    )
+  }
+
+  fun retryJob(jobId: String): Boolean = (dao.retryJob(jobId) == 1).also { invalidate() }
+
   fun retryFailed(): Int = dao.retryEligibleFailures().also {
     invalidate()
   }
@@ -305,6 +322,15 @@ class RoomEngineView(
     "quota" -> "Nextcloud storage is full."
     "local_missing" -> "The local file is no longer available."
     "local_invalid" -> "The local file cannot be uploaded."
+    "dns" -> "The Nextcloud server address could not be found."
+    "timeout" -> "The Nextcloud server did not respond in time."
+    "connection_refused" -> "The Nextcloud server refused the connection."
+    "network" -> "The network connection failed during the upload."
+    "server" -> "The Nextcloud server returned an error."
+    "rate_limited" -> "Nextcloud is limiting upload requests."
+    "remote_locked" -> "The file is locked on Nextcloud."
+    "invalid_path" -> "The destination path is invalid."
+    "unexpected" -> "An unexpected transfer error stopped this upload."
     else -> "Upload failed ($code)."
   }
 

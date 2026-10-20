@@ -15,9 +15,10 @@ export { formatRemoteRoot } from "./app-preferences-state";
 const STORAGE_KEY = "app-preferences";
 const defaultRemoteRootPath: string[] = [project.defaultRemoteFolder];
 
-type AppPreferences = { remoteRootPath: string[] };
+type AppPreferences = { remoteRootPath: string[]; hiddenMediaFolders: string[] };
 type AppPreferencesContextValue = AppPreferences & {
   setRemoteRootPath: (path: string[]) => Promise<void>;
+  setHiddenMediaFolders: (folders: string[]) => Promise<void>;
 };
 
 const AppPreferencesContext = createContext<AppPreferencesContextValue | null>(
@@ -25,17 +26,20 @@ const AppPreferencesContext = createContext<AppPreferencesContextValue | null>(
 );
 
 function readPreferences(value: string | null): AppPreferences {
-  if (!value) return { remoteRootPath: defaultRemoteRootPath };
+  if (!value) return { remoteRootPath: defaultRemoteRootPath, hiddenMediaFolders: [] };
   try {
-    const parsed = JSON.parse(value) as { remoteRootPath?: unknown };
+    const parsed = JSON.parse(value) as { remoteRootPath?: unknown; hiddenMediaFolders?: unknown };
     const remoteRootPath = remotePathSegmentsSchema.safeParse(
       parsed.remoteRootPath,
     );
+    const hiddenMediaFolders = Array.isArray(parsed.hiddenMediaFolders)
+      ? parsed.hiddenMediaFolders.filter((value): value is string => typeof value === "string")
+      : [];
     return remoteRootPath.success
-      ? { remoteRootPath: remoteRootPath.data }
-      : { remoteRootPath: defaultRemoteRootPath };
+      ? { remoteRootPath: remoteRootPath.data, hiddenMediaFolders }
+      : { remoteRootPath: defaultRemoteRootPath, hiddenMediaFolders: [] };
   } catch {
-    return { remoteRootPath: defaultRemoteRootPath };
+    return { remoteRootPath: defaultRemoteRootPath, hiddenMediaFolders: [] };
   }
 }
 
@@ -48,12 +52,18 @@ export function AppPreferencesProvider({ children }: PropsWithChildren) {
         setPreferences(readPreferences(value));
       })
       .catch(() => {
-        setPreferences({ remoteRootPath: defaultRemoteRootPath });
+        setPreferences({ remoteRootPath: defaultRemoteRootPath, hiddenMediaFolders: [] });
       });
   }, []);
 
   const setRemoteRootPath = async (remoteRootPath: string[]) => {
-    const next = { remoteRootPath };
+    const next = { ...preferences!, remoteRootPath };
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    setPreferences(next);
+  };
+
+  const setHiddenMediaFolders = async (hiddenMediaFolders: string[]) => {
+    const next = { ...preferences!, hiddenMediaFolders };
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     setPreferences(next);
   };
@@ -62,7 +72,7 @@ export function AppPreferencesProvider({ children }: PropsWithChildren) {
 
   return (
     <AppPreferencesContext.Provider
-      value={{ ...preferences, setRemoteRootPath }}
+      value={{ ...preferences, setRemoteRootPath, setHiddenMediaFolders }}
     >
       {children}
     </AppPreferencesContext.Provider>

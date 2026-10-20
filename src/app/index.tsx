@@ -1,19 +1,20 @@
 import { useState } from "react";
-import { useRouter } from "expo-router";
+import { usePathname, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlatList, RefreshControl, Text, View } from "react-native";
 
 import { project } from "@/config/project";
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
-import { SourceCard } from "@/features/sources/SourceCard";
+import { MediaFolderSuggestion } from "@/features/sources/MediaFolderSuggestion";
+import { mediaFolderId, mediaFolderSuggestions } from "@/features/sources/media-folder-suggestions";
+import { useAppPreferences } from "@/lib/app-preferences";
+import type { MediaFolder, SourceSelection } from "../../modules/webdav-upload-engine";
 import { SourceEditor } from "@/features/sources/SourceEditor";
 import {
-  existingPresetSource,
-  selectionForPickerMode,
-  type SourcePickerMode,
+    type SourcePickerMode,
 } from "@/features/sources/source-editor-state";
-import { useEngineSnapshot } from "@/lib/engine-query";
+import { useEngineSnapshot, useMediaFolders } from "@/lib/engine-query";
 import { useNow } from "@/lib/use-now";
 import {
   ActionButton,
@@ -26,6 +27,10 @@ import { UploadProgress } from "@/components/UploadProgress";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const focused = usePathname() === "/";
+  const { hiddenMediaFolders, setHiddenMediaFolders } = useAppPreferences();
+  const [initialSelection, setInitialSelection] = useState<SourceSelection>();
+  const [selectingFolder, setSelectingFolder] = useState(false);
   const { data: snapshot, error: snapshotError, refetch } = useEngineSnapshot();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [editingSourceId, setEditingSourceId] = useState<string | "new">();
@@ -80,7 +85,7 @@ export default function HomeScreen() {
 
   const refresh = async () => {
     if (snapshot?.account.status === "connected") {
-      await scanNow();
+      await Promise.all([scanNow(), media.refetch()]);
       return;
     }
 
@@ -94,18 +99,34 @@ export default function HomeScreen() {
 
   const connected = snapshot?.account.status === "connected";
   const visibleSources = connected ? snapshot.sources : [];
+  const media = useMediaFolders(connected && focused);
+  const suggestions = mediaFolderSuggestions(media.data?.folders ?? [], visibleSources, hiddenMediaFolders);
   const editingSource =
     editingSourceId && editingSourceId !== "new"
       ? snapshot?.sources.find((source) => source.id === editingSourceId)
       : undefined;
-  const addSource = (mode: typeof pickerMode = "all") => {
-    const presetSelection = selectionForPickerMode(mode);
-    const existing =
-      snapshot && presetSelection
-        ? existingPresetSource(snapshot.sources, presetSelection)
-        : undefined;
-    setPickerMode(mode);
-    setEditingSourceId(existing?.id ?? "new");
+  const startSuggestion = (folder: MediaFolder) => {
+    setInitialSelection({ type: "media_folder", volumeName: folder.volumeName, relativePath: folder.relativePath });
+    setPickerMode("media");
+    setEditingSourceId("new");
+  };
+  const chooseFolder = async () => {
+    setSelectingFolder(true);
+    setErrorMessage(undefined);
+    try {
+      const result = await webDavUploadEngine.pickDocumentTree();
+      if (!result.ok) { setErrorMessage(result.error.message); return; }
+      if (!result.value) return;
+      setInitialSelection({ type: "document_tree", treeUri: result.value.treeUri });
+      setPickerMode("folder");
+      setEditingSourceId("new");
+    } catch { setErrorMessage("Could not open the folder picker. Try again."); }
+    finally { setSelectingFolder(false); }
+  };
+  const requestMediaAccess = async () => {
+    const result = await webDavUploadEngine.requestMediaPermission();
+    if (!result.ok) setErrorMessage(result.error.message);
+    await media.refetch();
   };
 
   return (
@@ -116,10 +137,10 @@ export default function HomeScreen() {
       <FlatList
         className="flex-1"
         contentContainerClassName="flex-grow p-2"
-        data={visibleSources}
+        data={suggestions}
         ItemSeparatorComponent={() => <View className="h-2" />}
         keyboardShouldPersistTaps="handled"
-        keyExtractor={(source) => source.id}
+        keyExtractor={mediaFolderId}
         ListHeaderComponent={
           <View className="mb-2 gap-2">
             <View className="flex-row items-center justify-between gap-2">
@@ -162,7 +183,7 @@ export default function HomeScreen() {
                     {snapshot.blockers.length ? (
                       <ActionButton
                         label={`${snapshot.blockers.length} ${snapshot.blockers.length === 1 ? "issue" : "issues"}`}
-                        onPress={() => router.navigate("/activity")}
+                        onPress={() => router.navigate("/status")}
                         tone="danger"
                       />
                     ) : null}
@@ -183,33 +204,25 @@ export default function HomeScreen() {
             ) : null}
             {connected ? (
               <View className="gap-2">
-                <Text
-                  accessibilityRole="header"
-                  className="text-base font-semibold text-ink-light dark:text-ink-dark"
-                >
-                  Backup folders
-                </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {!existingPresetSource(visibleSources, { type: "camera" }) ? (
-                    <ActionButton
-                      icon="camera-outline"
-                      label="Backup camera"
-                      onPress={() => addSource("camera")}
-                    />
+                <View className="flex-row flex-wrap items-center justify-between gap-2">
+                  <Text accessibilityRole="header" className="text-base font-semibold text-ink-light dark:text-ink-dark">Suggested folders</Text>
+                  {hiddenMediaFolders.length ? (
+                    <IconAction icon="eye-outline" label="Show hidden suggestions" onPress={() => {
+                      void setHiddenMediaFolders([]).catch(() => setErrorMessage("Could not restore hidden suggestions."));
+                    }} />
                   ) : null}
-                  {!existingPresetSource(visibleSources, { type: "screenshots" }) ? (
-                    <ActionButton
-                      icon="cellphone-screenshot"
-                      label="Backup screenshots"
-                      onPress={() => addSource("screenshots")}
-                    />
-                  ) : null}
-                  <ActionButton
-                    icon="folder-outline"
-                    label="Backup other directory"
-                    onPress={() => addSource("folder")}
-                  />
                 </View>
+                <ActionButton icon="folder-outline" label="Backup other directory" disabled={selectingFolder}
+                  loading={selectingFolder} onPress={() => void chooseFolder()} />
+                {media.data?.permission.access === "denied" || media.data?.permission.access === "partial" ? (
+                  <ActionButton icon="image-search-outline" label={media.data.permission.access === "denied" ? "Find media folders" : "Allow all media folders"}
+                    onPress={() => void requestMediaAccess()} />
+                ) : null}
+                {media.isLoading ? <LoadingState label="Finding media folders…" /> : null}
+                {media.error ? <ErrorNotice message="Media folders could not be loaded." onRetry={() => void media.refetch()} /> : null}
+                {!media.isLoading && media.data?.permission.access !== "denied" && !suggestions.length ? (
+                  <Text className="text-base text-muted-light dark:text-muted-dark">No more media folders to suggest.</Text>
+                ) : null}
               </View>
             ) : null}
           </View>
@@ -220,16 +233,12 @@ export default function HomeScreen() {
             onRefresh={() => void refresh()}
           />
         }
-        renderItem={({ item: source }) =>
-          snapshot ? (
-            <SourceCard
-              now={now}
-              onEdit={() => setEditingSourceId(source.id)}
-              snapshot={snapshot}
-              source={source}
-            />
-          ) : null
-        }
+        renderItem={({ item: folder }) => (
+          <MediaFolderSuggestion folder={folder} onStart={() => startSuggestion(folder)} onHide={() => {
+            void setHiddenMediaFolders([...hiddenMediaFolders, mediaFolderId(folder)])
+              .catch(() => setErrorMessage("Could not hide this suggestion."));
+          }} />
+        )}
       />
       {connected && editingSourceId ? (
         <SourceEditor
@@ -240,6 +249,7 @@ export default function HomeScreen() {
             setEditingSourceId(undefined);
             void refetch();
           }}
+          initialSelection={initialSelection}
           pickerMode={editingSourceId === "new" ? pickerMode : "all"}
           source={editingSource}
           sources={snapshot.sources}

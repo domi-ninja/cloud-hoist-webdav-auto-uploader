@@ -111,7 +111,7 @@ class EngineWorkSchedulerTest {
 
   @Test
   fun transferForegroundInfoUsesDataSyncAndOffersPause() {
-    val info = TransferNotification(context).foregroundInfo(queueCount = 2)
+    val info = TransferNotification(context).foregroundInfo(QueueCounts(queued = 2, uploading = 0, failed = 0, uploaded = 5))
 
     assertEquals(ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC, info.foregroundServiceType)
     assertEquals("Pause", info.notification.actions.single().title)

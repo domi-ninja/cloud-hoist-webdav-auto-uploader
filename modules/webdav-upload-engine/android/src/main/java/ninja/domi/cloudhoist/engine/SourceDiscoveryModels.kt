@@ -23,6 +23,7 @@ data class MediaStoreItem(
   val relativePath: String?,
   val bucketDisplayName: String?,
   val createdAtEpochSeconds: Long? = null,
+  val volumeName: String = "external_primary",
 )
 
 data class DiscoveredFile(
@@ -80,6 +81,8 @@ class SourceAccessException(
 
 fun interface MediaPresetDiscovery {
   fun discover(preset: MediaPreset): MediaDiscovery
+  fun discoverFolder(volumeName: String, relativePath: String): MediaDiscovery =
+    throw EngineInvalidInputException("Media folders are unavailable.")
 }
 
 fun interface DocumentTreeSourceDiscovery {

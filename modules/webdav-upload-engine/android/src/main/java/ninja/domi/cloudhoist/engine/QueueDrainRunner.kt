@@ -106,19 +106,13 @@ class QueueDrainRunner(
         dao.insertAttempt(
           UploadAttemptEntity(attemptId, job.id, claimedAt, finishedAt, failure.code),
         )
-        if (error is TransferCancelledException && isPaused()) {
-          // A user pause must not add network-error backoff when they resume.
-          dao.retryClaim(job.id, claimToken, finishedAt, failure.code)
-          return QueueDrainResult(completed, retryWorker = false)
+        if (error is TransferCancelledException) {
+          // Pauses, worker stops, and normal time slices do not consume the retry budget.
+          dao.releaseCancelledClaim(job.id, claimToken, finishedAt)
+          return QueueDrainResult(completed, retryWorker = !isPaused(),
+            continueImmediately = !isPaused() && !isStopped())
         }
-        if (error is TransferCancelledException && !isPaused() && !isStopped() &&
-          elapsed() - startedAt >= maxRunMillis
-        ) {
-          // A normal time-slice rollover must not accumulate network-error backoff.
-          dao.retryClaim(job.id, claimToken, finishedAt, failure.code)
-          return QueueDrainResult(completed, retryWorker = true, continueImmediately = true)
-        }
-        if (failure.retryable) {
+        if (job.attemptCount < MAX_UPLOAD_ATTEMPTS) {
           dao.retryClaim(
             job.id,
             claimToken,
@@ -129,7 +123,6 @@ class QueueDrainRunner(
             ),
             failure.code,
           )
-          if (shouldNotifyAboutFailure(job, failure, finishedAt)) onFailure(job, failure)
           return QueueDrainResult(completed, retryWorker = true)
         }
         when (failure.scope) {
@@ -154,7 +147,7 @@ class QueueDrainRunner(
             failure.code,
           )
         }
-        if (shouldNotifyAboutFailure(job, failure, finishedAt)) onFailure(job, failure)
+        if (shouldNotifyAboutFailure(job, failure)) onFailure(job, failure)
       }
     }
 
@@ -207,13 +200,11 @@ class QueueDrainRunner(
   }
 }
 
-internal fun shouldNotifyAboutFailure(
-  job: UploadJobEntity,
-  failure: TransferFailure,
-  failedAt: Long,
-) = !failure.retryable ||
-  job.attemptCount >= 3 ||
-  failedAt - job.createdAt >= TimeUnit.HOURS.toMillis(24)
+// The initial attempt plus three automatic retries.
+internal const val MAX_UPLOAD_ATTEMPTS = 4
+
+internal fun shouldNotifyAboutFailure(job: UploadJobEntity, failure: TransferFailure) =
+  failure.code != "cancelled" && job.attemptCount >= MAX_UPLOAD_ATTEMPTS
 
 data class TransferFailure(
   val code: String,

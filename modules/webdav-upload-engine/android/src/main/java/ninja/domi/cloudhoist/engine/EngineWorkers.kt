@@ -75,12 +75,12 @@ class QueueDrainWorker(
   parameters: WorkerParameters,
 ) : Worker(context, parameters) {
   override fun doWork(): Result {
-    val queueCount = EngineRoomDatabase.open(applicationContext).engineDao()
-      .pendingWorkCount()
+    val dao = EngineRoomDatabase.open(applicationContext).engineDao()
+    val queueCount = dao.pendingWorkCount()
     val process = ActivityManager.RunningAppProcessInfo().also(ActivityManager::getMyMemoryState)
     val notification = if (queueCount > 0 && mayPromoteUploadWorker(Build.VERSION.SDK_INT, process.importance)) {
       val candidate = TransferNotification(applicationContext)
-      if (!promoteUploadWorker { setForegroundAsync(candidate.foregroundInfo(queueCount)).get() }) {
+      if (!promoteUploadWorker { setForegroundAsync(candidate.foregroundInfo(dao.queueCounts())).get() }) {
         // Visibility can change between the check and promotion. WorkManager has already
         // marked this worker foreground; finish it before trying an ordinary background batch.
         EngineWorkScheduler(applicationContext).continueQueueDrain()
@@ -90,11 +90,19 @@ class QueueDrainWorker(
     } else {
       null
     }
+    var lastNotificationUpdate = 0L
     val drain = QueueDrainRunner.create(
       context = applicationContext,
       isStopped = { isStopped },
-      onProgress = { progress -> notification?.update(progress, queueCount) },
+      onProgress = {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (notification != null && now - lastNotificationUpdate >= 1_000) {
+          notification.update(dao.queueCounts())
+          lastNotificationUpdate = now
+        }
+      },
     ).run()
+    notification?.update(dao.queueCounts())
     return when {
       drain.continueImmediately -> {
         EngineWorkScheduler(applicationContext).continueQueueDrain()

@@ -78,15 +78,17 @@ export default function RootLayout() {
               }}
             />
             <Tabs.Screen
-              name="activity"
+              name="status"
               options={{
-                title: "Activity",
-                tabBarAccessibilityLabel: "Activity",
+                title: "Status",
+                tabBarAccessibilityLabel: "Status",
                 tabBarIcon: (props) => (
                   <MaterialCommunityIcons {...props} name="transfer" />
                 ),
               }}
             />
+            <Tabs.Screen name="activity" options={{ href: null }} />
+            <Tabs.Screen name="upload-failure" options={{ href: null }} />
             <Tabs.Screen
               name="settings"
               options={{

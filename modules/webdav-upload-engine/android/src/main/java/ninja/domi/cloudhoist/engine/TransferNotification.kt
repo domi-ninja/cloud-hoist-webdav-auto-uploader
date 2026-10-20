@@ -23,8 +23,7 @@ class TransferNotification(
     Intent(appContext, PauseUploadsReceiver::class.java),
     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
   )
-  private var lastPercent = -1
-  private var lastFileName = ""
+  private var lastProgress: OverallUploadProgress? = null
 
   init {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -41,39 +40,28 @@ class TransferNotification(
     }
   }
 
-  fun foregroundInfo(queueCount: Int) = ForegroundInfo(
+  fun foregroundInfo(counts: QueueCounts) = ForegroundInfo(
     NOTIFICATION_ID,
-    notification(progress = null, queueCount),
+    notification(overallUploadProgress(counts)),
     ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
   )
 
-  fun update(progress: TransferProgress, queueCount: Int) {
-    val percent = transferPercent(progress.uploadedBytes, progress.totalBytes)
-    val fileName = safeTransferFileName(progress.fileName)
-    if (percent == lastPercent && fileName == lastFileName) return
-    lastPercent = percent
-    lastFileName = fileName
-    notifications.notify(NOTIFICATION_ID, notification(progress, queueCount))
+  fun update(counts: QueueCounts) {
+    val progress = overallUploadProgress(counts)
+    if (progress == lastProgress) return
+    lastProgress = progress
+    notifications.notify(NOTIFICATION_ID, notification(progress))
   }
 
-  private fun notification(progress: TransferProgress?, queueCount: Int): Notification {
-    val fileName = progress?.fileName?.let(::safeTransferFileName)
-    val percent = progress?.let { transferPercent(it.uploadedBytes, it.totalBytes) }
+  private fun notification(progress: OverallUploadProgress): Notification {
     return NotificationCompat.Builder(appContext, CHANNEL_ID)
       .setSmallIcon(android.R.drawable.stat_sys_upload)
       .setContentTitle("Uploading to Nextcloud")
-      .setContentText(
-        when {
-          fileName != null && queueCount > 1 -> "$fileName · $queueCount queued"
-          fileName != null -> fileName
-          queueCount > 1 -> "$queueCount files queued"
-          else -> "Preparing upload"
-        },
-      )
+      .setContentText("${progress.uploaded}/${progress.total} files uploaded")
       .setOnlyAlertOnce(true)
       .setOngoing(true)
       .setSilent(true)
-      .setProgress(100, percent ?: 0, percent == null)
+      .setProgress(progress.total.coerceAtLeast(1), progress.uploaded, false)
       .addAction(
         android.R.drawable.ic_menu_close_clear_cancel,
         "Pause",
@@ -118,3 +106,9 @@ internal fun transferPercent(uploadedBytes: Long, totalBytes: Long): Int {
 }
 
 private const val MAX_NOTIFICATION_FILE_NAME = 80
+
+data class OverallUploadProgress(val uploaded: Int, val total: Int)
+
+internal fun overallUploadProgress(counts: QueueCounts) = OverallUploadProgress(
+  counts.uploaded, counts.uploaded + counts.queued + counts.uploading + counts.failed,
+)
