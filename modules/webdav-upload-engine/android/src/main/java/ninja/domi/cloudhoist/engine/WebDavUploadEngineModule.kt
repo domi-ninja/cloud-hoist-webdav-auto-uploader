@@ -1,6 +1,7 @@
 package ninja.domi.cloudhoist.engine
 
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.net.Uri
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -137,6 +138,23 @@ class WebDavUploadEngineModule : Module() {
     Name("WebDavUploadEngine")
 
     Events("onSnapshotInvalidated")
+
+    AsyncFunction("openPlayStoreAsync") { androidPackage: String ->
+      val context = appContext.reactContext ?: throw AccountStorageException()
+      val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${Uri.encode(androidPackage)}"))
+        .setPackage("com.android.vending")
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      if (intent.resolveActivity(context.packageManager) == null) {
+        false
+      } else {
+        try {
+          context.startActivity(intent)
+          true
+        } catch (_: ActivityNotFoundException) {
+          false
+        }
+      }
+    }
 
     OnCreate {
       signOutCleanup.finishInterruptedSignOut()

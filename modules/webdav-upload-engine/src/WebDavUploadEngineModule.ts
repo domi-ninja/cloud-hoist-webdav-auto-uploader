@@ -54,6 +54,7 @@ import {
 } from "./WebDavUploadEngine.types";
 
 declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineModuleEvents> {
+  openPlayStoreAsync(androidPackage: string): Promise<boolean>;
   getSnapshotAsync(): Promise<unknown>;
   getSourcesAsync(): Promise<unknown>;
   getActivityPageAsync(offset: number): Promise<unknown>;
@@ -164,6 +165,10 @@ async function runValueCommand<T>(
 }
 
 export const webDavUploadEngine = {
+  openPlayStore: (androidPackage: string) => runValueCommand(
+    () => nativeModule.openPlayStoreAsync(androidPackage),
+    (value) => z.boolean().parse(value),
+  ),
   async getSnapshot(): Promise<EngineSnapshot> {
     return engineSnapshotSchema.parse(await nativeModule.getSnapshotAsync());
   },

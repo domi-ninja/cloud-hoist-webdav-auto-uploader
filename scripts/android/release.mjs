@@ -4,6 +4,7 @@ import { mkdir, writeFile, readFile, chmod, copyFile, rmdir } from 'node:fs/prom
 import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { checkPublishDestination, loadPublishConfig, publishBeta } from './publish.mjs';
+import { latestPublishedBuild } from './github-release.mjs';
 
 process.umask(0o077);
 const signingDir = resolve('.signing');
@@ -42,7 +43,9 @@ async function main() {
   if (mode === 'publish') {
     publishConfig = await loadPublishConfig();
     await checkPublishDestination(publishConfig);
-    versionCode = app.expo.android.versionCode + 1;
+    const distribution = JSON.parse(await readFile('release.config.json', 'utf8'));
+    const publishedBuild = await latestPublishedBuild(distribution.githubRepository, app.expo.android.package);
+    versionCode = Math.max(app.expo.android.versionCode, publishedBuild) + 1;
     if (!Number.isSafeInteger(versionCode) || versionCode < 2 || versionCode > 2100000000) {
       throw new Error('app.json must contain a valid Android versionCode with room to increment.');
     }

@@ -15,6 +15,7 @@ import { AccountSettingsModal } from "@/features/account/AccountSettingsModal";
 import { InstanceIcon } from "@/features/account/InstanceIcon";
 import { RemoteFolderPicker } from "@/features/sources/RemoteFolderPicker";
 import { formatRemoteRoot, useAppPreferences } from "@/lib/app-preferences";
+import { AppUpdates } from "@/features/updates/AppUpdates";
 
 type ConstraintKey = keyof TransferConstraints;
 
@@ -198,6 +199,7 @@ export default function SettingsScreen() {
             ) : null}
           </Panel>
         ) : null}
+        <AppUpdates />
         <Panel>
           <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
             About
