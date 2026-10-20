@@ -50,6 +50,7 @@ fun SourcePreview.toMap(): Map<String, Any?> = mapOf(
   "eligibleFileCount" to eligibleFileCount,
   "totalBytes" to totalBytes,
   "permissionAccess" to permissionAccess?.name?.lowercase(),
+  "nextOffset" to nextOffset,
   "files" to files.map { file ->
     mapOf(
       "localUri" to file.localUri,

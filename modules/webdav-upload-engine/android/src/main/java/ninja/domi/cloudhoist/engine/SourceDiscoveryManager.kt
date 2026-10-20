@@ -43,7 +43,20 @@ class SourceDiscoveryManager(
   private val newId: () -> String = { UUID.randomUUID().toString() },
   private val now: () -> Long = System::currentTimeMillis,
 ) {
-  fun preview(selection: SourceSelection): SourcePreview = discover(selection).preview
+  private var previewSelection: SourceSelection? = null
+  private var previewDiscovery: SelectedSourceDiscovery? = null
+
+  @Synchronized
+  fun preview(selection: SourceSelection, offset: Int = 0): SourcePreview {
+    require(offset >= 0)
+    val discovery = if (offset == 0 || selection != previewSelection) {
+      discover(selection).also {
+        previewSelection = selection
+        previewDiscovery = it
+      }
+    } else previewDiscovery ?: discover(selection)
+    return discovery.files.toSourcePreview(discovery.permissionAccess, offset, pageSize = 40)
+  }
 
   fun commit(input: SourceCommit): SourceCommitResult {
     val account = accountRepository.currentAccount() ?: throw AccountNotConfiguredException()

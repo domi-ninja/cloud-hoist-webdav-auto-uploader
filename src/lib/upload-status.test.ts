@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
-import { attentionBlockers, engineStatus, uploadProgress } from "./upload-status";
+import { attentionBlockers, engineStatus, uploadProgress, uploadRemainingTime } from "./upload-status";
 
 function snapshot(worker: EngineSnapshot["worker"]): EngineSnapshot {
   return {
@@ -114,4 +114,34 @@ describe("upload status", () => {
     expect(engineStatus(snapshot({ state: "stopped", reason: "Uploads stopped" }), 0)).toBe("Uploads stopped");
   });
 
+});
+
+describe("upload remaining time", () => {
+  const uploading = () => snapshot({ state: "uploading", jobId: "job", bytesSent: 0, totalBytes: 100 });
+  it("waits for a throughput sample and formats estimates", () => {
+    const state = uploading();
+    expect(uploadRemainingTime(state)).toBe("Estimating…");
+    state.queue.estimatedRemainingSeconds = 45;
+    expect(uploadRemainingTime(state)).toBe("<1 min left");
+    state.queue.estimatedRemainingSeconds = 140;
+    expect(uploadRemainingTime(state)).toBe("~3 min left");
+    state.queue.estimatedRemainingSeconds = 4000;
+    expect(uploadRemainingTime(state)).toBe("~1 hr 7 min left");
+  });
+  it("hides stale estimates during pauses, waits, failures, and disabled backups", () => {
+    const state = uploading();
+    state.queue.estimatedRemainingSeconds = 140;
+    state.engine = { state: "paused", pausedAt: "2026-10-20T12:00:00Z" };
+    expect(uploadRemainingTime(state)).toBeNull();
+    state.engine = { state: "running" };
+    state.queue.failed = 1;
+    expect(uploadRemainingTime(state)).toBeNull();
+    state.queue.failed = 0;
+    state.sources[0].enabled = false;
+    state.sources[0].queue = { pending: 1, failed: 0 };
+    expect(uploadRemainingTime(state)).toBeNull();
+    state.sources[0].enabled = true;
+    state.worker = { state: "waiting", reason: "Waiting for Wi-Fi" };
+    expect(uploadRemainingTime(state)).toBeNull();
+  });
 });

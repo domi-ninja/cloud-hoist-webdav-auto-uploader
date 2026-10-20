@@ -60,6 +60,17 @@ class SourceDiscoveryModelsTest {
   }
 
   @Test
+  fun pagesThroughAllPreviewFilesWithoutChangingTotals() {
+    val files = (0 until 85).map { index ->
+      item(displayName = "photo-$index.jpg").forPreset(MediaPreset.CAMERA)!!
+    }
+    val pages = listOf(0, 40, 80).map { files.toSourcePreview(offset = it, pageSize = 40) }
+    assertEquals(listOf(40, 80, null), pages.map { it.nextOffset })
+    assertEquals(files.map { it.fileName }, pages.flatMap { it.files }.map { it.fileName })
+    pages.forEach { assertEquals(85, it.eligibleFileCount) }
+  }
+
+  @Test
   fun mapsEverySupportedAndroidMediaPermissionBranch() {
     fun access(sdk: Int, vararg permissions: String) = mediaPermissionAccess(
       sdk,

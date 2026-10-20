@@ -320,8 +320,8 @@ class WebDavUploadEngineModule : Module() {
       }
     }
 
-    AsyncFunction("previewSourceAsync") Coroutine { selection: SourceSelectionRecord ->
-      withContext(Dispatchers.IO) { sourceDiscoveryManager.preview(selection.toSelection()).toMap() }
+    AsyncFunction("previewSourceAsync") Coroutine { selection: SourceSelectionRecord, offset: Int ->
+      withContext(Dispatchers.IO) { sourceDiscoveryManager.preview(selection.toSelection(), offset).toMap() }
     }
 
     AsyncFunction("commitSourceAsync") { source: SourceCommitRecord ->

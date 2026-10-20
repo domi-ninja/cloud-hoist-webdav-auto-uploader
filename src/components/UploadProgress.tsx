@@ -2,7 +2,7 @@ import { Text, View } from "react-native";
 import { useTheme } from "react-native-paper";
 
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
-import { engineStatus, uploadProgress } from "@/lib/upload-status";
+import { engineStatus, uploadProgress, uploadRemainingTime } from "@/lib/upload-status";
 
 export function UploadProgress({
   snapshot,
@@ -13,7 +13,8 @@ export function UploadProgress({
 }) {
   const { uploaded, total, fraction } = uploadProgress(snapshot);
   const theme = useTheme();
-  const label = `${uploaded}/${total} uploaded`;
+  const label = `${uploaded}/${total} files uploaded`;
+  const remainingTime = uploadRemainingTime(snapshot);
 
   return (
     <View className="gap-2">
@@ -31,9 +32,10 @@ export function UploadProgress({
           style={{ width: `${fraction * 100}%`, backgroundColor: theme.colors.primary }}
         />
       </View>
-      <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-        {label}
-      </Text>
+      <View className="flex-row flex-wrap items-center justify-between gap-2">
+        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">{label}</Text>
+        {remainingTime ? <Text className="text-base text-muted-light dark:text-muted-dark">{remainingTime}</Text> : null}
+      </View>
       <Text
         accessibilityLiveRegion="polite"
         className="text-base text-muted-light dark:text-muted-dark"

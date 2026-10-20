@@ -53,6 +53,7 @@ export const sourceSummarySchema = z.object({
 });
 
 export const queueCountsSchema = z.object({
+  estimatedRemainingSeconds: z.number().nonnegative().nullable().optional(),
   queued: z.number().int().nonnegative(),
   uploading: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
@@ -273,6 +274,7 @@ export const sourceSelectionSchema = z.discriminatedUnion("type", [
 ]);
 
 export const sourcePreviewSchema = z.object({
+  nextOffset: z.number().int().nonnegative().nullable().optional(),
   eligibleFileCount: z.number().int().nonnegative(),
   totalBytes: z.number().int().nonnegative(),
   permissionAccess: z.enum(["full", "partial", "denied"]).nullable(),

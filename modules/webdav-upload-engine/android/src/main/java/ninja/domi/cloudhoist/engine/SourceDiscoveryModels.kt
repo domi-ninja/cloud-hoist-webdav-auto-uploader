@@ -41,6 +41,7 @@ data class SourcePreview(
   val totalBytes: Long,
   val permissionAccess: MediaPermissionAccess? = null,
   val files: List<SourcePreviewFile> = emptyList(),
+  val nextOffset: Int? = null,
 )
 
 data class SourcePreviewFile(
@@ -87,11 +88,14 @@ fun interface DocumentTreeSourceDiscovery {
 
 fun Iterable<DiscoveredFile>.toSourcePreview(
   permissionAccess: MediaPermissionAccess? = null,
+  offset: Int = 0,
+  pageSize: Int = 5,
 ): SourcePreview = SourcePreview(
   eligibleFileCount = count(),
   totalBytes = sumOf(DiscoveredFile::byteCount),
   permissionAccess = permissionAccess,
-  files = take(5).map { file ->
+  nextOffset = (offset + pageSize).takeIf { it < count() },
+  files = drop(offset).take(pageSize).map { file ->
     SourcePreviewFile(file.localUri, file.fileName, file.mimeType)
   },
 )

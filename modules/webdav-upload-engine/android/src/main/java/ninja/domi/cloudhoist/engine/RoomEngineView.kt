@@ -30,6 +30,17 @@ class RoomEngineView(
     val blockers = blockers(account, jobs)
     val running = jobs.firstOrNull { it.state == JobState.RUNNING }
     val queue = dao.queueCounts()
+    val sources = sources()
+    val canEstimate = running != null && scheduler.pausedAt == null && blockers.isEmpty() &&
+      waitingReason == null && queue.failed == 0 && sources.none { source ->
+        val counts = source["queue"] as? Map<*, *>
+        source["enabled"] == false && ((counts?.get("pending") as? Int) ?: 0) > 0
+      }
+    val confirmedBytes = running?.let { (it.chunkSize ?: 0) * (it.confirmedChunks?.size ?: 0) } ?: 0
+    val remainingSeconds = if (canEstimate) estimateRemainingSeconds(
+      (dao.remainingUploadBytes() - confirmedBytes).coerceAtLeast(0),
+      dao.recentUploadTimings(now() - TimeUnit.MINUTES.toMillis(10)),
+    ) else null
     return mapOf(
       "revision" to revision,
       "account" to account,
@@ -38,12 +49,13 @@ class RoomEngineView(
         blockers.isNotEmpty() -> mapOf("state" to "blocked", "blockerCount" to blockers.size)
         else -> mapOf("state" to "running")
       },
-      "sources" to sources(),
+      "sources" to sources,
       "queue" to mapOf(
         "queued" to queue.queued,
         "uploading" to queue.uploading,
         "failed" to queue.failed,
         "uploaded" to queue.uploaded,
+        "estimatedRemainingSeconds" to remainingSeconds,
       ),
       "recentJobs" to jobs.map(::jobMap),
       "blockers" to blockers,

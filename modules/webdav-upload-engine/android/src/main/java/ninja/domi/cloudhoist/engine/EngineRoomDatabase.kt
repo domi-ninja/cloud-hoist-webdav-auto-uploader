@@ -184,6 +184,25 @@ interface EngineDao {
   )
   fun recentJobViews(limit: Int = 100): List<UploadJobView>
 
+  @Query("""
+    SELECT COALESCE(SUM(local_revisions.byteCount), 0) FROM upload_jobs
+    INNER JOIN local_revisions ON local_revisions.id = upload_jobs.revisionId
+    WHERE upload_jobs.state IN ('queued', 'running', 'retry_wait')
+  """)
+  fun remainingUploadBytes(): Long
+
+  @Query("""
+    SELECT local_revisions.byteCount AS bytes,
+      SUM(upload_attempts.finishedAt - upload_attempts.startedAt) AS durationMillis
+    FROM upload_jobs
+    INNER JOIN local_revisions ON local_revisions.id = upload_jobs.revisionId
+    INNER JOIN upload_attempts ON upload_attempts.jobId = upload_jobs.id
+    WHERE upload_jobs.state = 'completed' AND upload_jobs.completedAt >= :cutoff
+      AND upload_attempts.finishedAt > upload_attempts.startedAt
+    GROUP BY upload_jobs.id ORDER BY upload_jobs.completedAt DESC LIMIT 20
+  """)
+  fun recentUploadTimings(cutoff: Long): List<UploadTiming>
+
   @Query("SELECT * FROM upload_jobs WHERE state IN ('blocked', 'retry_wait') ORDER BY createdAt ASC, id ASC")
   fun unresolvedJobs(): List<UploadJobEntity>
 

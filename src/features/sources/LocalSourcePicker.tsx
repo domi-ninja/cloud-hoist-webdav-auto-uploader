@@ -5,7 +5,7 @@ import webDavUploadEngine, {
   type EngineError,
   type SourceSelection,
 } from "../../../modules/webdav-upload-engine";
-import { IconAction } from "@/components/ui";
+import { ActionButton } from "@/components/ui";
 
 type LocalSourcePickerProps = {
   disabled: boolean;
@@ -42,27 +42,9 @@ export function LocalSourcePicker({
   return (
     <View>
       <View className="flex-row flex-wrap gap-2">
-        <IconAction
-          icon="camera-outline"
-          label="Choose Camera source"
-          disabled={disabled}
-          onPress={() => {
-            setError(undefined);
-            onSelect({ type: "camera" });
-          }}
-        />
-        <IconAction
-          icon="cellphone-screenshot"
-          label="Choose Screenshots source"
-          disabled={disabled}
-          onPress={() => {
-            setError(undefined);
-            onSelect({ type: "screenshots" });
-          }}
-        />
-        <IconAction
+        <ActionButton
           icon="folder-open-outline"
-          label="Choose local folder source"
+          label="Choose a different folder"
           disabled={disabled}
           onPress={() => void chooseFolder()}
         />

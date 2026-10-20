@@ -8,7 +8,8 @@ import webDavUploadEngine, {
   type SourceSelection,
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
-import { RadioButton } from "react-native-paper";
+import { DestinationPath } from "./DestinationPath";
+import { requestBackupNotifications } from "./backup-notifications";
 import { ActionButton, IconAction, LoadingState, Panel } from "@/components/ui";
 import { formatBytes } from "@/lib/format";
 import { useAppPreferences } from "@/lib/app-preferences";
@@ -21,7 +22,6 @@ import { RemoteFolderPicker } from "./RemoteFolderPicker";
 import { SourcePreviewThumbnails } from "./SourcePreviewThumbnails";
 import {
   existingPresetSource,
-  keepBothPreviewName,
   sourceEditorInitialValue,
   sourceEditorValueKey,
   sourceInputFromEditor,
@@ -67,9 +67,7 @@ export function SourceEditor({
     initialValue.remotePathSegments,
   );
   const enabled = initialValue.enabled;
-  const [collisionPolicy, setCollisionPolicy] = useState(
-    initialValue.collisionPolicy,
-  );
+  const collisionPolicy = initialValue.collisionPolicy;
   const [preview, setPreview] = useState<SourcePreview>();
   const [previewLoading, setPreviewLoading] = useState(
     Boolean(initialValue.selection),
@@ -77,9 +75,6 @@ export function SourceEditor({
   const [previewAttempt, setPreviewAttempt] = useState(0);
   const [selectingLocal, setSelectingLocal] = useState(false);
   const [choosingRemote, setChoosingRemote] = useState(false);
-  const [destinationCustomized, setDestinationCustomized] = useState(
-    Boolean(source),
-  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
   useEffect(() => {
@@ -148,8 +143,6 @@ export function SourceEditor({
   const dirty = sourceEditorValueKey(currentValue) !== initialKey;
   const canSave =
     Boolean(selection && preview) && !busy && !previewLoading && !selectingLocal;
-  const previewFileName = preview?.files[0]?.fileName ?? "example.txt";
-  const keepBothPreview = `${previewFileName} -> ${keepBothPreviewName(previewFileName)}`;
 
   const close = () => {
     if (busy) return;
@@ -182,6 +175,8 @@ export function SourceEditor({
         return;
       }
 
+      if (!source && sources.length === 0) await requestBackupNotifications();
+
       const result = source
         ? await webDavUploadEngine.addOrUpdateSource(
             sourceInputFromEditor(source.id, {
@@ -205,7 +200,6 @@ export function SourceEditor({
         return;
       }
 
-      if (!source) await webDavUploadEngine.requestNotificationPermission();
       setBusy(false);
       onSaved();
     } catch {
@@ -275,9 +269,13 @@ export function SourceEditor({
                     {sourceSelectionPath(selection)}
                   </Text>
                 ) : null}
-                {preview ? (
+                {preview && selection ? (
                   <>
-                    <SourcePreviewThumbnails files={preview.files} />
+                    <SourcePreviewThumbnails
+                      key={JSON.stringify(selection)}
+                      preview={preview}
+                      selection={selection}
+                    />
                     <Text className="text-base text-muted-light dark:text-muted-dark">
                       {preview.eligibleFileCount} files ·{" "}
                       {formatBytes(preview.totalBytes)}
@@ -315,11 +313,15 @@ export function SourceEditor({
                 setSelection(nextSelection);
                 setPreview(undefined);
                 setPreviewLoading(true);
-                if (!destinationCustomized) {
-                  setRemotePathSegments(
-                    defaultRemotePath(nextSelection, remoteRootPath),
+                const previousFolder = selection ? sourceFolderPathSegments(selection) : [];
+                const followsLocalFolder = previousFolder.length > 0 &&
+                  previousFolder.every((segment, index) =>
+                    remotePathSegments[remotePathSegments.length - previousFolder.length + index] === segment,
                   );
-                }
+                const parent = followsLocalFolder
+                  ? remotePathSegments.slice(0, -previousFolder.length)
+                  : remoteRootPath;
+                setRemotePathSegments(defaultRemotePath(nextSelection, parent));
               }}
             />
           </Panel>
@@ -331,9 +333,7 @@ export function SourceEditor({
                     <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                       Nextcloud folder
                     </Text>
-                    <Text className="text-base text-muted-light dark:text-muted-dark">
-                      {displayPath(remotePathSegments)}
-                    </Text>
+                    <DestinationPath path={displayPath(remotePathSegments)} />
                   </View>
                   <IconAction
                     icon="folder-edit-outline"
@@ -357,51 +357,10 @@ export function SourceEditor({
                         ? defaultRemotePath(selection, pathSegments)
                         : pathSegments,
                     );
-                    setDestinationCustomized(true);
                     setChoosingRemote(false);
                   }}
                 />
               ) : null}
-              <Panel>
-                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                  What to do with files that you change on the phone?
-                </Text>
-                <View>
-                  <RadioButton.Item
-                    label="Update files"
-                    value="replace"
-                    status={collisionPolicy === "replace" ? "checked" : "unchecked"}
-                    labelStyle={{ fontSize: 16 }}
-                    style={{
-                      minHeight: 48,
-                      paddingVertical: 0,
-                      paddingHorizontal: 8,
-                    }}
-                    accessibilityLabel="Update files on Nextcloud"
-                    disabled={busy}
-                    onPress={() => setCollisionPolicy("replace")}
-                  />
-                  <RadioButton.Item
-                    label="Add a number to the name."
-                    value="keep_both"
-                    status={
-                      collisionPolicy === "keep_both" ? "checked" : "unchecked"
-                    }
-                    labelStyle={{ fontSize: 16 }}
-                    style={{
-                      minHeight: 48,
-                      paddingVertical: 0,
-                      paddingHorizontal: 8,
-                    }}
-                    accessibilityLabel={`Add a number to the name. Preview: ${keepBothPreview}`}
-                    disabled={busy}
-                    onPress={() => setCollisionPolicy("keep_both")}
-                  />
-                  <Text className="px-2 pb-2 text-sm text-muted-light dark:text-muted-dark">
-                    Preview: {keepBothPreview}
-                  </Text>
-                </View>
-              </Panel>
             </>
           ) : null}
           {error ? (

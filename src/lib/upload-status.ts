@@ -56,3 +56,18 @@ export function uploadProgress(snapshot: EngineSnapshot) {
   const total = queued + uploading + failed + uploaded;
   return { uploaded, total, fraction: total === 0 ? 0 : uploaded / total };
 }
+
+/** Only quote a completion time while the entire queue can make progress. */
+export function uploadRemainingTime(snapshot: EngineSnapshot) {
+  if (snapshot.engine.state !== "running" || snapshot.worker.state !== "uploading" ||
+      snapshot.queue.failed > 0 || snapshot.blockers.length > 0 ||
+      snapshot.sources.some((source) => !source.enabled && (source.queue?.pending ?? 0) > 0)) return null;
+  const seconds = snapshot.queue.estimatedRemainingSeconds;
+  if (seconds == null) return "Estimating…";
+  if (seconds < 60) return "<1 min left";
+  const minutes = Math.ceil(seconds / 60);
+  if (minutes < 60) return `~${minutes} min left`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return `~${hours} hr${remainder ? ` ${remainder} min` : ""} left`;
+}

@@ -1,48 +1,100 @@
-import { Image, ScrollView, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { FlatList, Image, Text, View } from "react-native";
 import { Icon } from "react-native-paper";
 
-import type { SourcePreview } from "../../../modules/webdav-upload-engine";
+import webDavUploadEngine, {
+  type SourcePreview,
+  type SourceSelection,
+} from "../../../modules/webdav-upload-engine";
+import { ActionButton, LoadingState } from "@/components/ui";
 
 export function SourcePreviewThumbnails({
-  files,
+  preview,
+  selection,
 }: {
-  files: SourcePreview["files"];
+  preview: SourcePreview;
+  selection: SourceSelection;
 }) {
+  const [files, setFiles] = useState(preview.files);
+  const [nextOffset, setNextOffset] = useState(preview.nextOffset);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+  const fetching = useRef(false);
+
+  const loadMore = async () => {
+    if (nextOffset == null || fetching.current) return;
+    fetching.current = true;
+    setLoading(true);
+    setError(false);
+    try {
+      const result = await webDavUploadEngine.previewSource(selection, nextOffset);
+      if (!result.ok) {
+        setError(true);
+        return;
+      }
+      setFiles((current) => [...current, ...result.value.files]);
+      setNextOffset(result.value.nextOffset);
+    } catch {
+      setError(true);
+    } finally {
+      fetching.current = false;
+      setLoading(false);
+    }
+  };
+
+  const columns = Array.from(
+    { length: Math.ceil(files.length / 2) },
+    (_, index) => files.slice(index * 2, index * 2 + 2),
+  );
   if (!files.length) return null;
 
   return (
-    <ScrollView
+    <FlatList
       accessibilityLabel="Files in this backup folder"
-      contentContainerClassName="gap-2"
       horizontal
-      showsHorizontalScrollIndicator={false}
-    >
-      {files.map((file) => (
-        <View
-          className="h-16 w-16 items-center justify-center overflow-hidden bg-canvas-light dark:bg-canvas-dark"
-          key={`${file.localUri}-${file.fileName}`}
-        >
-          {file.mimeType?.startsWith("image/") ? (
-            <Image
-              accessibilityLabel={file.fileName}
-              className="h-16 w-16"
-              resizeMode="cover"
-              resizeMethod="resize"
-              source={{ uri: file.localUri }}
-            />
-          ) : (
-            <>
-              <Icon source="file-outline" size={24} />
-              <Text
-                className="text-base text-muted-light dark:text-muted-dark"
-                numberOfLines={1}
-              >
-                {file.fileName}
-              </Text>
-            </>
-          )}
+      style={{ height: 200 }}
+      data={columns}
+      keyExtractor={(column) => column[0].localUri}
+      initialNumToRender={4}
+      maxToRenderPerBatch={4}
+      windowSize={3}
+      onEndReachedThreshold={0.5}
+      onEndReached={() => {
+        if (!error) void loadMore();
+      }}
+      renderItem={({ item: column }) => (
+        <View style={{ gap: 8, marginRight: 8 }}>
+          {column.map((file) => (
+            <View
+              key={file.localUri}
+              className="items-center justify-center overflow-hidden bg-canvas-light dark:bg-canvas-dark"
+              style={{ width: 96, height: 96 }}
+            >
+              {file.mimeType?.startsWith("image/") ? (
+                <Image
+                  accessibilityLabel={file.fileName}
+                  style={{ width: 96, height: 96 }}
+                  resizeMode="cover"
+                  resizeMethod="resize"
+                  source={{ uri: file.localUri }}
+                />
+              ) : (
+                <>
+                  <Icon source="file-outline" size={32} />
+                  <Text numberOfLines={1} className="text-base text-muted-light dark:text-muted-dark">
+                    {file.fileName}
+                  </Text>
+                </>
+              )}
+            </View>
+          ))}
         </View>
-      ))}
-    </ScrollView>
+      )}
+      ListFooterComponent={
+        loading ? <LoadingState label="Loading files…" /> : error ? (
+          <ActionButton icon="reload" label="Retry loading files" onPress={() => void loadMore()} />
+        ) : null
+      }
+    />
   );
 }
