@@ -1,33 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
   <title id="title">WebDAV Auto Upload</title>
-  <desc id="desc">A phone sends a file toward a connected cloud.</desc>
+  <desc id="desc">A photo with an orange upload arrow rising out of its frame.</desc>
 
   <!-- background:start -->
   <g id="background">
-    <rect width="1024" height="1024" fill="#2C6E5B" />
+    <rect width="256" height="256" fill="#F4E9D7" />
   </g>
   <!-- background:end -->
 
   <!-- mark:start -->
-  <g id="mark" shape-rendering="geometricPrecision" transform="translate(76.8 76.8) scale(.85)">
-    <!-- A connected-circle cloud, familiar without reproducing Nextcloud's mark. -->
-    <g fill="none" stroke="#F5F1E8" stroke-linecap="round" stroke-linejoin="round" stroke-width="58">
-      <path d="M500 300 552 278M688 278l52 38" />
-      <circle cx="472" cy="318" r="47" />
-      <circle cx="620" cy="254" r="91" />
-      <circle cx="770" cy="336" r="47" />
-    </g>
-
-    <!-- The upload arrow rises out of the phone screen. -->
-    <path fill="#95D7C4" d="m573 369 108 91h-55v167H520V460h-55z" transform="translate(15 18)" />
-    <path fill="#F5F1E8" d="m573 369 108 91h-55v167H520V460h-55z" />
-
-    <!-- A diagonal phone rendered as a compact three-dimensional slab. -->
-    <path fill="#76B9A7" d="m224 604 231 146v82L224 686z" />
-    <path fill="#95D7C4" d="m455 750 310-126v82L455 832z" />
-    <path fill="#F5F1E8" d="m224 604 304-124 237 144-310 126z" />
-    <path fill="#214B3F" d="m286 611 237-97 180 109-242 99z" />
-    <ellipse cx="317" cy="612" rx="15" ry="9" fill="#95D7C4" transform="rotate(-22 317 612)" />
+  <g id="mark" fill="#213D38">
+    <!-- The frame opening stays transparent in adaptive and monochrome icons. -->
+    <path fill-rule="evenodd" d="M75 78h106a14 14 0 0 1 14 14v95a14 14 0 0 1-14 14H75a14 14 0 0 1-14-14V92a14 14 0 0 1 14-14Zm3 12a5 5 0 0 0-5 5v89a5 5 0 0 0 5 5h100a5 5 0 0 0 5-5V95a5 5 0 0 0-5-5Z" />
+    <path d="M73 174l34-40 24 25 24-28 28 43v15H73Z" />
+    <circle cx="99" cy="113" r="10" fill="#F26B3B" />
+    <path d="M114 129V64H91l37-36 37 36h-23v65Z" fill="#F26B3B" />
   </g>
   <!-- mark:end -->
 </svg>

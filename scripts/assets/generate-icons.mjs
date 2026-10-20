@@ -18,10 +18,8 @@ const source = await readFile(sourcePath, "utf8");
 const foreground = stripLayer(source, "background");
 const background = stripLayer(source, "mark");
 const monochrome = foreground
-  .replaceAll("#F5F1E8", "#FFFFFF")
-  .replaceAll("#95D7C4", "#FFFFFF")
-  .replaceAll("#76B9A7", "#FFFFFF")
-  .replaceAll("#214B3F", "#FFFFFF");
+  .replaceAll("#213D38", "#FFFFFF")
+  .replaceAll("#F26B3B", "#FFFFFF");
 
 const outputs = new Map([
   ["assets/icon.png", source],
