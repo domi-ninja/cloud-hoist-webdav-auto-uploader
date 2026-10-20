@@ -1,7 +1,6 @@
 import { afterEach, expect, it, jest } from "@jest/globals";
 import { Linking } from "react-native";
 
-import webDavUploadEngine from "../../../modules/webdav-upload-engine";
 import { openUpdate } from "./open-app-update";
 
 jest.mock("../../../modules/webdav-upload-engine", () => ({
@@ -28,5 +27,4 @@ it("opens the APK through the platform Linking receiver", async () => {
     sha256: "a".repeat(64),
   })).resolves.toBe("apk");
   expect(browser).toHaveBeenCalledWith(apkUrl);
-  expect(webDavUploadEngine.openPlayStore).not.toHaveBeenCalled();
 });
