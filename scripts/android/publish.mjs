@@ -103,7 +103,7 @@ export async function publishBeta(config, apk, { version, versionCode }, request
   const send = client(config, request);
   // Use the artifact timestamp so retrying the same APK keeps its release filename.
   const timestamp = (await stat(apk)).mtime.toISOString().replace(/:/g, '').replace(/\.\d{3}Z$/, 'Z');
-  const fileName = `webdav-auto-upload-${version}-${timestamp}-build-${versionCode}.apk`;
+  const fileName = `cloud-hoist-${version}-${timestamp}-build-${versionCode}.apk`;
   const target = new URL(fileName, config.folderUrl).href;
   // Nextcloud reserves .part paths for its own upload handling.
   const staging = new URL(`.beta-${randomUUID()}.apk`, config.folderUrl).href;

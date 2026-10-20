@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "WebDAV Auto Upload",
-    "slug": "webdav-auto-upload",
+    "name": "Cloud Hoist",
+    "slug": "cloud-hoist",
     "version": "0.1.0",
-    "scheme": "webdav-auto-upload",
+    "scheme": "cloud-hoist",
     "platforms": [
       "android"
     ],
@@ -13,7 +13,7 @@
     "newArchEnabled": true,
     "android": {
       "versionCode": 3,
-      "package": "ninja.domi.webdavautoupload",
+      "package": "ninja.domi.cloudhoist",
       "predictiveBackGestureEnabled": false,
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW"

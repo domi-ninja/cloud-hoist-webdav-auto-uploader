@@ -1,4 +1,4 @@
-# WebDAV Auto Upload
+# Cloud Hoist
 
 An Android app that automatically uploads photos, videos, and selected folders to Nextcloud. This is an independent project, unaffiliated with Nextcloud GmbH.
 
@@ -7,11 +7,13 @@ An Android app that automatically uploads photos, videos, and selected folders t
 The app is in private beta. Ask the person running your beta for the shared download folder; there is no public store release yet.
 
 1. Download the APK with the highest build number from the beta folder and open it on your Android phone. Allow installation from that source if Android asks.
-2. Open WebDAV Auto Upload, enter your Nextcloud server URL, and sign in through your browser. You can also connect with your username and a Nextcloud app password.
+2. Open Cloud Hoist, enter your Nextcloud server URL, and sign in through your browser. You can also connect with your username and a Nextcloud app password.
 3. Add a backup folder. Choose Camera, Screenshots, or a local folder, grant access when prompted, and check the destination in Nextcloud. Tap Save backup folder.
 4. Check Activity for upload progress and errors. Check Settings if uploads are waiting for network or power conditions.
 
 Adding a source includes its existing files. Choose a small folder first if you want to try the app before starting a larger backup.
+
+Cloud Hoist uses a new Android application ID. It installs separately from earlier betas under the previous name; sign in and add your backup folders again. Disable uploads in the old app before enabling the same folders in Cloud Hoist. Existing files on your server stay in place. New backup folders default to `/Cloud Hoist`; select an existing destination if you want to keep using it.
 
 To update, download and open the newest beta APK. Updates signed with the same key keep your settings and history. Switching from a development build to a beta requires uninstalling the development build first, which removes its settings and history.
 
@@ -24,4 +26,4 @@ To update, download and open the newest beta APK. Updates signed with the same k
 
 ## License
 
-WebDAV Auto Upload is licensed under GPL-3.0-or-later. Third-party packages and retained scaffold assets keep their respective licenses.
+Cloud Hoist is licensed under GPL-3.0-or-later. Third-party packages and retained scaffold assets keep their respective licenses.

@@ -28,7 +28,7 @@ async function main() {
       '-genkeypair', '-keystore', keystore, '-storetype', 'PKCS12',
       '-storepass:env', 'BETA_KEY_PASSWORD', '-keypass:env', 'BETA_KEY_PASSWORD',
       '-alias', credentials.keyAlias, '-keyalg', 'RSA', '-keysize', '4096',
-      '-validity', '10000', '-dname', 'CN=WebDAV Auto Upload',
+      '-validity', '10000', '-dname', 'CN=Cloud Hoist',
     ], { ...process.env, BETA_KEY_PASSWORD: password });
     await chmod(keystore, 0o600);
     console.log('Signing identity created in .signing/. Back up BOTH files securely before distributing builds.');
@@ -72,8 +72,8 @@ async function main() {
   console.log(`Verified release certificate SHA-256: ${fingerprint}`);
   if (mode === 'verify') return;
   await mkdir('dist', { recursive: true });
-  await copyFile(apk, 'dist/webdav-auto-upload-beta.apk');
-  console.log('Signed beta: dist/webdav-auto-upload-beta.apk. No devices were changed.');
+  await copyFile(apk, 'dist/cloud-hoist-beta.apk');
+  console.log('Signed beta: dist/cloud-hoist-beta.apk. No devices were changed.');
   if (publishConfig) await publishBeta(publishConfig, apk, { version: app.expo.version, versionCode });
 }
 

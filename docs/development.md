@@ -122,7 +122,7 @@ consume that file without printing its values:
 pnpm test:account:live emu
 ```
 
-The harness clears only WebDAV Auto Upload's app data on the selected target, drives the manual
+The harness clears only Cloud Hoist's app data on the selected target, drives the manual
 app-password form, force-stops the app, and verifies that Kotlin can authenticate
 again from Android Keystore-backed storage. It then creates two valid bitmap
 images in the target's Camera collection, discovers them through MediaStore,

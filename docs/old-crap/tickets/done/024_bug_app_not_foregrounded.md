@@ -22,8 +22,8 @@ The crash matches the SDK 57 Worklets/Reanimated 0.10.1/4.5.1 startup regression
 
 ## Acceptance criteria
 
-- `pnpm android` leaves WebDAV Auto Upload in the foreground.
-- The application process is running under `ninja.domi.webdavautoupload`.
+- `pnpm android` leaves Cloud Hoist in the foreground.
+- The application process is running under `ninja.domi.cloudhoist`.
 - An emulator screenshot shows the React Native bootstrap screen.
 
 ## Open question

@@ -10,8 +10,8 @@ import { parseCredentials } from "./live-credentials.mjs";
 import { createStressNetwork } from "./stress-network.mjs";
 
 const root = resolve(import.meta.dirname, "../..");
-const APP = "ninja.domi.webdavautoupload";
-const TEST_APP = "ninja.domi.webdavautoupload.engine.test";
+const APP = "ninja.domi.cloudhoist";
+const TEST_APP = "ninja.domi.cloudhoist.engine.test";
 const provider = `content://${APP}.account-acceptance`;
 const runId = `stress-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
 const outputDir = join(root, "test-results", runId);
@@ -206,7 +206,7 @@ async function instrument(serial, runFolder, method) {
       "-r",
       "-e",
       "class",
-      `ninja.domi.webdavautoupload.engine.LiveStressTest#${method}`,
+      `ninja.domi.cloudhoist.engine.LiveStressTest#${method}`,
       "-e",
       "stressRun",
       runFolder,
@@ -298,7 +298,7 @@ async function launch(serial, route = "/") {
     "-a",
     "android.intent.action.VIEW",
     "-d",
-    `webdav-auto-upload://${route}`,
+    `cloud-hoist://${route}`,
     "-p",
     APP,
   ]);

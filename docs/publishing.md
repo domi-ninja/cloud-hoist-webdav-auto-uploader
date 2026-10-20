@@ -11,7 +11,7 @@ and its password, is owner-only, and is ignored by Git. Losing it prevents signi
 compatible updates. Never share it with testers.
 
 Run `pnpm android:beta` to generate the Android project, build and verify the signed
-APK, and copy it to `dist/webdav-auto-upload-beta.apk`. Share only that APK.
+APK, and copy it to `dist/cloud-hoist-beta.apk`. Share only that APK.
 The command never installs or uninstalls anything on connected devices.
 Before each subsequent distributed build, increase `expo.android.versionCode`
 in `app.json`; update `expo.version` there for a new visible version.
@@ -53,8 +53,8 @@ are encoded automatically; use normal folder names in `NEXTCLOUD_DIRECTORY`.
 Each `pnpm android:publish` run checks the destination, increments
 `expo.android.versionCode` in `app.json`, builds and verifies the APK signature,
 uploads a unique temporary file, downloads it to verify SHA-256, and renames it to
-`webdav-auto-upload-<version>-<YYYY-MM-DDTHHmmssZ>-build-<versionCode>.apk` without replacing an existing beta.
-For example, `webdav-auto-upload-0.1.0-2026-10-03T195219Z-build-2.apk`. The date and time are
+`cloud-hoist-<version>-<YYYY-MM-DDTHHmmssZ>-build-<versionCode>.apk` without replacing an existing beta.
+For example, `cloud-hoist-0.1.0-2026-10-03T195219Z-build-2.apk`. The date and time are
 UTC, taken from the local APK's modification time so upload retries keep the same name.
 Keep and commit the version bump, even after a failed build/upload. Use this one
 checkout for publishing, or synchronize `app.json` before publishing elsewhere.
@@ -63,7 +63,7 @@ Both beta build commands compile the beta label into the app. Settings → About
 shows `Beta 0.1.0 · Build 2`, using the version and build number from Expo's bundled
 app configuration. Other builds show `Version` instead of `Beta`.
 
-The local APK remains at `dist/webdav-auto-upload-beta.apk`. On failure the command
+The local APK remains at `dist/cloud-hoist-beta.apk`. On failure the command
 exits nonzero and attempts to remove only its own temporary upload. It never deletes
 previous betas. Refused connections are retried up to three times with short backoff;
 other failures stop the command. Nextcloud reserves `.part`, so staging uses a unique

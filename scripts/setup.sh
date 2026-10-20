@@ -40,7 +40,7 @@ if ! command -v javac >/dev/null 2>&1 && [ ! -x "$PROJECT_JDK/bin/javac" ]; then
   JDK_VERSION='21.0.12.1+1'
   JDK_SHA256='ce79869e1307ed8ee1e2baa86a412b1eb5b75d10a01006d788a6f968bcfaee94'
   JDK_URL='https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_linux_hotspot_21.0.12.1_1.tar.gz'
-  JDK_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/webdav-auto-upload"
+  JDK_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/cloud-hoist"
   JDK_ARCHIVE="$JDK_CACHE_DIR/temurin-$JDK_VERSION.tar.gz"
 
   if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then

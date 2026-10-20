@@ -12,7 +12,7 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 TARGET_SERIAL=$("$SCRIPT_DIR/resolve-device.sh" "$@")
 
 RESULT=$(adb -s "$TARGET_SERIAL" shell content call \
-  --uri content://ninja.domi.webdavautoupload.account-acceptance \
+  --uri content://ninja.domi.cloudhoist.account-acceptance \
   --method seed)
 
 case "$RESULT" in
@@ -23,7 +23,7 @@ case "$RESULT" in
     ;;
 esac
 
-adb -s "$TARGET_SERIAL" shell am force-stop ninja.domi.webdavautoupload
+adb -s "$TARGET_SERIAL" shell am force-stop ninja.domi.cloudhoist
 adb -s "$TARGET_SERIAL" shell monkey \
-  -p ninja.domi.webdavautoupload \
+  -p ninja.domi.cloudhoist \
   -c android.intent.category.LAUNCHER 1 >/dev/null

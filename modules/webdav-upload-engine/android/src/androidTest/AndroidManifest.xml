@@ -3,14 +3,14 @@
 
   <application android:usesCleartextTraffic="true">
     <provider
-      android:name="ninja.domi.webdavautoupload.engine.StressDocumentsProvider"
-      android:authorities="ninja.domi.webdavautoupload.stress-documents"
+      android:name="ninja.domi.cloudhoist.engine.StressDocumentsProvider"
+      android:authorities="ninja.domi.cloudhoist.stress-documents"
       android:exported="true"
       android:permission="android.permission.MANAGE_DOCUMENTS"
       android:grantUriPermissions="true" />
     <provider
-      android:name="ninja.domi.webdavautoupload.engine.FixtureDocumentsProvider"
-      android:authorities="ninja.domi.webdavautoupload.engine.fixture-documents"
+      android:name="ninja.domi.cloudhoist.engine.FixtureDocumentsProvider"
+      android:authorities="ninja.domi.cloudhoist.engine.fixture-documents"
       android:exported="true"
       android:grantUriPermissions="true" />
   </application>

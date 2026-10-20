@@ -91,7 +91,7 @@ export function existingPresetSource(
 export function sourceEditorInitialValue(
   source: SourceSummary | undefined,
   pickerMode: SourcePickerMode = "all",
-  remoteRootPath: string[] = ["WebDAV Auto Upload"],
+  remoteRootPath: string[] = ["Cloud Hoist"],
 ): SourceEditorValue {
   const selection = source
     ? selectionForSource(source)
