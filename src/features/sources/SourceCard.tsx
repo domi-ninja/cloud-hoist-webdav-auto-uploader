@@ -34,7 +34,7 @@ function sourceStatus(
       ? snapshot.recentJobs.find((job) => job.id === worker.jobId)
       : undefined;
 
-  if (!source.enabled) return "Backup disabled";
+  if (!source.enabled) return null;
   if (snapshot.engine.state === "paused") return "Uploads paused by you";
   if (permissionBlocker) return "Permission required";
   if ((worker.state === "waiting" || worker.state === "stopped") && source.queue?.pending) {
@@ -68,6 +68,10 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
       { kind: "permission" }
     > => blocker.kind === "permission" && blocker.sourceId === source.id,
   );
+  const status = [
+    sourceStatus(snapshot, source, now),
+    source.queue?.failed ? `${source.queue.failed} failed` : null,
+  ].filter(Boolean).join(" · ");
 
   const run = async (
     command: () => Promise<{ ok: true } | { ok: false; error: EngineError }>,
@@ -113,10 +117,17 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
   return (
     <Panel>
       <View className="flex-row items-center justify-between gap-2">
-        <Text className="shrink text-base font-semibold text-ink-light dark:text-ink-dark">
-          {source.name}
-        </Text>
-        <View className="flex-row items-center gap-2">
+        <View className="min-w-0 flex-1 flex-row items-center gap-2">
+          <Text className="min-w-0 flex-1 text-base font-semibold text-ink-light dark:text-ink-dark">
+            {source.name}
+          </Text>
+          {source.queue?.pending ? (
+            <Text className="shrink-0 text-base text-muted-light dark:text-muted-dark">
+              {source.queue.pending} {source.queue.pending === 1 ? "file" : "files"} pending
+            </Text>
+          ) : null}
+        </View>
+        <View className="shrink-0 flex-row items-center gap-2">
           <Menu
             visible={menuOpen}
             onDismiss={() => setMenuOpen(false)}
@@ -155,13 +166,11 @@ export function SourceCard({ snapshot, source, now, onEdit }: SourceCardProps) {
           />
         </View>
       </View>
-      <Text className="text-base text-muted-light dark:text-muted-dark">
-        {[
-          sourceStatus(snapshot, source, now),
-          source.queue?.pending ? `${source.queue.pending} pending` : null,
-          source.queue?.failed ? `${source.queue.failed} failed` : null,
-        ].filter(Boolean).join(" · ")}
-      </Text>
+      {status ? (
+        <Text className="text-base text-muted-light dark:text-muted-dark">
+          {status}
+        </Text>
+      ) : null}
       <Text className="text-base text-muted-light dark:text-muted-dark">
         {sourceLocalLabel(source)} → {source.remotePath}
       </Text>
