@@ -13,7 +13,7 @@ and native storage assertions would have exercised the wrong package.
 ## Impact
 
 The harness could neither drive controlled React Native fields reliably nor
-prove that credentials persisted in WebDAV Auto Upload's own private storage.
+prove that credentials persisted in Cloud Hoist's own private storage.
 
 ## Fix
 
@@ -24,7 +24,7 @@ only to check the connected RN screen.
 
 ## Acceptance criteria
 
-- Debug provider calls run under `ninja.domi.webdavautoupload`.
+- Debug provider calls run under `ninja.domi.cloudhoist`.
 - A post-force-stop provider call reloads the first phase's encrypted credential.
 - The connected React Native screen renders from the same app-owned metadata.
 

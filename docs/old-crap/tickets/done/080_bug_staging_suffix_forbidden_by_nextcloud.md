@@ -34,5 +34,5 @@ file over the destination only after all bytes arrive.
 
 **Question:** Should the staging suffix imitate a known Nextcloud internal name?
 
-**Default:** No. Use `.filename.webdav-auto-upload-<uuid>` so the final extension
+**Default:** No. Use `.filename.cloud-hoist-<uuid>` so the final extension
 is the unique identifier and does not collide with a server-reserved suffix.

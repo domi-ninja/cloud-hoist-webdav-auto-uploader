@@ -10,10 +10,10 @@ Version 0.1.0 is reproducible, documented, licensed, clearly independent from Ne
 
 ## Work
 
-- Confirm the public repository name is `webdav-auto-upload` while leaving the local folder unchanged.
+- Confirm the public repository name is `cloud-hoist` while leaving the local folder unchanged.
 - Finalize the original app icon and store artwork without Nextcloud's name, cloud logo, or modified brand assets.
-- Keep the display name `WebDAV Auto Upload` and Android package `ninja.domi.webdavautoupload`.
-- Add the compatibility statement: "WebDAV Auto Upload uploads files to Nextcloud servers. WebDAV Auto Upload is an independent project and is not affiliated with or endorsed by Nextcloud GmbH."
+- Keep the display name `Cloud Hoist` and Android package `ninja.domi.cloudhoist`.
+- Add the compatibility statement: "Cloud Hoist uploads files to Nextcloud servers. Cloud Hoist is an independent project and is not affiliated with or endorsed by Nextcloud GmbH."
 - Document supported Android and tested Nextcloud versions, permissions, battery limitations, source behavior, overwrite behavior, privacy, and explicit non-goals.
 - Document reproducible pnpm and Android build commands without requiring EAS-hosted services.
 - Configure release signing through secrets outside the repository. Document backup and recovery of the signing key without printing it.
@@ -50,4 +50,4 @@ Version 0.1.0 is reproducible, documented, licensed, clearly independent from Ne
 
 **Question:** Under which GitHub user or organization should the public repository and release live?
 
-**Default:** Keep the repository local until Domi names the destination. Prepare all metadata for `webdav-auto-upload` without creating or pushing a remote.
+**Default:** Keep the repository local until Domi names the destination. Prepare all metadata for `cloud-hoist` without creating or pushing a remote.

@@ -127,9 +127,9 @@ if (!(await metroIsReady())) {
 }
 
 const launchUrl =
-  "exp+webdav-auto-upload://expo-development-client/?url=" +
+  "exp+cloud-hoist://expo-development-client/?url=" +
   encodeURIComponent("http://127.0.0.1:8081");
-const runFolder = `webdav-auto-upload-acceptance-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
+const runFolder = `cloud-hoist-acceptance-${Date.now().toString(36)}-${randomUUID().slice(0, 8)}`;
 const encodedArguments = {
   serverUrlB64: Buffer.from(credentials.serverUrl).toString("base64url"),
   usernameB64: Buffer.from(credentials.username).toString("base64url"),
@@ -140,7 +140,7 @@ const encodedArguments = {
 };
 
 process.stdout.write("Running manual login, process-death, and encrypted-reload checks…\n");
-run("adb", ["-s", serial, "shell", "pm", "clear", "ninja.domi.webdavautoupload"], {
+run("adb", ["-s", serial, "shell", "pm", "clear", "ninja.domi.cloudhoist"], {
   stdio: "ignore",
 });
 const redactionValues = [
@@ -152,7 +152,7 @@ const redactionValues = [
   ...Object.values(encodedArguments),
 ];
 const component =
-  "ninja.domi.webdavautoupload.engine.test/androidx.test.runner.AndroidJUnitRunner";
+  "ninja.domi.cloudhoist.engine.test/androidx.test.runner.AndroidJUnitRunner";
 
 function redact(output) {
   return redactionValues.reduce(
@@ -169,7 +169,7 @@ function runProvider(method, extras = []) {
     "content",
     "call",
     "--uri",
-    "content://ninja.domi.webdavautoupload.account-acceptance",
+    "content://ninja.domi.cloudhoist.account-acceptance",
     "--method",
     method,
     ...extras,
@@ -254,7 +254,7 @@ function runInstrumentation(testName, argumentsList) {
     "-r",
     "-e",
     "class",
-    `ninja.domi.webdavautoupload.engine.LiveAccountAcceptanceTest#${testName}`,
+    `ninja.domi.cloudhoist.engine.LiveAccountAcceptanceTest#${testName}`,
     ...argumentsList,
     component,
   ]);
@@ -278,7 +278,7 @@ try {
     "--extra",
     `serverAddressB64:s:${encodedArguments.serverAddressB64}`,
   ]);
-  run("adb", ["-s", serial, "shell", "am", "force-stop", "ninja.domi.webdavautoupload"], {
+  run("adb", ["-s", serial, "shell", "am", "force-stop", "ninja.domi.cloudhoist"], {
     stdio: "ignore",
   });
   run("adb", [
@@ -293,7 +293,7 @@ try {
     "-d",
     launchUrl,
     "-p",
-    "ninja.domi.webdavautoupload",
+    "ninja.domi.cloudhoist",
   ], { stdio: "ignore" });
   runProvider("verify", [
     "--extra",
@@ -314,7 +314,7 @@ try {
     "shell",
     "pm",
     "grant",
-    "ninja.domi.webdavautoupload",
+    "ninja.domi.cloudhoist",
     "android.permission.READ_MEDIA_IMAGES",
   ], { stdio: "ignore" });
   run("adb", [
@@ -323,7 +323,7 @@ try {
     "shell",
     "pm",
     "grant",
-    "ninja.domi.webdavautoupload",
+    "ninja.domi.cloudhoist",
     "android.permission.READ_MEDIA_VIDEO",
   ], { stdio: "ignore" });
   runProvider("prepareUpload", providerNetworkArguments());
@@ -348,7 +348,7 @@ try {
     verifyRemoteFile(smallName, smallSha256),
     verifyRemoteFile(largeName, largeSha256),
   ]);
-  run("adb", ["-s", serial, "shell", "am", "force-stop", "ninja.domi.webdavautoupload"], {
+  run("adb", ["-s", serial, "shell", "am", "force-stop", "ninja.domi.cloudhoist"], {
     stdio: "ignore",
   });
   runInstrumentation("completedUploadsRenderAfterProcessDeath", [

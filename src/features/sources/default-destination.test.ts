@@ -11,12 +11,12 @@ import {
 
 describe("default remote destination", () => {
   it("keeps new uploads out of the account root", () => {
-    expect(defaultRemotePath()).toEqual(["WebDAV Auto Upload"]);
+    expect(defaultRemotePath()).toEqual(["Cloud Hoist"]);
   });
 
   it("appends the source parent and folder to a new destination", () => {
     expect(defaultRemotePath({ type: "camera" })).toEqual([
-      "WebDAV Auto Upload",
+      "Cloud Hoist",
       "DCIM",
       "Camera",
     ]);
@@ -26,7 +26,7 @@ describe("default remote destination", () => {
         treeUri:
           "content://com.android.externalstorage.documents/tree/primary%3APictures%2FExports",
       }),
-    ).toEqual(["WebDAV Auto Upload", "Pictures", "Exports"]);
+    ).toEqual(["Cloud Hoist", "Pictures", "Exports"]);
   });
 
   it("appends the source path when the configured root is the account root", () => {
@@ -43,7 +43,7 @@ describe("default remote destination", () => {
         treeUri:
           "content://com.android.externalstorage.documents/tree/primary%3ADownload",
       }),
-    ).toEqual(["WebDAV Auto Upload", "Download"]);
+    ).toEqual(["Cloud Hoist", "Download"]);
   });
 
   it("creates nested destination segments in order", async () => {
@@ -78,7 +78,7 @@ describe("default remote destination", () => {
     );
 
     await expect(
-      ensureRemoteDestination(["WebDAV Auto Upload"], createFolder),
+      ensureRemoteDestination(["Cloud Hoist"], createFolder),
     ).resolves.toEqual({
       ok: false,
       error: {

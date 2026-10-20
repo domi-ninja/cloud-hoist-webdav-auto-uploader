@@ -4,19 +4,19 @@ Status: completed
 
 ## Resolution
 
-Expo SDK 57, React Native 0.86.3, strict TypeScript, Expo Router, NativeWind 4, pnpm, and the Android-only development client are bootstrapped. A frozen install and all static checks pass. The documented command cold-starts the API 36 `medium_phone` emulator, builds and installs `ninja.domi.webdavautoupload`, and leaves the visibly styled first route alive in the foreground.
+Expo SDK 57, React Native 0.86.3, strict TypeScript, Expo Router, NativeWind 4, pnpm, and the Android-only development client are bootstrapped. A frozen install and all static checks pass. The documented command cold-starts the API 36 `medium_phone` emulator, builds and installs `ninja.domi.cloudhoist`, and leaves the visibly styled first route alive in the foreground.
 
 Depends on: none
 
 ## Outcome
 
-WebDAV Auto Upload launches as an Expo development build on the Android emulator. The repository has the agreed TypeScript, Expo Router, NativeWind, package, and quality-tool foundation without copying application code from `dictation-eu`.
+Cloud Hoist launches as an Expo development build on the Android emulator. The repository has the agreed TypeScript, Expo Router, NativeWind, package, and quality-tool foundation without copying application code from `dictation-eu`.
 
 ## Work
 
 - Create the Expo app in the existing repository without replacing `TECH_STACK.md`, `PLAN.md`, `.git`, or `tickets/`.
 - Use the current stable Expo-compatible React Native and React versions. Install packages with pnpm and commit `pnpm-lock.yaml`.
-- Set the display name to `WebDAV Auto Upload`, slug to `webdav-auto-upload`, and Android package to `ninja.domi.webdavautoupload`.
+- Set the display name to `Cloud Hoist`, slug to `cloud-hoist`, and Android package to `ninja.domi.cloudhoist`.
 - Enable strict TypeScript. Do not introduce `any` or casting helpers.
 - Configure NativeWind 4 and Tailwind CSS 3 using `dictation-eu` as a configuration reference only.
 - Configure Expo Router with one minimal initial route. Do not build the final tabs in this ticket.
@@ -32,7 +32,7 @@ WebDAV Auto Upload launches as an Expo development build on the Android emulator
 - The TypeScript compiler and linter pass.
 - `pnpm android` installs and opens the development build on the chosen emulator.
 - The first route renders one NativeWind-styled React Native view.
-- The installed Android app reports package `ninja.domi.webdavautoupload`.
+- The installed Android app reports package `ninja.domi.cloudhoist`.
 - No Convex, authentication, audio, or other feature dependency from `dictation-eu` is copied.
 - The working tree contains no generated secrets, emulator state, native build output, or `node_modules`.
 - `git check-ignore test-creds.tct` succeeds, and a build artifact inspection finds no copy of that file.

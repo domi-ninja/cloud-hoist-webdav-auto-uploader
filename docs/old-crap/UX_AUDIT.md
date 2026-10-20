@@ -60,13 +60,13 @@ Sources                 [refresh] [menu]
 Idle · 3 sources · 0 queued
 ----------------------------------------
 Camera                              [on]
-2h ago · /WebDAV Auto Upload/Camera  [⋮]
+2h ago · /Cloud Hoist/Camera  [⋮]
 ----------------------------------------
 Screenshots                         [on]
-5m ago · /WebDAV Auto Upload/Shots   [⋮]
+5m ago · /Cloud Hoist/Shots   [⋮]
 ----------------------------------------
 Receipts                            [off]
-Paused · /WebDAV Auto Upload/Receipts[⋮]
+Paused · /Cloud Hoist/Receipts[⋮]
 
                                   [+]
 ```

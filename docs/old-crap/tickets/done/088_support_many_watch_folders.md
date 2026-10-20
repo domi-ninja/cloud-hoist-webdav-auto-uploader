@@ -13,7 +13,7 @@ Users can keep adding independently watched Android folders without an app-defin
 - Make Add watch folder a first-class action instead of hiding folder watching behind the generic source picker.
 - Keep Camera and Screenshots presets available as a separate media-source action.
 - After saving a source, offer to add another watch folder without leaving setup.
-- Continue defaulting every new source to `/WebDAV Auto Upload` unless the user changes it.
+- Continue defaulting every new source to `/Cloud Hoist` unless the user changes it.
 - Keep every source independently named, enabled, scanned, retargeted, and removable.
 - Virtualize the source ledger so the app does not mount every source card at once.
 - Preserve pull-to-scan, the global controls, setup cancellation, and enlarged-font scrolling.
@@ -28,7 +28,7 @@ Users can keep adding independently watched Android folders without an app-defin
 - Repeating Add another watch folder creates a new independent source each time.
 - The app imposes no numeric source cap or local-folder uniqueness rule.
 - A long source list scrolls through a virtualized native list.
-- Each new source defaults to `/WebDAV Auto Upload`.
+- Each new source defaults to `/Cloud Hoist`.
 - Existing source controls and global scan/pause controls still work.
 
 ## Verification
@@ -48,6 +48,6 @@ The app will not set its own limit. Android, the device, and persisted Storage A
 
 - The Android database suite stored and returned 256 independent SAF sources.
 - A release build added WatchAlpha, WatchBeta, and WatchGamma in one repeated setup session.
-- Each folder discovered and uploaded a distinct image to `/WebDAV Auto Upload`.
+- Each folder discovered and uploaded a distinct image to `/Cloud Hoist`.
 - All uploaded fixtures were byte-identical when fetched back from Nextcloud.
 - The remote fixtures, temporary sources, and emulator folders were removed after the run.

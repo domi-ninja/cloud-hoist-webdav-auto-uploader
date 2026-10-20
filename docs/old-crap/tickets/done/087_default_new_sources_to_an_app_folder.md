@@ -6,12 +6,12 @@ Depends on: 004, 011, 083
 
 ## Outcome
 
-New sources upload to `/WebDAV Auto Upload` by default. The app creates that folder before saving the source instead of directing uploads into the Nextcloud account root.
+New sources upload to `/Cloud Hoist` by default. The app creates that folder before saving the source instead of directing uploads into the Nextcloud account root.
 
 ## Work
 
 - Add the default remote folder name to the project configuration.
-- After local source selection, continue directly to review with `/WebDAV Auto Upload` selected.
+- After local source selection, continue directly to review with `/Cloud Hoist` selected.
 - Replace the review screen's Back action with Change destination.
 - Keep the remote folder browser available for users who want another location.
 - Allow `/` only when the user explicitly selects it in the browser.
@@ -21,10 +21,10 @@ New sources upload to `/WebDAV Auto Upload` by default. The app creates that fol
 
 ## Acceptance criteria
 
-- Camera, Screenshots, and selected-folder sources all default to `/WebDAV Auto Upload`.
+- Camera, Screenshots, and selected-folder sources all default to `/Cloud Hoist`.
 - The review screen shows the default destination before any server mutation.
 - Start auto upload creates the remote folder and stores it as the source destination.
-- Reusing an existing `/WebDAV Auto Upload` folder succeeds.
+- Reusing an existing `/Cloud Hoist` folder succeeds.
 - Change destination still supports existing folders, new folders, and an explicit root selection.
 - Cancelling setup before save does not create a remote folder.
 
@@ -34,12 +34,12 @@ New sources upload to `/WebDAV Auto Upload` by default. The app creates that fol
 - Run TypeScript, Expo lint, and Jest.
 - Build and install the release APK.
 - Start a new Camera source on the connected emulator account.
-- Confirm review defaults to `/WebDAV Auto Upload`.
+- Confirm review defaults to `/Cloud Hoist`.
 - Save the source and verify through WebDAV browsing that the folder exists and the source targets it.
 - Remove the temporary acceptance source after verification without deleting the remote folder.
 
 ## Open question
 
-**Question:** Should each source get a child folder beneath `/WebDAV Auto Upload`?
+**Question:** Should each source get a child folder beneath `/Cloud Hoist`?
 
 **Default:** No. Use one dedicated app folder for now. Users can choose separate destinations when filename overlap matters.

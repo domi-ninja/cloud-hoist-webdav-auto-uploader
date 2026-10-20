@@ -8,7 +8,7 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_ROOT=$(dirname "$(dirname "$SCRIPT_DIR")")
-APP_ID=ninja.domi.webdavautoupload
+APP_ID=ninja.domi.cloudhoist
 
 . "$SCRIPT_DIR/../android/env.sh"
 
@@ -42,7 +42,7 @@ assert_cold_link() {
   exit 1
 }
 
-assert_cold_link "webdav-auto-upload:///activity" "Files"
-assert_cold_link "webdav-auto-upload:///" "WebDAV Auto Upload"
+assert_cold_link "cloud-hoist:///activity" "Files"
+assert_cold_link "cloud-hoist:///" "Cloud Hoist"
 
 printf '%s\n' "Cold-start deep links opened Activity and Sources on $TARGET_SERIAL."

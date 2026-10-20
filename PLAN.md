@@ -1,4 +1,4 @@
-# WebDAV Auto Upload product plan
+# Cloud Hoist product plan
 
 This file records the decisions from six grilling rounds. The original questions and recommendations remain below as decision history.
 
@@ -6,7 +6,7 @@ Planning status: complete. All six rounds were accepted.
 
 ## Settled starting point
 
-- Name the product **WebDAV Auto Upload**, with slug and future public repository `webdav-auto-upload` and Android package `ninja.domi.webdavautoupload`. Keep the existing local directory name.
+- Name the product **Cloud Hoist**, with slug and future public repository `cloud-hoist` and Android package `ninja.domi.cloudhoist`. Keep the existing local directory name.
 - Build an open-source, Android-first app that handles Nextcloud automatic uploads.
 - Use React Native, Expo development builds, TypeScript, NativeWind, and the supporting tools recorded in `TECH_STACK.md`.
 - Keep the app local-first. It connects directly to the user's server and has no application backend.
@@ -283,11 +283,11 @@ Decisions:
 
 ## Project identity
 
-- **Display name:** WebDAV Auto Upload
-- **Expo slug and future public repository:** `webdav-auto-upload`
-- **Android package:** `ninja.domi.webdavautoupload`
-- **Compatibility wording:** "WebDAV Auto Upload uploads files to Nextcloud servers. WebDAV Auto Upload is an independent project and is not affiliated with or endorsed by Nextcloud GmbH."
-- **Local directory:** keep `domi-nextcloud-auto-upload` unchanged
+- **Display name:** Cloud Hoist
+- **Expo slug and future public repository:** `cloud-hoist`
+- **Android package:** `ninja.domi.cloudhoist`
+- **Compatibility wording:** "Cloud Hoist uploads files to Nextcloud servers. Cloud Hoist is an independent project and is not affiliated with or endorsed by Nextcloud GmbH."
+- **Local directory:** the checkout directory can have any name
 
 The name and icon must not use the Nextcloud name or cloud logo as product branding. Factual compatibility wording is allowed for an independent non-commercial project. [Nextcloud trademark guidelines](https://nextcloud.com/trademarks/)
 
@@ -297,7 +297,7 @@ Status: accepted on 2026-09-04
 
 Current priority, confirmed by Domi on 2026-09-28: test locally on the emulator and connected phone. Release infrastructure, signing automation, release tags, and store metadata are deferred until later. Their absence does not block local testing and should not be treated as a current project blocker. The publication requirements below apply when release work resumes.
 
-❓ **Q40** - **Does the name promise generic WebDAV?**: `WebDAV Auto Upload` sounds broader than the first release, which uses Nextcloud login, capabilities, chunking, and DAV paths.
+**Scope:** Cloud Hoist targets Nextcloud servers. The first release uses Nextcloud login, capabilities, chunking, and DAV paths.
 
 ➡️ State plainly that v1 supports Nextcloud servers. Keep the transport code isolated and add generic WebDAV only after testing it against named servers. Do not put an untested "works with any WebDAV server" claim in the README or stores.
 

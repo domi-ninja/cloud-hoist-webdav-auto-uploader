@@ -59,7 +59,7 @@ for (const failure of [null, 'checksum', 'conflict', 'upload', 'refused']) {
       const builtAt = new Date('2026-10-04T01:52:19+06:00');
       await utimes(apk, builtAt, builtAt);
       const release = { version: '0.1.0', versionCode: 2 };
-      const fileName = 'webdav-auto-upload-0.1.0-2026-10-03T195219Z-build-2.apk';
+      const fileName = 'cloud-hoist-0.1.0-2026-10-03T195219Z-build-2.apk';
       const calls = [];
       let uploaded;
       const request = async (url, options) => {

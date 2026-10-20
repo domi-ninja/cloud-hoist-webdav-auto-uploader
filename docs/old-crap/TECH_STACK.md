@@ -1,13 +1,13 @@
-# WebDAV Auto Upload technology stack
+# Cloud Hoist technology stack
 
-WebDAV Auto Upload is an Android-first, open-source React Native app for reliable automatic uploads to Nextcloud.
+Cloud Hoist is an Android-first, open-source React Native app for reliable automatic uploads to Nextcloud.
 
 ## Project identity
 
-- **Display name:** WebDAV Auto Upload
-- **Expo slug and public repository:** `webdav-auto-upload`
-- **Android package:** `ninja.domi.webdavautoupload`
-- **Local directory:** `domi-nextcloud-auto-upload` remains unchanged
+- **Display name:** Cloud Hoist
+- **Expo slug and public repository:** `cloud-hoist`
+- **Android package:** `ninja.domi.cloudhoist`
+- **Local directory:** the checkout directory can have any name
 
 ## Locked choices
 
