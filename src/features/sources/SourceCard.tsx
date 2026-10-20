@@ -34,10 +34,12 @@ function sourceStatus(
       ? snapshot.recentJobs.find((job) => job.id === worker.jobId)
       : undefined;
 
+  if (!source.enabled) return "Backup disabled";
+  if (snapshot.engine.state === "paused") return "Uploads paused by you";
   if (permissionBlocker) return "Permission required";
-  if (!source.enabled) return "Disabled";
-  if (snapshot.engine.state === "paused") return "Paused";
-  if (snapshot.worker.state === "waiting") return snapshot.worker.reason;
+  if ((worker.state === "waiting" || worker.state === "stopped") && source.queue?.pending) {
+    return worker.reason;
+  }
   if (
     snapshot.worker.state === "scanning" &&
     (snapshot.worker.scope === "all" || source.kind === "media_store")

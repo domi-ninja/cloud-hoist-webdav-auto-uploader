@@ -8,6 +8,8 @@ import androidx.room.PrimaryKey
 
 data class SourceQueueCounts(val sourceId: String, val pending: Int, val failed: Int)
 
+data class QueueCounts(val queued: Int, val uploading: Int, val failed: Int, val uploaded: Int)
+
 @Entity(tableName = "accounts")
 data class AccountEntity(
   @PrimaryKey val id: String,

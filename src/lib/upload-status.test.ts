@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
-import { attentionBlockers, engineStatus } from "./upload-status";
+import { attentionBlockers, engineStatus, uploadProgress } from "./upload-status";
 
 function snapshot(worker: EngineSnapshot["worker"]): EngineSnapshot {
   return {
@@ -48,22 +48,70 @@ function snapshot(worker: EngineSnapshot["worker"]): EngineSnapshot {
 
 describe("upload status", () => {
   it("does not classify a network wait as needing attention", () => {
-    const state = snapshot({ state: "idle" });
+    const state = snapshot({ state: "waiting", reason: "Waiting for a network connection" });
     state.engine = { state: "blocked", blockerCount: 1 };
     state.blockers = [{ kind: "network", retryAt: null }];
     expect(attentionBlockers(state.blockers)).toEqual([]);
-    expect(engineStatus(state, 0)).toBe("Waiting for Android to start uploads");
+    expect(engineStatus(state, 0)).toBe("Waiting for a network connection");
   });
 
   it("keeps real blockers actionable", () => {
     const state = snapshot({ state: "idle" });
     state.blockers = [{ kind: "permission", sourceId: "camera", permission: "media" }];
     expect(attentionBlockers(state.blockers)).toHaveLength(1);
-    expect(engineStatus(state, 0)).toBe("Uploads need attention");
+    expect(engineStatus(state, 0)).toBe("Restore photo access");
   });
   it("shows the native waiting reason", () => {
     expect(engineStatus(snapshot({ state: "waiting", reason: "Waiting for charging" }), 0))
       .toBe("Waiting for charging");
+  });
+
+  it.each([
+    { state: "idle" },
+    { state: "waiting", reason: "Waiting for charging" },
+    { state: "stopped", reason: "Uploads stopped" },
+    { state: "scanning", scope: "all", startedAt: "2026-09-06T12:00:00.000Z" },
+  ] satisfies EngineSnapshot["worker"][])("keeps the user's pause explicit while the worker is $state", (worker) => {
+    const state = snapshot(worker);
+    state.engine = { state: "paused", pausedAt: "2026-09-06T12:00:00.000Z" };
+    expect(engineStatus(state, 0)).toBe("Uploads paused by you");
+  });
+
+  it("describes cancellation honestly while a paused upload is stopping", () => {
+    const state = snapshot({ state: "uploading", jobId: "job", bytesSent: 0, totalBytes: 20 });
+    state.engine = { state: "paused", pausedAt: "2026-09-06T12:00:00.000Z" };
+    expect(engineStatus(state, 0)).toBe("Uploads paused by you · stopping the current upload");
+  });
+
+  it("does not claim all files are uploaded while a disabled folder has pending files", () => {
+    const state = snapshot({ state: "waiting", reason: "Camera backup is disabled" });
+    state.queue = { queued: 1734, uploading: 0, failed: 0, uploaded: 2679 };
+    expect(engineStatus(state, 0)).toBe("Camera backup is disabled");
+    expect(uploadProgress(state)).toEqual({ uploaded: 2679, total: 4413, fraction: 2679 / 4413 });
+  });
+
+  it("counts uploading and failed files in the total without counting them as completed", () => {
+    const state = snapshot({ state: "uploading", jobId: "job", bytesSent: 0, totalBytes: 20 });
+    state.queue = { queued: 7, uploading: 1, failed: 2, uploaded: 10 };
+    expect(uploadProgress(state)).toEqual({ uploaded: 10, total: 20, fraction: 0.5 });
+    expect(engineStatus(state, 0)).toBe("Uploading");
+  });
+
+  it("handles an empty queue without invalid progress", () => {
+    const state = snapshot({ state: "idle" });
+    state.queue = { queued: 0, uploading: 0, failed: 0, uploaded: 0 };
+    expect(uploadProgress(state)).toEqual({ uploaded: 0, total: 0, fraction: 0 });
+  });
+
+  it("reports completion only when no files remain", () => {
+    const state = snapshot({ state: "idle" });
+    state.queue = { queued: 0, uploading: 0, failed: 0, uploaded: 10 };
+    expect(engineStatus(state, 0)).toBe("All files uploaded");
+    expect(uploadProgress(state).fraction).toBe(1);
+  });
+
+  it("reports a stopped worker separately from a user pause", () => {
+    expect(engineStatus(snapshot({ state: "stopped", reason: "Uploads stopped" }), 0)).toBe("Uploads stopped");
   });
 
 });

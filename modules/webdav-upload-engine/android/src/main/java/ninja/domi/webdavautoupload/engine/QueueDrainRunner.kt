@@ -106,6 +106,11 @@ class QueueDrainRunner(
         dao.insertAttempt(
           UploadAttemptEntity(attemptId, job.id, claimedAt, finishedAt, failure.code),
         )
+        if (error is TransferCancelledException && isPaused()) {
+          // A user pause must not add network-error backoff when they resume.
+          dao.retryClaim(job.id, claimToken, finishedAt, failure.code)
+          return QueueDrainResult(completed, retryWorker = false)
+        }
         if (error is TransferCancelledException && !isPaused() && !isStopped() &&
           elapsed() - startedAt >= maxRunMillis
         ) {

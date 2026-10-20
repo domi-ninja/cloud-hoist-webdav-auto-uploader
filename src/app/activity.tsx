@@ -24,7 +24,8 @@ import {
   Separator,
 } from "@/components/ui";
 import { RestoreSourcePermission } from "@/features/sources/RestoreSourcePermission";
-import { attentionBlockers, engineStatus, queueSummary } from "@/lib/upload-status";
+import { attentionBlockers } from "@/lib/upload-status";
+import { UploadProgress } from "@/components/UploadProgress";
 
 function blockerText(blocker: ReturnType<typeof attentionBlockers>[number]) {
   switch (blocker.kind) {
@@ -252,16 +253,7 @@ export default function ActivityScreen() {
             </Text>
             {snapshot.data ? (
               <Panel>
-                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                  {engineStatus(snapshot.data, now)}
-                </Text>
-                {Object.values(snapshot.data.queue).some(
-                  (count) => count > 0,
-                ) ? (
-                  <Text className="text-base text-muted-light dark:text-muted-dark">
-                    {queueSummary(snapshot.data)}
-                  </Text>
-                ) : null}
+                <UploadProgress snapshot={snapshot.data} now={now} />
               </Panel>
             ) : null}
             {snapshot.isLoading || inventory.isLoading ? (

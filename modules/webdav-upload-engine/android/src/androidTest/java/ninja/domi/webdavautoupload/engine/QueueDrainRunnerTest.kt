@@ -89,6 +89,35 @@ class QueueDrainRunnerTest {
   }
 
   @Test
+  fun userPauseDoesNotDelayTheUploadAfterResumeOrNotifyAboutFailure() {
+    enqueue("paused", "revision-paused", 10, attemptCount = 5)
+    var paused = false
+    var interrupted = false
+    val notices = mutableListOf<String>()
+    val uploader = runner(
+      isPaused = { paused },
+      davClient = DavClient { _, request ->
+        if (!interrupted) {
+          interrupted = true
+          paused = true
+          assertTrue(request.isCancelled())
+          throw TransferCancelledException()
+        }
+        DavUploadResult(false, false)
+      },
+      onFailure = { job, _ -> notices += job.id },
+    )
+    val result = uploader.run()
+
+    assertFalse(result.retryWorker)
+    assertEquals(clock, dao.job("paused")?.retryAt)
+    assertEquals(1, dao.eligibleJobCount(clock))
+    assertTrue(notices.isEmpty())
+    paused = false
+    assertEquals(1, uploader.run().completedJobs)
+  }
+
+  @Test
   fun processRecoveryRequeuesOnlyClaimsOwnedByTheDeadProcess() {
     enqueue("old", "old-revision", 10)
     enqueue("current", "current-revision", 20)
@@ -325,13 +354,14 @@ class QueueDrainRunnerTest {
     canStartNextFile: () -> Boolean = { true },
     onFailure: (UploadJobEntity, TransferFailure) -> Unit = { _, _ -> },
     onAttemptFinished: (String) -> Unit = {},
+    isPaused: () -> Boolean = { false },
   ) = QueueDrainRunner(
     dao = dao,
     accountRepository = accountRepository(),
     davClient = davClient,
     chunkedDavClient = chunkedDavClient,
     mimeType = { "image/jpeg" },
-    isPaused = { false },
+    isPaused = isPaused,
     newId = generateSequence(0) { it + 1 }.iterator().let { ids ->
       { "generated-${ids.next()}" }
     },

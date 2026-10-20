@@ -37,7 +37,7 @@ class TransferConstraintChecker(
     if (
       constraints.batteryNotLow &&
       battery.getBooleanExtra(BatteryManager.EXTRA_BATTERY_LOW, false)
-    ) return "Waiting for the battery to recover"
+    ) return "Battery is low · waiting for it to charge"
     if (constraints.requiresCharging) {
       val status = battery.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
       if (status != BatteryManager.BATTERY_STATUS_CHARGING &&

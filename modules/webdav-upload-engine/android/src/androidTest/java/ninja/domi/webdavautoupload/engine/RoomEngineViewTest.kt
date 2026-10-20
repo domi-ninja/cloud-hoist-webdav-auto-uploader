@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.work.WorkInfo
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -52,7 +53,10 @@ class RoomEngineViewTest {
     )
     val view = RoomEngineView(dao, onInvalidated = {})
 
-    val snapshot = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus())
+    val snapshot = view.snapshot(
+      CONNECTED_ACCOUNT, SchedulerStatus(),
+      queueDrain = QueueDrainStatus(state = WorkInfo.State.RUNNING),
+    )
 
     val queue = snapshot["queue"] as Map<*, *>
     assertEquals(1, queue["queued"])
@@ -73,7 +77,10 @@ class RoomEngineViewTest {
   fun activeUploadRemainsVisibleBehindThousandsOfNewerJobs() {
     enqueue("old-running", JobState.RUNNING, 1, 50)
     repeat(2000) { enqueue("queued-$it", JobState.QUEUED, it.toLong() + 2, 10) }
-    val snapshot = RoomEngineView(dao, onInvalidated = {}).snapshot(CONNECTED_ACCOUNT, SchedulerStatus())
+    val snapshot = RoomEngineView(dao, onInvalidated = {}).snapshot(
+      CONNECTED_ACCOUNT, SchedulerStatus(),
+      queueDrain = QueueDrainStatus(state = WorkInfo.State.RUNNING),
+    )
     assertEquals("old-running", (snapshot["worker"] as Map<*, *>)["jobId"])
     val source = (snapshot["sources"] as List<*>).single() as Map<*, *>
     assertEquals(2001, (source["queue"] as Map<*, *>)["pending"])
@@ -143,6 +150,7 @@ class RoomEngineViewTest {
       CONNECTED_ACCOUNT,
       SchedulerStatus(),
       waitingReason = "Waiting for charging",
+      queueDrain = QueueDrainStatus(state = WorkInfo.State.ENQUEUED),
     )
 
     val worker = snapshot["worker"] as Map<*, *>
@@ -173,13 +181,16 @@ class RoomEngineViewTest {
     enqueue("retry", JobState.RETRY_WAIT, 10, 10, error = "server", retryAt = 500)
     var clock = 100L
     val view = RoomEngineView(dao, onInvalidated = {}, now = { clock })
-    val snapshot = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus(), waitingReason = null)
+    val snapshot = view.snapshot(
+      CONNECTED_ACCOUNT, SchedulerStatus(),
+      queueDrain = QueueDrainStatus(state = WorkInfo.State.ENQUEUED),
+    )
     assertTrue((snapshot["blockers"] as List<*>).isEmpty())
     assertEquals("running", (snapshot["engine"] as Map<*, *>)["state"])
-    assertEquals("Waiting to retry upload", (snapshot["worker"] as Map<*, *>)["reason"])
+    assertEquals("Nextcloud server error · will retry automatically", (snapshot["worker"] as Map<*, *>)["reason"])
     clock = 600L
     val ready = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus(), waitingReason = null)
-    assertEquals("idle", (ready["worker"] as Map<*, *>)["state"])
+    assertEquals("stopped", (ready["worker"] as Map<*, *>)["state"])
     assertEquals(1, dao.eligibleJobCount(clock))
   }
 
@@ -188,14 +199,66 @@ class RoomEngineViewTest {
     enqueue("queued", JobState.QUEUED, 10, 10)
     val view = RoomEngineView(dao, onInvalidated = {})
     listOf("Waiting for an unmetered network", "Waiting for charging").forEach { reason ->
-      val waiting = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus(), waitingReason = reason)
+      val waiting = view.snapshot(
+        CONNECTED_ACCOUNT, SchedulerStatus(), waitingReason = reason,
+        queueDrain = QueueDrainStatus(state = WorkInfo.State.ENQUEUED),
+      )
       assertEquals(reason, (waiting["worker"] as Map<*, *>)["reason"])
       assertTrue((waiting["blockers"] as List<*>).isEmpty())
       assertEquals("running", (waiting["engine"] as Map<*, *>)["state"])
     }
     val ready = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus(), waitingReason = null)
-    assertEquals("idle", (ready["worker"] as Map<*, *>)["state"])
+    assertEquals("stopped", (ready["worker"] as Map<*, *>)["state"])
     assertTrue((ready["blockers"] as List<*>).isEmpty())
+  }
+
+  @Test
+  fun disabledFolderQueueIsNotTreatedAsScheduledOrRetryingWork() {
+    enqueue("queued", JobState.QUEUED, 10, 10)
+    dao.upsertSource(source().copy(enabled = false))
+    val snapshot = RoomEngineView(dao, onInvalidated = {}).snapshot(
+      CONNECTED_ACCOUNT,
+      SchedulerStatus(),
+      waitingReason = "Waiting for charging",
+      queueDrain = QueueDrainStatus(state = WorkInfo.State.ENQUEUED),
+    )
+    assertEquals(0, dao.pendingWorkCount())
+    assertEquals(1, (snapshot["queue"] as Map<*, *>)["queued"])
+    assertEquals("Camera backup is disabled", (snapshot["worker"] as Map<*, *>)["reason"])
+    assertEquals("running", (snapshot["engine"] as Map<*, *>)["state"])
+  }
+
+  @Test
+  fun eligibleWorkReportsTheRealAndroidSchedule() {
+    enqueue("queued", JobState.QUEUED, 10, 10)
+    val view = RoomEngineView(dao, onInvalidated = {})
+    val stopped = view.snapshot(CONNECTED_ACCOUNT, SchedulerStatus())
+    assertEquals("stopped", (stopped["worker"] as Map<*, *>)["state"])
+    val scheduled = view.snapshot(
+      CONNECTED_ACCOUNT, SchedulerStatus(),
+      queueDrain = QueueDrainStatus(state = WorkInfo.State.ENQUEUED),
+    )
+    assertEquals("Uploads scheduled", (scheduled["worker"] as Map<*, *>)["reason"])
+  }
+
+  @Test
+  fun staleRunningClaimDoesNotPretendAStoppedWorkerIsUploading() {
+    enqueue("stale", JobState.RUNNING, 10, 10)
+    val snapshot = RoomEngineView(dao, onInvalidated = {}).snapshot(CONNECTED_ACCOUNT, SchedulerStatus())
+    assertEquals("stopped", (snapshot["worker"] as Map<*, *>)["state"])
+  }
+
+  @Test
+  fun userPauseRemainsSeparateFromDeviceAndFolderWaits() {
+    enqueue("queued", JobState.QUEUED, 10, 10)
+    dao.upsertSource(source().copy(enabled = false))
+    val paused = RoomEngineView(dao, onInvalidated = {}).snapshot(
+      CONNECTED_ACCOUNT,
+      SchedulerStatus(pausedAt = "2026-09-04T12:00:00Z"),
+      waitingReason = "Waiting for charging",
+    )
+    assertEquals("paused", (paused["engine"] as Map<*, *>)["state"])
+    assertEquals("idle", (paused["worker"] as Map<*, *>)["state"])
   }
 
   private fun enqueue(

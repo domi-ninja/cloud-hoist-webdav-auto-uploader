@@ -1,5 +1,5 @@
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
-import { formatBytes, formatRelativeTime } from "./format";
+import { formatRelativeTime } from "./format";
 
 // Waiting for transfer rules or an automatic retry does not require user action.
 export function attentionBlockers(blockers: EngineSnapshot["blockers"]) {
@@ -7,35 +7,52 @@ export function attentionBlockers(blockers: EngineSnapshot["blockers"]) {
 }
 
 export function engineStatus(snapshot: EngineSnapshot, now: number) {
-  if (snapshot.account.status !== "connected") return "Connect an account to begin";
   if (snapshot.engine.state === "paused") {
     return snapshot.worker.state === "uploading"
-      ? "Uploads paused · finishing the current file"
-      : `Uploads paused ${formatRelativeTime(snapshot.engine.pausedAt, now)}`;
+      ? "Uploads paused by you · stopping the current upload"
+      : "Uploads paused by you";
   }
+  if (snapshot.account.status === "error") return snapshot.account.message;
+  if (snapshot.account.status !== "connected") return "Connect an account to begin";
   if (snapshot.worker.state === "scanning") return "Scanning for new files";
-  if (snapshot.worker.state === "uploading") {
-    return `Uploading ${formatBytes(snapshot.worker.bytesSent)} of ${formatBytes(snapshot.worker.totalBytes)}`;
+  if (snapshot.worker.state === "uploading") return "Uploading";
+  if (snapshot.worker.state === "waiting" || snapshot.worker.state === "stopped") {
+    return snapshot.worker.reason;
   }
-  if (snapshot.worker.state === "waiting") return snapshot.worker.reason;
-  if (attentionBlockers(snapshot.blockers).length) return "Uploads need attention";
+  const blocker = attentionBlockers(snapshot.blockers)[0];
+  if (blocker) {
+    switch (blocker.kind) {
+      case "account":
+      case "job":
+        return blocker.message;
+      case "permission": {
+        const source = snapshot.sources.find(
+          (source) => source.id === blocker.sourceId,
+        );
+        return `Restore ${blocker.permission === "media" ? "photo" : "folder"} access${source ? ` for ${source.name}` : ""}`;
+      }
+      case "storage":
+        return "Not enough storage on your phone";
+    }
+  }
   if (!snapshot.sources.length) return "Choose a folder to start uploading";
-  if (snapshot.queue.queued) return "Waiting for Android to start uploads";
+  if (snapshot.sources.every((source) => !source.enabled)) {
+    return "All backup folders are disabled";
+  }
+  if (snapshot.queue.failed) {
+    return `${snapshot.queue.failed} ${snapshot.queue.failed === 1 ? "file could" : "files could"} not be uploaded`;
+  }
+  if (snapshot.queue.queued) return "Uploads have not started";
+  if (snapshot.queue.uploaded) return "All files uploaded";
   if (snapshot.scheduler.lastScanCompletedAt) {
     return `Last scan ${formatRelativeTime(snapshot.scheduler.lastScanCompletedAt, now)}`;
   }
   return "Ready to upload";
 }
 
-export function queueSummary(snapshot: EngineSnapshot) {
-  const counts = [
-    [snapshot.queue.queued, "queued"],
-    [snapshot.queue.uploading, "uploading"],
-    [snapshot.queue.failed, "blocked"],
-    [snapshot.queue.uploaded, "uploaded"],
-  ] as const;
-  const active = counts.filter(([count]) => count > 0);
-  return active.length
-    ? active.map(([count, label]) => `${count} ${label}`).join(" · ")
-    : "No uploads yet";
+// Include disabled folders and failed files: unfinished backups must not read as complete.
+export function uploadProgress(snapshot: EngineSnapshot) {
+  const { queued, uploading, failed, uploaded } = snapshot.queue;
+  const total = queued + uploading + failed + uploaded;
+  return { uploaded, total, fraction: total === 0 ? 0 : uploaded / total };
 }
