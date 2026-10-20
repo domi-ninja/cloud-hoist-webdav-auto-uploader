@@ -5,15 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, Portal } from "react-native-paper";
 
 import app from "../../../app.json";
-import webDavUploadEngine from "../../../modules/webdav-upload-engine";
 import { ActionButton, Panel } from "@/components/ui";
 import {
   fetchAvailableUpdate,
-  openAppUpdate,
   releasesUrl,
   updateConfig,
   type AppRelease,
 } from "./app-update";
+import { openUpdate } from "./open-app-update";
 
 const updateKey = ["app-update"] as const;
 
@@ -37,13 +36,7 @@ function UpdateAction({ release, onOpened }: { release: AppRelease; onOpened?: (
     setOpening(true);
     setError(false);
     try {
-      await openAppUpdate(release, updateConfig, {
-        openPlayStore: async (androidPackage) => {
-          const result = await webDavUploadEngine.openPlayStore(androidPackage);
-          return result.ok && result.value;
-        },
-        openUrl: Linking.openURL,
-      });
+      await openUpdate(release);
       onOpened?.();
     } catch {
       setError(true);
