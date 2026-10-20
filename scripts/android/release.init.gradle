@@ -16,6 +16,13 @@ gradle.beforeProject { project ->
             signing.keyAlias = credentials.keyAlias
             signing.keyPassword = credentials.keyPassword
             project.android.buildTypes.release.signingConfig = signing
+            // React Native's default bundle inputs omit JSON configuration files.
+            project.tasks.matching { it.name == 'createBundleReleaseJsAndAssets' }.configureEach {
+                inputs.file(new File(project.rootDir.parentFile, 'release.config.json'))
+                    .withPropertyName('releaseConfiguration')
+                inputs.file(new File(project.rootDir.parentFile, 'app.json'))
+                    .withPropertyName('appConfiguration')
+            }
         }
     }
 }
