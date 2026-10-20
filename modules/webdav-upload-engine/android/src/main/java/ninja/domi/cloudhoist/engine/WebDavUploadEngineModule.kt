@@ -149,7 +149,12 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("getSnapshotAsync") {
-      engine.snapshot(accountManager.accountHealth(), enginePreferences.status(), constraintChecker.waitingReason())
+      engine.snapshot(
+        accountManager.accountHealth(),
+        enginePreferences.status(),
+        constraintChecker.waitingReason(),
+        workScheduler.queueDrainStatus(),
+      )
     }
 
     AsyncFunction("getSourcesAsync") {

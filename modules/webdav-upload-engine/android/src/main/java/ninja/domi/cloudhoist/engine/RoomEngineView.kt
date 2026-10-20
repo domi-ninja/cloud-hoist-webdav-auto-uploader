@@ -1,5 +1,6 @@
 package ninja.domi.cloudhoist.engine
 
+import androidx.work.WorkInfo
 import java.time.Instant
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -23,10 +24,12 @@ class RoomEngineView(
     account: Map<String, Any?>,
     scheduler: SchedulerStatus,
     waitingReason: String? = null,
+    queueDrain: QueueDrainStatus = QueueDrainStatus(),
   ): Map<String, Any?> {
     val jobs = dao.recentJobViews()
     val blockers = blockers(account, jobs)
     val running = jobs.firstOrNull { it.state == JobState.RUNNING }
+    val queue = dao.queueCounts()
     return mapOf(
       "revision" to revision,
       "account" to account,
@@ -37,14 +40,14 @@ class RoomEngineView(
       },
       "sources" to sources(),
       "queue" to mapOf(
-        "queued" to dao.jobCountInStates(listOf(JobState.QUEUED, JobState.RETRY_WAIT)),
-        "uploading" to dao.jobCountInStates(listOf(JobState.RUNNING)),
-        "failed" to dao.jobCountInStates(listOf(JobState.BLOCKED)),
-        "uploaded" to dao.jobCountInStates(listOf(JobState.COMPLETED)),
+        "queued" to queue.queued,
+        "uploading" to queue.uploading,
+        "failed" to queue.failed,
+        "uploaded" to queue.uploaded,
       ),
       "recentJobs" to jobs.map(::jobMap),
       "blockers" to blockers,
-      "worker" to workerMap(running, scheduler, waitingReason),
+      "worker" to workerMap(running, scheduler, waitingReason, queueDrain),
       "scheduler" to scheduler.toMap(),
     )
   }
@@ -224,8 +227,9 @@ class RoomEngineView(
     running: UploadJobView?,
     scheduler: SchedulerStatus,
     waitingReason: String?,
+    queueDrain: QueueDrainStatus,
   ): Map<String, Any?> = when {
-    running != null -> mapOf(
+    running != null && queueDrain.state == WorkInfo.State.RUNNING -> mapOf(
       "state" to "uploading",
       "jobId" to running.id,
       "bytesSent" to confirmedBytes(running),
@@ -238,11 +242,40 @@ class RoomEngineView(
         "scope" to scheduler.workerScope,
         "startedAt" to scheduler.lastScanRequestedAt,
       )
-    scheduler.pausedAt == null && waitingReason != null && dao.pendingWorkCount() > 0 ->
-      mapOf("state" to "waiting", "reason" to waitingReason)
-    scheduler.pausedAt == null && dao.pendingWorkCount() > 0 && dao.eligibleJobCount(now()) == 0 ->
-      mapOf("state" to "waiting", "reason" to "Waiting to retry upload")
+    scheduler.pausedAt == null && dao.pendingWorkCount() > 0 -> when {
+      queueDrain.state == null -> queueDrain.workerMap(now())
+      waitingReason != null -> mapOf("state" to "waiting", "reason" to waitingReason)
+      dao.eligibleJobCount(now()) == 0 && dao.nextRetryJob() != null -> mapOf(
+        "state" to "waiting",
+        "reason" to retryReason(dao.nextRetryJob()?.lastErrorCode),
+      )
+      else -> queueDrain.workerMap(now())
+    }
+    scheduler.pausedAt == null -> disabledFolderWait() ?: mapOf("state" to "idle")
     else -> mapOf("state" to "idle")
+  }
+
+  private fun disabledFolderWait(): Map<String, Any?>? {
+    val pendingSources = dao.sourceQueueCounts().filter { it.pending > 0 }.map { it.sourceId }.toSet()
+    val disabled = dao.allSources().filter { !it.enabled && it.id in pendingSources }
+    if (disabled.isEmpty()) return null
+    return mapOf(
+      "state" to "waiting",
+      "reason" to if (disabled.size == 1) {
+        "${disabled.single().name} backup is disabled"
+      } else {
+        "${disabled.size} backup folders are disabled"
+      },
+    )
+  }
+
+  private fun retryReason(code: String?): String = when (code) {
+    "network", "dns", "connection_refused" -> "Cannot reach Nextcloud · will retry automatically"
+    "timeout" -> "Nextcloud did not respond · will retry automatically"
+    "server" -> "Nextcloud server error · will retry automatically"
+    "rate_limited" -> "Nextcloud is limiting uploads · will retry automatically"
+    "remote_locked" -> "File is locked on Nextcloud · will retry automatically"
+    else -> "Upload interrupted · will retry automatically"
   }
 
   private fun confirmedBytes(job: UploadJobView): Long = minOf(
@@ -260,7 +293,7 @@ class RoomEngineView(
     "quota" -> "Nextcloud storage is full."
     "local_missing" -> "The local file is no longer available."
     "local_invalid" -> "The local file cannot be uploaded."
-    else -> "Upload paused after $code."
+    else -> "Upload failed ($code)."
   }
 
   companion object {

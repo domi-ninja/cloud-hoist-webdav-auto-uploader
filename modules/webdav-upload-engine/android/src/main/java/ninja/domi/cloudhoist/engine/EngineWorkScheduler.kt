@@ -2,6 +2,7 @@ package ninja.domi.cloudhoist.engine
 
 import android.content.Context
 import android.provider.MediaStore
+import android.os.Build
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
@@ -9,6 +10,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.WorkInfo
 import java.util.concurrent.TimeUnit
 
 data class TransferConstraints(
@@ -23,6 +25,24 @@ class EngineWorkScheduler(
   private val workManager: WorkManager = WorkManager.getInstance(context),
   private val preferences: EnginePreferences = EnginePreferences(context),
 ) {
+  /** Query WorkManager itself; queued database rows do not mean a worker is scheduled. */
+  fun queueDrainStatus(): QueueDrainStatus {
+    val work = workManager.getWorkInfosForUniqueWork(QUEUE_DRAIN_WORK).get()
+      .filterNot { it.state.isFinished }
+      .minByOrNull {
+        when (it.state) {
+          WorkInfo.State.RUNNING -> 0
+          WorkInfo.State.ENQUEUED -> 1
+          else -> 2
+        }
+      } ?: return QueueDrainStatus()
+    return QueueDrainStatus(
+      state = work.state,
+      nextScheduleTimeMillis = work.nextScheduleTimeMillis,
+      stopReason = if (Build.VERSION.SDK_INT >= 31) work.stopReason else WorkInfo.STOP_REASON_NOT_STOPPED,
+    )
+  }
+
   fun ensureScheduled() {
     workManager.enqueueUniqueWork(
       MEDIA_OBSERVER_WORK,

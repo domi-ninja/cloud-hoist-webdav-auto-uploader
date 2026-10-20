@@ -150,6 +150,16 @@ interface EngineDao {
   fun jobCountInStates(states: List<String>): Int
 
   @Query("""
+    SELECT
+      COUNT(CASE WHEN state IN ('queued', 'retry_wait') THEN 1 END) AS queued,
+      COUNT(CASE WHEN state = 'running' THEN 1 END) AS uploading,
+      COUNT(CASE WHEN state = 'blocked' THEN 1 END) AS failed,
+      COUNT(CASE WHEN state = 'completed' THEN 1 END) AS uploaded
+    FROM upload_jobs
+  """)
+  fun queueCounts(): QueueCounts
+
+  @Query("""
     SELECT sourceId,
       SUM(CASE WHEN state IN ('queued', 'running', 'retry_wait') THEN 1 ELSE 0 END) AS pending,
       SUM(CASE WHEN state = 'blocked' THEN 1 ELSE 0 END) AS failed
@@ -252,6 +262,16 @@ interface EngineDao {
       AND upload_jobs.state IN ('queued', 'retry_wait', 'running')
   """)
   fun pendingWorkCount(): Int
+
+  @Query("""
+    SELECT upload_jobs.* FROM upload_jobs
+    INNER JOIN sources ON sources.id = upload_jobs.sourceId
+    INNER JOIN accounts ON accounts.id = upload_jobs.accountId
+    WHERE sources.enabled = 1 AND sources.blockerCode IS NULL AND accounts.blockerCode IS NULL
+      AND upload_jobs.state = 'retry_wait'
+    ORDER BY upload_jobs.retryAt ASC LIMIT 1
+  """)
+  fun nextRetryJob(): UploadJobEntity?
 
   @Query("""
     UPDATE upload_jobs SET state = 'queued', claimToken = NULL, startedAt = NULL, retryAt = NULL

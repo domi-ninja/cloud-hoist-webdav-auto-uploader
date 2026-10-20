@@ -22,7 +22,7 @@ import {
   LoadingState,
   Panel,
 } from "@/components/ui";
-import { engineStatus, queueSummary } from "@/lib/upload-status";
+import { UploadProgress } from "@/components/UploadProgress";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -33,6 +33,9 @@ export default function HomeScreen() {
   const [scanning, setScanning] = useState(false);
   const [pausing, setPausing] = useState(false);
   const now = useNow();
+  const uploadsPaused = snapshot?.engine.state === "paused";
+  const uploadsStopped = snapshot?.worker.state === "stopped";
+  const shouldStartUploads = uploadsPaused || uploadsStopped;
 
   const togglePaused = async () => {
     if (!snapshot) {
@@ -43,13 +46,14 @@ export default function HomeScreen() {
     setErrorMessage(undefined);
     try {
       const result =
-        snapshot.engine.state === "paused"
+        shouldStartUploads
           ? await webDavUploadEngine.resume()
           : await webDavUploadEngine.pause();
 
       if (!result.ok) {
         setErrorMessage(result.error.message);
       }
+      await refetch();
     } catch {
       setErrorMessage("Could not change backup state. Please try again.");
     } finally {
@@ -131,14 +135,7 @@ export default function HomeScreen() {
             </View>
             {snapshot ? (
               <Panel>
-                <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
-                  {engineStatus(snapshot, now)}
-                </Text>
-                {Object.values(snapshot.queue).some((count) => count > 0) ? (
-                  <Text className="text-base text-muted-light dark:text-muted-dark">
-                    {queueSummary(snapshot)}
-                  </Text>
-                ) : null}
+                <UploadProgress snapshot={snapshot} now={now} />
                 {connected && visibleSources.length ? (
                   <View className="flex-row flex-wrap items-center gap-2">
                     <IconAction
@@ -149,14 +146,16 @@ export default function HomeScreen() {
                       onPress={() => void scanNow()}
                       tone="primary"
                     />
-                    <IconAction
-                      icon={
-                        snapshot.engine.state === "paused" ? "play" : "pause"
-                      }
+                    <ActionButton
+                      icon={shouldStartUploads ? "play" : "pause"}
                       disabled={pausing}
                       loading={pausing}
                       label={
-                        snapshot.engine.state === "paused" ? "Resume" : "Pause"
+                        uploadsPaused
+                          ? "Resume uploads"
+                          : uploadsStopped
+                            ? "Start uploads"
+                            : "Pause uploads"
                       }
                       onPress={() => void togglePaused()}
                     />

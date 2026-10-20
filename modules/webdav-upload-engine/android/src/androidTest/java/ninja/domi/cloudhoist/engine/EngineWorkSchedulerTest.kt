@@ -61,6 +61,7 @@ class EngineWorkSchedulerTest {
     scheduler.requestQueueDrain()
 
     val work = activeWork(EngineWorkScheduler.QUEUE_DRAIN_WORK).single()
+    assertEquals(work.state, scheduler.queueDrainStatus().state)
     assertEquals(NetworkType.UNMETERED, work.constraints.requiredNetworkType)
     assertTrue(work.constraints.requiresBatteryNotLow())
     assertTrue(!work.constraints.requiresCharging())
@@ -85,6 +86,7 @@ class EngineWorkSchedulerTest {
     scheduler.pause()
     workManager.getWorkInfosForUniqueWork(EngineWorkScheduler.QUEUE_DRAIN_WORK).get()
     assertTrue(activeWork(EngineWorkScheduler.QUEUE_DRAIN_WORK).isEmpty())
+    assertEquals(null, scheduler.queueDrainStatus().state)
   }
 
   @Test

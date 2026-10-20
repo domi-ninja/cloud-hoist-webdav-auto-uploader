@@ -78,6 +78,7 @@ describe("native engine contract", () => {
     { state: "scanning", scope: "media", startedAt: now },
     { state: "uploading", jobId: "job-1", bytesSent: 10, totalBytes: 20 },
     { state: "waiting", reason: "Wi-Fi required" },
+    { state: "stopped", reason: "Uploads stopped" },
   ])("decodes worker activity %#", (value) => {
     expect(workerActivitySchema.parse(value)).toEqual(value);
   });

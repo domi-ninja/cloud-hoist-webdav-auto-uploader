@@ -126,6 +126,7 @@ export const workerActivitySchema = z.discriminatedUnion("state", [
     totalBytes: z.number().int().nonnegative(),
   }),
   z.object({ state: z.literal("waiting"), reason: z.string().min(1) }),
+  z.object({ state: z.literal("stopped"), reason: z.string().min(1) }),
 ]);
 
 export const transferConstraintsSchema = z.object({
