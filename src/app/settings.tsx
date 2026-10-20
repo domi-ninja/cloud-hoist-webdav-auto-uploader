@@ -223,10 +223,6 @@ export default function SettingsScreen() {
           account={snapshot.account}
           key={snapshot.account.id}
           onClose={closeAccount}
-          onSignedOut={() => {
-            closeAccount();
-            router.navigate("/");
-          }}
           visible
         />
       ) : null}

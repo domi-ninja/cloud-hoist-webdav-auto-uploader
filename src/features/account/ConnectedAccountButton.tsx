@@ -23,7 +23,6 @@ export function ConnectedAccountButton({ account }: { account: AccountSummary })
         <AccountSettingsModal
           account={account}
           onClose={() => setOpen(false)}
-          onSignedOut={() => setOpen(false)}
           visible
         />
       ) : null}
