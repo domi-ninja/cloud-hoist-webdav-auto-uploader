@@ -1,23 +1,19 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { latestPublishedBuild, releaseBuildNumber, releaseMetadata } from './github-release.mjs';
+import { latestPublishedBuild, releaseVersionCode, releaseMetadata } from './github-release.mjs';
 
-test('release build numbers increase across CI runs, reruns, and higher published builds', () => {
-  assert.equal(releaseBuildNumber('1', 3), 1001);
-  assert.equal(releaseBuildNumber('2', 3), 1002);
-  assert.equal(releaseBuildNumber('2', 3, 1002), 1003);
-  assert.equal(releaseBuildNumber('1', 3, 2000), 2001);
-  assert.equal(releaseBuildNumber('1', 2000), 2001);
-  assert.throws(() => releaseBuildNumber(undefined, 3));
-  assert.throws(() => releaseBuildNumber('0', 3));
-  assert.throws(() => releaseBuildNumber('2100000000', 3));
+test('year-minor versions have one fixed, increasing Android code', () => {
+  assert.equal(releaseVersionCode('2026-1'), 20260001);
+  assert.equal(releaseVersionCode('2026-2'), 20260002);
+  assert.equal(releaseVersionCode('2027-1'), 20270001);
+  for (const value of ['2026-0', '2026-01', '2026-10000', '0.1.0', undefined]) assert.throws(() => releaseVersionCode(value));
 });
 
 test('release metadata binds the update feed to the APK name, Android package, and checksum', () => {
-  const app = { name: 'Cloud Hoist', slug: 'cloud-hoist', version: '0.1.0', android: { package: 'ninja.domi.cloudhoist', versionCode: 1001 } };
+  const app = { name: 'Cloud Hoist', slug: 'cloud-hoist', version: '2026-1', android: { package: 'ninja.domi.cloudhoist', versionCode: 20260001 } };
   const release = releaseMetadata(app, 'domi-ninja/cloud-hoist-webdav-auto-uploader', 'a'.repeat(64));
-  assert.equal(release.tag, 'android-build-1001');
-  assert.equal(release.fileName, 'cloud-hoist-0.1.0-build-1001.apk');
+  assert.equal(release.tag, 'v2026-1');
+  assert.equal(release.fileName, 'cloud-hoist-2026-1.apk');
   assert.equal(release.manifest.androidPackage, app.android.package);
   assert.equal(release.manifest.sha256, 'a'.repeat(64));
   assert.equal(release.manifest.apkUrl, `https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download/${release.tag}/${release.fileName}`);

@@ -2,14 +2,19 @@ import { Text, View } from "react-native";
 import { useTheme } from "react-native-paper";
 
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
+import { IconAction } from "./ui";
 import { engineStatus, uploadProgress, uploadRemainingTime } from "@/lib/upload-status";
 
 export function UploadProgress({
   snapshot,
   now,
+  onRescan,
+  scanning = false,
 }: {
   snapshot: EngineSnapshot;
   now: number;
+  onRescan?: () => void;
+  scanning?: boolean;
 }) {
   const { uploaded, total, fraction } = uploadProgress(snapshot);
   const theme = useTheme();
@@ -32,9 +37,10 @@ export function UploadProgress({
           style={{ width: `${fraction * 100}%`, backgroundColor: theme.colors.primary }}
         />
       </View>
-      <View className="flex-row flex-wrap items-center justify-between gap-2">
-        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">{label}</Text>
+      <View className="flex-row items-center gap-2">
+        <Text className="flex-1 text-base font-semibold text-ink-light dark:text-ink-dark">{label}</Text>
         {remainingTime ? <Text className="text-base text-muted-light dark:text-muted-dark">{remainingTime}</Text> : null}
+        {onRescan ? <IconAction icon="refresh" label={scanning ? "Scanning…" : "Scan now"} loading={scanning} disabled={scanning} onPress={onRescan} /> : null}
       </View>
       <Text
         accessibilityLiveRegion="polite"

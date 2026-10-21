@@ -17,6 +17,17 @@ class FileInventoryTest {
   }
 
   @Test
+  fun nestedBackupFilesBelongToTheChildEvenWhenDisabled() {
+    val parent = source()
+    val child = source().copy(id = "child", remotePathSegments = listOf("Photos", "Screenshots"), enabled = false)
+    val remote = listOf("photo.jpg", "Screenshots/screen.jpg", "Screenshots-other/keep.jpg").map {
+      RemoteInventoryFile(it, "image/jpeg", 10, 1)
+    }
+    assertEquals(listOf("photo.jpg", "Screenshots-other/keep.jpg"), remoteForSource(parent, listOf(parent, child), remote).map { it.relativePath })
+    assertEquals(remote, remoteForSource(parent, listOf(parent), remote))
+  }
+
+  @Test
   fun reconcilesLocalRemoteAndSharedFiles() {
     val source = source()
     val local = listOf(

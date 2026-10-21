@@ -2,13 +2,11 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { appendFile, copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 
-export function releaseBuildNumber(runNumber, sourceBuild, publishedBuild = 0) {
-  const build = Math.max(1000 + Number(runNumber), sourceBuild + 1, publishedBuild + 1);
-  if (!Number.isSafeInteger(Number(runNumber)) || Number(runNumber) < 1 ||
-      !Number.isSafeInteger(build) || build > 2100000000) {
-    throw new Error('Invalid GitHub release build number.');
-  }
-  return build;
+/** One Android code per year-based public version, independent of CI run numbers. */
+export function releaseVersionCode(version) {
+  const match = /^(20\d{2})-([1-9]\d{0,3})$/.exec(version);
+  if (!match) throw new Error('Use a year-minor version, for example 2026-1.');
+  return Number(match[1]) * 10000 + Number(match[2]);
 }
 
 export async function latestPublishedBuild(repository, androidPackage, fetcher = fetch) {
@@ -27,13 +25,13 @@ export async function latestPublishedBuild(repository, androidPackage, fetcher =
 export function releaseMetadata(app, repository, sha256) {
   if (!/^[\w.-]+\/[\w.-]+$/.test(repository) ||
       !/^[a-z0-9-]+$/.test(app.slug) ||
-      !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(app.version) ||
-      !Number.isSafeInteger(app.android.versionCode) || app.android.versionCode < 1 ||
+      !/^20\d{2}-[1-9]\d{0,3}$/.test(app.version) ||
+      !Number.isSafeInteger(app.android.versionCode) || app.android.versionCode !== releaseVersionCode(app.version) ||
       !/^[a-f0-9]{64}$/.test(sha256)) {
     throw new Error('Invalid release identity or checksum.');
   }
-  const tag = `android-build-${app.android.versionCode}`;
-  const fileName = `${app.slug}-${app.version}-build-${app.android.versionCode}.apk`;
+  const tag = `v${app.version}`;
+  const fileName = `${app.slug}-${app.version}.apk`;
   return {
     tag,
     fileName,
@@ -57,7 +55,9 @@ async function main() {
   }
   if (process.argv[2] === 'prepare') {
     const publishedBuild = await latestPublishedBuild(config.githubRepository, app.expo.android.package);
-    app.expo.android.versionCode = releaseBuildNumber(process.env.GITHUB_RUN_NUMBER, app.expo.android.versionCode, publishedBuild);
+    const code = releaseVersionCode(app.expo.version);
+    if (code <= publishedBuild) throw new Error('This version is already published. Increment the year-minor version for changed code.');
+    if (app.expo.android.versionCode !== code) throw new Error('app.json versionCode must match the year-minor version.');
     await writeFile('app.json', JSON.stringify(app, null, 2) + '\n');
     console.log(`Building ${app.expo.name} ${app.expo.version}, build ${app.expo.android.versionCode}.`);
     return;

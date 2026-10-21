@@ -1,7 +1,7 @@
 import { Fragment, memo, useMemo, useState } from "react";
 import { usePathname, useRouter } from "expo-router";
-import { FlatList, Image, Pressable, RefreshControl, Text, View } from "react-native";
-import { Chip, Icon } from "react-native-paper";
+import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Icon, SegmentedButtons } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
@@ -23,11 +23,13 @@ import {
   Panel,
   Separator,
 } from "@/components/ui";
+import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { SourceCard } from "@/features/sources/SourceCard";
 import { SourceEditor } from "@/features/sources/SourceEditor";
 import { RestoreSourcePermission } from "@/features/sources/RestoreSourcePermission";
 import { attentionBlockers } from "@/lib/upload-status";
-import { UploadProgress } from "@/components/UploadProgress";
+import { UploadControls } from "@/components/UploadControls";
+import { ScreenHeader } from "@/components/ScreenHeader";
 
 function blockerText(blocker: ReturnType<typeof attentionBlockers>[number]) {
   switch (blocker.kind) {
@@ -48,9 +50,9 @@ const presenceText: Record<FileInventoryEntry["presence"], string> = {
   both: "On phone and Nextcloud",
 };
 
-const presenceIcon: Record<FileInventoryEntry["presence"], string | null> = {
+const presenceIcon: Record<FileInventoryEntry["presence"], string> = {
   local_only: "upload",
-  remote_only: null,
+  remote_only: "cloud-check-outline",
   both: "check",
 };
 
@@ -72,30 +74,18 @@ function transferText(entry: FileInventoryEntry, now: number) {
 }
 
 function FileThumbnail({ entry }: { entry: FileInventoryEntry }) {
-  const [failedUri, setFailedUri] = useState<string>();
-  const image = entry.mimeType?.startsWith("image/") ?? false;
+  const media = entry.mimeType?.startsWith("image/") || entry.mimeType?.startsWith("video/");
   const remoteThumbnail = useRemoteThumbnail(
     entry.sourceId,
     entry.relativePath,
     entry.modifiedAt,
-    image && !entry.localUri,
+    Boolean(media && !entry.localUri),
   );
   const uri = entry.localUri ?? remoteThumbnail.data ?? undefined;
 
   return (
     <View className="h-20 w-20 shrink-0 items-center justify-center bg-canvas-light dark:bg-canvas-dark">
-      {image && uri && failedUri !== uri ? (
-        <Image
-          accessible={false}
-          className="h-20 w-20"
-          resizeMode="cover"
-          resizeMethod="resize"
-          onError={() => setFailedUri(uri)}
-          source={{ uri }}
-        />
-      ) : (
-        <Icon source="file-outline" size={32} />
-      )}
+      <MediaThumbnail uri={uri} mimeType={!entry.localUri && remoteThumbnail.data ? "image/jpeg" : entry.mimeType} size={80} version={entry.modifiedAt} />
       {presenceIcon[entry.presence] ? (
         <View className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center bg-panel-light dark:bg-panel-dark">
           <Icon
@@ -133,9 +123,6 @@ const FileRow = memo(function FileRow({
           numberOfLines={2}
         >
           {entry.fileName}
-        </Text>
-        <Text className="text-base text-muted-light dark:text-muted-dark">
-          {presenceText[entry.presence]} · {entry.sourceName}
         </Text>
         {transfer ? (
           <Text className="text-base text-muted-light dark:text-muted-dark">
@@ -251,17 +238,8 @@ export default function StatusScreen() {
         }
         ListHeaderComponent={
           <View className="gap-2">
-            <Text
-              accessibilityRole="header"
-              className="text-base font-semibold text-ink-light dark:text-ink-dark"
-            >
-              Status
-            </Text>
-            {snapshot.data ? (
-              <Panel>
-                <UploadProgress snapshot={snapshot.data} now={now} />
-              </Panel>
-            ) : null}
+            <ScreenHeader title="Status" account={snapshot.data?.account} />
+            {snapshot.data ? <UploadControls snapshot={snapshot.data} now={now} onError={setErrorMessage} onScanned={() => inventory.refetch()} /> : null}
             {snapshot.data?.sources.map((source) => (
               <SourceCard key={source.id} source={source} snapshot={snapshot.data!}
                 now={now} onEdit={() => setEditingSourceId(source.id)} />
@@ -367,7 +345,7 @@ export default function StatusScreen() {
                 shown.
               </Text>
             ))}
-            <View className="gap-2">
+            <View className="mt-2 gap-2">
               <View className="flex-row items-center justify-between gap-2">
                 <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
                   Files
@@ -388,31 +366,26 @@ export default function StatusScreen() {
               </View>
               {filtersOpen ? (
                 <>
-                  <View className="flex-row flex-wrap gap-2">
-                    {(["all", "pending", "failed", "uploaded"] as const).map(
-                      (status) => (
-                        <Chip
-                          accessibilityLabel={`Filter files: ${status}`}
-                          accessibilityState={{
-                            selected: statusFilter === status,
-                          }}
-                          key={status}
-                          onPress={() => setStatusFilter(status)}
-                          selected={statusFilter === status}
-                          textStyle={{ fontSize: 16, marginVertical: 14 }}
-                        >
-                          {status === "all"
-                            ? "All"
-                            : status[0].toUpperCase() + status.slice(1)}
-                        </Chip>
-                      ),
-                    )}
-                  </View>
+                  <SegmentedButtons
+                    value={statusFilter}
+                    onValueChange={(value) => {
+                      if (value === "all" || value === "pending" || value === "failed" || value === "uploaded") setStatusFilter(value);
+                    }}
+                    density="small"
+                    buttons={(["all", "pending", "failed", "uploaded"] as const).map((status) => ({
+                      value: status,
+                      label: status === "all" ? "All" : status[0].toUpperCase() + status.slice(1),
+                      accessibilityLabel: `Filter files: ${status}`,
+                      style: { paddingHorizontal: 0 },
+                      labelStyle: { fontSize: 13, marginVertical: 4 },
+                    }))}
+                  />
                   {snapshot.data && snapshot.data.sources.length > 1 ? (
-                    <View className="flex-row flex-wrap gap-2">
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4 }}>
                       <ActionButton
                         accessibilityState={{ selected: sourceFilter === null }}
-                        label="All backup folders"
+                        label="All folders"
+                        compact contentStyle={{ minHeight: 36 }} labelStyle={{ fontSize: 13 }}
                         onPress={() => setSourceFilter(null)}
                         tone={sourceFilter === null ? "secondary" : "quiet"}
                       />
@@ -423,13 +396,14 @@ export default function StatusScreen() {
                           }}
                           key={source.id}
                           label={source.name}
+                          compact contentStyle={{ minHeight: 36 }} labelStyle={{ fontSize: 13 }}
                           onPress={() => setSourceFilter(source.id)}
                           tone={
                             sourceFilter === source.id ? "secondary" : "quiet"
                           }
                         />
                       ))}
-                    </View>
+                    </ScrollView>
                   ) : null}
                 </>
               ) : null}

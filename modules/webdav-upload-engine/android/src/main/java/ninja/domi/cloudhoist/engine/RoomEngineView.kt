@@ -277,22 +277,8 @@ class RoomEngineView(
       )
       else -> queueDrain.workerMap(now())
     }
-    scheduler.pausedAt == null -> disabledFolderWait() ?: mapOf("state" to "idle")
+    scheduler.pausedAt == null -> mapOf("state" to "idle")
     else -> mapOf("state" to "idle")
-  }
-
-  private fun disabledFolderWait(): Map<String, Any?>? {
-    val pendingSources = dao.sourceQueueCounts().filter { it.pending > 0 }.map { it.sourceId }.toSet()
-    val disabled = dao.allSources().filter { !it.enabled && it.id in pendingSources }
-    if (disabled.isEmpty()) return null
-    return mapOf(
-      "state" to "waiting",
-      "reason" to if (disabled.size == 1) {
-        "${disabled.single().name} backup is disabled"
-      } else {
-        "${disabled.size} backup folders are disabled"
-      },
-    )
   }
 
   private fun retryReason(code: String?): String = when (code) {

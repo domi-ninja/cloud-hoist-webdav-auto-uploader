@@ -6,8 +6,9 @@
 
 The private repository on `git.domi.ninja` is the primary upstream. The public
 [GitHub mirror](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader)
-builds an APK on each push to `main`. The Android release workflow can also be
-started manually from the Actions tab.
+builds on release tags such as `v2026-1`. Ordinary main pushes do not build a release.
+The Android release workflow can also be started manually from the Actions tab.
+It skips versions that already have a GitHub release.
 
 This checkout sends `git push origin main` to both upstreams. In another checkout,
 add the GitHub remote and push both explicitly:
@@ -23,9 +24,10 @@ GitHub. A merge on the private server alone does not start GitHub Actions.
 
 The workflow runs TypeScript, lint, JavaScript, release-script, and native unit
 checks. It builds with the existing private signing key, verifies the signature,
-and publishes an APK, `SHA256SUMS`, and `update.json` to GitHub Releases. Build
-numbers start above 1000 and always exceed the last published build, including
-workflow reruns. The APK and update manifest remain available as Actions artifacts
+and publishes an APK, `SHA256SUMS`, and `update.json` to GitHub Releases. Public versions use year-minor, such as `2026-1`, then `2026-2`.
+Android versionCode is year × 10000 + minor, so `2026-1` is `20260001`.
+Increment both in app.json for a changed release bundle. A rerun keeps the same version.
+Use package.json's semver equivalent, `2026.1.0`, for tooling. The APK and update manifest remain available as Actions artifacts
 for 30 days. GitHub release assets remain available until someone removes them.
 
 The GitHub repository needs two Actions secrets. Use the existing `.signing/`
@@ -66,9 +68,11 @@ compatible updates. Never share it with testers.
 Run `pnpm android:beta` to generate the Android project, build and verify the signed
 APK, and copy it to `dist/cloud-hoist-beta.apk`. Share only that APK.
 The command never installs or uninstalls anything on connected devices.
-For a manually distributed local build, set `expo.android.versionCode` in
-`app.json` above the latest published build. Update `expo.version` for a new
-visible version. GitHub Actions assigns its build number automatically.
+Install it on the selected physical phone with `ANDROID_SERIAL=<serial> pnpm android:install`.
+The command verifies the signature, updates in place, and launches the app without clearing data.
+Test this artifact, then package and publish that same APK. Do not build a second APK just to publish.
+If publishing locally, create the GitHub release before pushing its `v<version>` tag so CI skips it.
+Commit and push main to both remotes as usual.
 
 Only this beta command applies the private signing configuration. Ordinary local
 Gradle/test builds retain the debug key so device tests remain compatible. Do not
@@ -104,19 +108,12 @@ directory are ignored by Git. Never send these credentials or the signing key to
 Existing shell environment variables take precedence over `.env`. Directory names
 are encoded automatically; use normal folder names in `NEXTCLOUD_DIRECTORY`.
 
-Each `pnpm android:publish` run checks the destination, increments
-`expo.android.versionCode` in `app.json` above both its current value and the
-latest GitHub build, builds and verifies the APK signature,
-uploads a unique temporary file, downloads it to verify SHA-256, and renames it to
-`cloud-hoist-<version>-<YYYY-MM-DDTHHmmssZ>-build-<versionCode>.apk` without replacing an existing beta.
-For example, `cloud-hoist-0.1.0-2026-10-03T195219Z-build-2.apk`. The date and time are
-UTC, taken from the local APK's modification time so upload retries keep the same name.
-Keep and commit the version bump, even after a failed build/upload. Use this one
-checkout for publishing, or synchronize `app.json` before publishing elsewhere.
-Update `expo.version` manually when you want a new user-visible version label.
-Both beta build commands compile the beta label into the app. Settings → About
-shows `Beta 0.1.0 · Build 2`, using the version and build number from Expo's bundled
-app configuration. Other builds show `Version` instead of `Beta`.
+Each `pnpm android:publish` run checks the destination and refuses a version already
+published on GitHub. It builds and verifies the configured year-minor version,
+uploads a temporary file, downloads it to verify SHA-256, and renames it without replacing an existing beta.
+It does not increment versions automatically. Change app.json before releasing changed code.
+The APK filename includes the version and its build time in UTC.
+Settings shows the configured version, such as `Beta 2026-1`.
 
 The local APK remains at `dist/cloud-hoist-beta.apk`. On failure the command
 exits nonzero and attempts to remove only its own temporary upload. It never deletes

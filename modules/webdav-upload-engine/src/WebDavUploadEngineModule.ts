@@ -90,6 +90,8 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   createRemoteFolderAsync(parentPathSegments: string[], name: string): Promise<unknown>;
   pickDocumentTreeAsync(initialUri: string | null): Promise<unknown>;
   getMediaFoldersAsync(): Promise<unknown>;
+  getLocalVideoThumbnailAsync(uri: string): Promise<unknown>;
+  openLocalVideoAsync(uri: string): Promise<void>;
   previewSourceAsync(selection: SourceSelection, offset: number): Promise<unknown>;
   commitSourceAsync(source: SourceCommit): Promise<unknown>;
   getMediaPermissionAsync(): Promise<unknown>;
@@ -299,6 +301,11 @@ export const webDavUploadEngine = {
     () => nativeModule.getMediaFoldersAsync(),
     (value) => mediaFolderSchema.array().parse(value),
   ),
+  getLocalVideoThumbnail: (uri: string) => runValueCommand(
+    () => nativeModule.getLocalVideoThumbnailAsync(uri),
+    (value) => z.string().startsWith("data:image/jpeg;base64,").nullable().parse(value),
+  ),
+  openLocalVideo: (uri: string) => runCommand(() => nativeModule.openLocalVideoAsync(uri)),
   previewSource: (selection: SourceSelection, offset = 0) => {
     const input = sourceSelectionSchema.parse(selection);
     return runValueCommand(

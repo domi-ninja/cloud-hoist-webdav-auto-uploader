@@ -4,7 +4,7 @@ import { mkdir, writeFile, readFile, chmod, copyFile, rmdir } from 'node:fs/prom
 import { spawnSync } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { checkPublishDestination, loadPublishConfig, publishBeta } from './publish.mjs';
-import { latestPublishedBuild } from './github-release.mjs';
+import { latestPublishedBuild, releaseVersionCode } from './github-release.mjs';
 
 process.umask(0o077);
 const signingDir = resolve('.signing');
@@ -45,15 +45,12 @@ async function main() {
     await checkPublishDestination(publishConfig);
     const distribution = JSON.parse(await readFile('release.config.json', 'utf8'));
     const publishedBuild = await latestPublishedBuild(distribution.githubRepository, app.expo.android.package);
-    versionCode = Math.max(app.expo.android.versionCode, publishedBuild) + 1;
-    if (!Number.isSafeInteger(versionCode) || versionCode < 2 || versionCode > 2100000000) {
-      throw new Error('app.json must contain a valid Android versionCode with room to increment.');
-    }
-    app.expo.android.versionCode = versionCode;
-    await writeFile('app.json', JSON.stringify(app, null, 2) + '\n');
-    console.log(`Building beta ${versionCode}. Keep this version bump even if publishing fails.`);
+    versionCode = releaseVersionCode(app.expo.version);
+    if (versionCode <= publishedBuild) throw new Error('This version is already published. Increment app.json version before publishing changes.');
+    if (app.expo.android.versionCode !== versionCode) throw new Error('Android versionCode must match the year-minor version.');
   }
   if (mode === 'build' || mode === 'publish') {
+    if (app.expo.android.versionCode !== releaseVersionCode(app.expo.version)) throw new Error('Android versionCode must match the year-minor version.');
     const betaEnv = { ...process.env, EXPO_PUBLIC_RELEASE_CHANNEL: 'beta' };
     run('pnpm', ['prebuild'], betaEnv);
     run('./android/gradlew', ['-p', 'android', '-I', '../scripts/android/release.init.gradle', ':app:assembleRelease'], {

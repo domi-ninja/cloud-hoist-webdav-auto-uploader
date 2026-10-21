@@ -204,7 +204,8 @@ class FileInventoryManager(
     val credential = accountRepository.credential() ?: throw AccountNotConfiguredException()
     val locals = dao.localInventory().groupBy(LocalInventoryView::sourceId)
     val errors = mutableListOf<InventoryError>()
-    val items = dao.allSources().filter { filter.sourceId == null || it.id == filter.sourceId }.flatMap { source ->
+    val sources = dao.allSources()
+    val items = sources.filter { filter.sourceId == null || it.id == filter.sourceId }.flatMap { source ->
       val remote = try {
         remoteFiles(credential, source)
       } catch (error: Exception) {
@@ -214,7 +215,7 @@ class FileInventoryManager(
         )
         emptyList()
       }
-      reconcileInventory(source, locals[source.id].orEmpty(), remote)
+      reconcileInventory(source, locals[source.id].orEmpty(), remoteForSource(source, sources, remote))
     }.sortedWith(
       compareByDescending<Map<String, Any?>> { it["modifiedAt"] as? String }
         .thenBy { it["relativePath"] as String },
@@ -263,6 +264,17 @@ internal fun inventoryPage(
     errors = errors,
     nextOffset = if (offset + pageItems.size < matching.size) offset + pageItems.size else null,
   )
+}
+
+/** A nested backup owns its destination, even when the parent folder is also backed up. */
+internal fun remoteForSource(source: SourceEntity, sources: List<SourceEntity>, files: List<RemoteInventoryFile>): List<RemoteInventoryFile> {
+  val nested = sources.filter { it.id != source.id && it.remotePathSegments.size > source.remotePathSegments.size &&
+    it.remotePathSegments.take(source.remotePathSegments.size) == source.remotePathSegments }
+    .map { it.remotePathSegments.drop(source.remotePathSegments.size) }
+  return files.filter { file ->
+    val path = file.relativePath.split('/')
+    nested.none { path.take(it.size) == it }
+  }
 }
 
 private val uploadStagingName = Regex("^\\..+\\.cloud-hoist-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")

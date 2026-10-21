@@ -140,6 +140,14 @@ interface EngineDao {
   @Query("SELECT * FROM sources ORDER BY createdAt ASC, id ASC")
   fun allSources(): List<SourceEntity>
 
+  @Query("""
+    SELECT MAX(upload_jobs.completedAt) FROM upload_jobs
+    INNER JOIN sources ON sources.id = upload_jobs.sourceId
+    WHERE upload_jobs.state = 'completed' AND sources.enabled = 1
+      AND (sources.remotePathSegments = '["Phone Uploads"]' OR sources.remotePathSegments LIKE '["Phone Uploads",%')
+  """)
+  fun latestCompletedUploadInPhoneUploads(): Long?
+
   @Query("SELECT * FROM accounts WHERE blockerCode IS NOT NULL ORDER BY id ASC")
   fun blockedAccounts(): List<AccountEntity>
 

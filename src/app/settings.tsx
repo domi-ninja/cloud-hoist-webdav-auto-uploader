@@ -15,6 +15,7 @@ import { AccountSettingsModal } from "@/features/account/AccountSettingsModal";
 import { InstanceIcon } from "@/features/account/InstanceIcon";
 import { RemoteFolderPicker } from "@/features/sources/RemoteFolderPicker";
 import { formatRemoteRoot, useAppPreferences } from "@/lib/app-preferences";
+import { ScreenHeader } from "@/components/ScreenHeader";
 import { AppUpdates } from "@/features/updates/AppUpdates";
 
 type ConstraintKey = keyof TransferConstraints;
@@ -83,12 +84,7 @@ export default function SettingsScreen() {
         className="flex-1"
         contentContainerClassName="gap-2 p-2"
       >
-        <Text
-          accessibilityRole="header"
-          className="text-base font-semibold text-ink-light dark:text-ink-dark"
-        >
-          Settings
-        </Text>
+        <ScreenHeader title="Settings" account={snapshot?.account} />
         {error || errorMessage ? (
           <Text
             accessibilityLiveRegion="polite"
@@ -159,7 +155,7 @@ export default function SettingsScreen() {
             title="Choose upload root"
           />
         ) : null}
-        <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
+        <Text className="mt-2 text-base font-semibold text-ink-light dark:text-ink-dark">
           Transfer rules
         </Text>
         {!snapshot && !error ? (
@@ -209,8 +205,7 @@ export default function SettingsScreen() {
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
             {process.env.EXPO_PUBLIC_RELEASE_CHANNEL === "beta" ? "Beta" : "Version"}{" "}
-            {Constants.expoConfig?.version ?? "unknown"} · Build{" "}
-            {Constants.expoConfig?.android?.versionCode ?? "unknown"}
+            {Constants.expoConfig?.version ?? "unknown"}
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
             {project.compatibilityNotice}

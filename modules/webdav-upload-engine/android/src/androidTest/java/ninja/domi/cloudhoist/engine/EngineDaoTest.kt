@@ -69,6 +69,16 @@ class EngineDaoTest {
   }
 
   @Test
+  fun readmeTimestampUsesCompletedUploadsInTheDefaultRoot() {
+    dao.upsertSource(source().copy(remotePathSegments = listOf("Phone Uploads", "Pictures")))
+    dao.enqueueRevision(revision("readme"), job("readme", "readme", 1).copy(
+      state = JobState.COMPLETED, completedAt = 1234, remotePathSegments = listOf("Phone Uploads", "Pictures")))
+    assertEquals(1234L, dao.latestCompletedUploadInPhoneUploads())
+    dao.upsertSource(source().copy(remotePathSegments = listOf("Other")))
+    assertNull(dao.latestCompletedUploadInPhoneUploads())
+  }
+
+  @Test
   fun discoveryDeduplicatesExactRevisionsButQueuesChangesAndMoves() {
     assertTrue(dao.enqueueRevision(revision("r1"), job("j1", "r1", 1)))
     assertFalse(dao.enqueueRevision(revision("duplicate"), job("duplicate", "duplicate", 2)))

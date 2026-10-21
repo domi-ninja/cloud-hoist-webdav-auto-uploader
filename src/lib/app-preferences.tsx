@@ -36,7 +36,8 @@ function readPreferences(value: string | null): AppPreferences {
       ? parsed.hiddenMediaFolders.filter((value): value is string => typeof value === "string")
       : [];
     return remoteRootPath.success
-      ? { remoteRootPath: remoteRootPath.data, hiddenMediaFolders }
+      ? { remoteRootPath: remoteRootPath.data.length === 1 && remoteRootPath.data[0] === "Cloud Hoist"
+          ? defaultRemoteRootPath : remoteRootPath.data, hiddenMediaFolders }
       : { remoteRootPath: defaultRemoteRootPath, hiddenMediaFolders: [] };
   } catch {
     return { remoteRootPath: defaultRemoteRootPath, hiddenMediaFolders: [] };

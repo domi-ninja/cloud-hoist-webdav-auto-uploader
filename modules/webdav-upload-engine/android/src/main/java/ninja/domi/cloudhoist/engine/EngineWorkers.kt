@@ -103,12 +103,14 @@ class QueueDrainWorker(
       },
     ).run()
     notification?.update(dao.queueCounts())
+    val credential = AndroidAccountRepository(applicationContext, dao).credential()
+    val readmeUpdated = credential == null || PhoneUploadReadme().updateAfterSync(applicationContext, dao, credential)
     return when {
       drain.continueImmediately -> {
         EngineWorkScheduler(applicationContext).continueQueueDrain()
         Result.success()
       }
-      drain.retryWorker -> Result.retry()
+      drain.retryWorker || !readmeUpdated -> Result.retry()
       else -> Result.success()
     }
   }

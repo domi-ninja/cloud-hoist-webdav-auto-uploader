@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { usePathname, useRouter } from "expo-router";
+import { usePathname } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlatList, RefreshControl, Text, View } from "react-native";
 
-import { project } from "@/config/project";
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
 import { MediaFolderSuggestion } from "@/features/sources/MediaFolderSuggestion";
@@ -21,12 +20,11 @@ import {
   ErrorNotice,
   IconAction,
   LoadingState,
-  Panel,
 } from "@/components/ui";
-import { UploadProgress } from "@/components/UploadProgress";
+import { UploadControls } from "@/components/UploadControls";
+import { ScreenHeader } from "@/components/ScreenHeader";
 
 export default function HomeScreen() {
-  const router = useRouter();
   const focused = usePathname() === "/";
   const { hiddenMediaFolders, setHiddenMediaFolders } = useAppPreferences();
   const [initialSelection, setInitialSelection] = useState<SourceSelection>();
@@ -36,35 +34,7 @@ export default function HomeScreen() {
   const [editingSourceId, setEditingSourceId] = useState<string | "new">();
   const [pickerMode, setPickerMode] = useState<SourcePickerMode>("all");
   const [scanning, setScanning] = useState(false);
-  const [pausing, setPausing] = useState(false);
   const now = useNow();
-  const uploadsPaused = snapshot?.engine.state === "paused";
-  const uploadsStopped = snapshot?.worker.state === "stopped";
-  const shouldStartUploads = uploadsPaused || uploadsStopped;
-
-  const togglePaused = async () => {
-    if (!snapshot) {
-      return;
-    }
-
-    setPausing(true);
-    setErrorMessage(undefined);
-    try {
-      const result =
-        shouldStartUploads
-          ? await webDavUploadEngine.resume()
-          : await webDavUploadEngine.pause();
-
-      if (!result.ok) {
-        setErrorMessage(result.error.message);
-      }
-      await refetch();
-    } catch {
-      setErrorMessage("Could not change backup state. Please try again.");
-    } finally {
-      setPausing(false);
-    }
-  };
 
   const scanNow = async () => {
     setScanning(true);
@@ -143,56 +113,10 @@ export default function HomeScreen() {
         keyExtractor={mediaFolderId}
         ListHeaderComponent={
           <View className="mb-2 gap-2">
-            <View className="flex-row items-center justify-between gap-2">
-              <Text
-                accessibilityRole="header"
-                className="shrink text-base font-semibold text-ink-light dark:text-ink-dark"
-              >
-                {project.displayName}
-              </Text>
-              {connected ? (
-                <AccountConnection account={snapshot.account} />
-              ) : null}
-            </View>
+            <ScreenHeader title="Backups" account={snapshot?.account} />
             {snapshot ? (
-              <Panel>
-                <UploadProgress snapshot={snapshot} now={now} />
-                {connected && visibleSources.length ? (
-                  <View className="flex-row flex-wrap items-center gap-2">
-                    <IconAction
-                      icon="folder-search-outline"
-                      disabled={scanning}
-                      loading={scanning}
-                      label={scanning ? "Scanning…" : "Scan now"}
-                      onPress={() => void scanNow()}
-                      tone="primary"
-                    />
-                    <ActionButton
-                      icon={shouldStartUploads ? "play" : "pause"}
-                      disabled={pausing}
-                      loading={pausing}
-                      label={
-                        uploadsPaused
-                          ? "Resume uploads"
-                          : uploadsStopped
-                            ? "Start uploads"
-                            : "Pause uploads"
-                      }
-                      onPress={() => void togglePaused()}
-                    />
-                    {snapshot.blockers.length ? (
-                      <ActionButton
-                        label={`${snapshot.blockers.length} ${snapshot.blockers.length === 1 ? "issue" : "issues"}`}
-                        onPress={() => router.navigate("/status")}
-                        tone="danger"
-                      />
-                    ) : null}
-                  </View>
-                ) : null}
-              </Panel>
-            ) : (
-              <LoadingState label="Loading backups…" />
-            )}
+              <UploadControls snapshot={snapshot} now={now} onError={setErrorMessage} onScanned={() => media.refetch()} />
+            ) : <LoadingState label="Loading backups…" />}
             {errorMessage || snapshotError ? (
               <ErrorNotice
                 message={errorMessage ?? "Backups could not be loaded."}
@@ -203,7 +127,7 @@ export default function HomeScreen() {
               <AccountConnection account={snapshot.account} />
             ) : null}
             {connected ? (
-              <View className="gap-2">
+              <View className="mt-2 gap-2">
                 <View className="flex-row flex-wrap items-center justify-between gap-2">
                   <Text accessibilityRole="header" className="text-base font-semibold text-ink-light dark:text-ink-dark">Suggested folders</Text>
                   {hiddenMediaFolders.length ? (

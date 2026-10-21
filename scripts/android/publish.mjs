@@ -96,7 +96,7 @@ async function sha256(stream) {
 }
 
 export async function publishBeta(config, apk, { version, versionCode }, request = fetch) {
-  if (typeof version !== 'string' || !/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(version)) {
+  if (typeof version !== 'string' || !/^(?:20\d{2}-[1-9]\d{0,3}|\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?)$/.test(version)) {
     throw new Error('Invalid app version.');
   }
   if (!Number.isSafeInteger(versionCode) || versionCode < 1) throw new Error('Invalid Android version code.');

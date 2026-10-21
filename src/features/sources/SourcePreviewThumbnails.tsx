@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
-import { FlatList, Image, Pressable, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, Text, View } from "react-native";
 import { Icon } from "react-native-paper";
 
 import webDavUploadEngine, {
   type SourcePreview,
   type SourceSelection,
 } from "../../../modules/webdav-upload-engine";
+import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { SourceImageViewer } from "./SourceImageViewer";
 import { ActionButton, LoadingState } from "@/components/ui";
 
@@ -76,16 +77,16 @@ export function SourcePreviewThumbnails({
               className="items-center justify-center overflow-hidden bg-canvas-light dark:bg-canvas-dark"
               style={{ width: 96, height: 96 }}
             >
-              {file.mimeType?.startsWith("image/") ? (
-                <Pressable accessibilityRole="button" accessibilityLabel={`Enlarge ${file.fileName}`}
-                  onPress={() => setViewingImage(file.localUri)}>
-                <Image
-                  accessible={false}
-                  style={{ width: 96, height: 96 }}
-                  resizeMode="cover"
-                  resizeMethod="resize"
-                  source={{ uri: file.localUri }}
-                />
+              {file.mimeType?.startsWith("image/") || file.mimeType?.startsWith("video/") ? (
+                <Pressable accessibilityRole="button" accessibilityLabel={`${file.mimeType?.startsWith("video/") ? "Play" : "Enlarge"} ${file.fileName}`}
+                  onPress={() => {
+                    if (file.mimeType?.startsWith("video/")) {
+                      void webDavUploadEngine.openLocalVideo(file.localUri).then((result) => {
+                        if (!result.ok) Alert.alert("Could not open video", "Install a video player to open this file.");
+                      });
+                    } else setViewingImage(file.localUri);
+                  }}>
+                  <MediaThumbnail uri={file.localUri} mimeType={file.mimeType} size={96} />
                 </Pressable>
               ) : (
                 <>

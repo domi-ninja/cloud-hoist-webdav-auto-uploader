@@ -11,12 +11,12 @@ import {
 
 describe("default remote destination", () => {
   it("keeps new uploads out of the account root", () => {
-    expect(defaultRemotePath()).toEqual(["Cloud Hoist"]);
+    expect(defaultRemotePath()).toEqual(["Phone Uploads"]);
   });
 
   it("appends the source parent and folder to a new destination", () => {
     expect(defaultRemotePath({ type: "camera" })).toEqual([
-      "Cloud Hoist",
+      "Phone Uploads",
       "DCIM",
       "Camera",
     ]);
@@ -26,7 +26,7 @@ describe("default remote destination", () => {
         treeUri:
           "content://com.android.externalstorage.documents/tree/primary%3APictures%2FExports",
       }),
-    ).toEqual(["Cloud Hoist", "Pictures", "Exports"]);
+    ).toEqual(["Phone Uploads", "Pictures", "Exports"]);
   });
 
   it("appends the source path when the configured root is the account root", () => {
@@ -43,7 +43,7 @@ describe("default remote destination", () => {
         treeUri:
           "content://com.android.externalstorage.documents/tree/primary%3ADownload",
       }),
-    ).toEqual(["Cloud Hoist", "Download"]);
+    ).toEqual(["Phone Uploads", "Download"]);
   });
 
   it("creates nested destination segments in order", async () => {
@@ -78,7 +78,7 @@ describe("default remote destination", () => {
     );
 
     await expect(
-      ensureRemoteDestination(["Cloud Hoist"], createFolder),
+      ensureRemoteDestination(["Phone Uploads"], createFolder),
     ).resolves.toEqual({
       ok: false,
       error: {

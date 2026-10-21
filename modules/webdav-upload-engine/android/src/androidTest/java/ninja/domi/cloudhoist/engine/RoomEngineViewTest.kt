@@ -223,8 +223,8 @@ class RoomEngineViewTest {
       queueDrain = QueueDrainStatus(state = WorkInfo.State.ENQUEUED),
     )
     assertEquals(0, dao.pendingWorkCount())
-    assertEquals(1, (snapshot["queue"] as Map<*, *>)["queued"])
-    assertEquals("Camera backup is disabled", (snapshot["worker"] as Map<*, *>)["reason"])
+    assertEquals(0, (snapshot["queue"] as Map<*, *>)["queued"])
+    assertEquals("idle", (snapshot["worker"] as Map<*, *>)["state"])
     assertEquals("running", (snapshot["engine"] as Map<*, *>)["state"])
   }
 

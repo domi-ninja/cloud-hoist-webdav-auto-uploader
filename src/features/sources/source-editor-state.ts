@@ -98,7 +98,7 @@ export function existingPresetSource(
 export function sourceEditorInitialValue(
   source: SourceSummary | undefined,
   pickerMode: SourcePickerMode = "all",
-  remoteRootPath: string[] = ["Cloud Hoist"],
+  remoteRootPath: string[] = ["Phone Uploads"],
   initialSelection?: SourceSelection,
 ): SourceEditorValue {
   const selection = source

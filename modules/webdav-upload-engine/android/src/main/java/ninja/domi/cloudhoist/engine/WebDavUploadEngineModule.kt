@@ -315,7 +315,13 @@ class WebDavUploadEngineModule : Module() {
 
     AsyncFunction("createRemoteFolderAsync") Coroutine {
         parentPathSegments: List<String>, name: String ->
-      withContext(Dispatchers.IO) { remoteFolderManager.create(parentPathSegments, name).toMap() }
+      withContext(Dispatchers.IO) {
+        remoteFolderManager.create(parentPathSegments, name).also { folder ->
+          if (folder.pathSegments == listOf("Phone Uploads")) {
+            accountRepository.credential()?.let { PhoneUploadReadme().write(it, null, onlyIfMissing = true) }
+          }
+        }.toMap()
+      }
     }
 
     AsyncFunction("pickDocumentTreeAsync") Coroutine { initialUri: String? ->
@@ -339,6 +345,21 @@ class WebDavUploadEngineModule : Module() {
           )
         }
       }
+    }
+
+    AsyncFunction("getLocalVideoThumbnailAsync") Coroutine { uri: String ->
+      withContext(Dispatchers.IO) {
+        LocalVideoPreview.thumbnail(appContext.reactContext ?: throw AccountStorageException(), uri)
+      }
+    }
+
+    AsyncFunction("openLocalVideoAsync") { uri: String ->
+      val context = appContext.reactContext ?: throw AccountStorageException()
+      val parsed = Uri.parse(uri)
+      require(parsed.scheme == "content")
+      val intent = Intent(Intent.ACTION_VIEW).setDataAndType(parsed, "video/*")
+        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+      context.startActivity(intent)
     }
 
     AsyncFunction("previewSourceAsync") Coroutine { selection: SourceSelectionRecord, offset: Int ->
