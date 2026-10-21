@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { View } from "react-native";
 import { useRouter } from "expo-router";
 import webDavUploadEngine, { type EngineSnapshot } from "../../modules/webdav-upload-engine";
-import { ActionButton, Panel } from "./ui";
+import { ActionButton, IconAction, Panel } from "./ui";
 import { UploadProgress } from "./UploadProgress";
 import { useEngineSnapshot } from "@/lib/engine-query";
 
@@ -42,13 +41,17 @@ export function UploadControls({ snapshot, now, onError, onScanned }: {
   };
   return (
     <Panel>
-      <UploadProgress snapshot={snapshot} now={now} onRescan={connected ? () => void scan() : undefined} scanning={scanning} />
-      {connected ? <View className="flex-row flex-wrap items-center gap-2">
-        <ActionButton icon={paused || stopped ? "play" : "pause"} disabled={pausing} loading={pausing}
-          label={paused ? "Resume uploads" : stopped ? "Start uploads" : "Pause uploads"} onPress={() => void toggle()} />
-        {snapshot.blockers.length ? <ActionButton label={`${snapshot.blockers.length} ${snapshot.blockers.length === 1 ? "issue" : "issues"}`}
-          tone="danger" onPress={() => router.navigate("/status")} /> : null}
-      </View> : null}
+      <UploadProgress snapshot={snapshot} now={now}
+        leadingAction={connected ? (
+          <IconAction icon={paused || stopped ? "play" : "pause"} disabled={pausing} loading={pausing}
+            label={paused ? "Resume uploads" : stopped ? "Start uploads" : "Pause uploads"}
+            onPress={() => void toggle()} />
+        ) : undefined}
+        onRescan={connected ? () => void scan() : undefined} scanning={scanning} />
+      {connected && snapshot.blockers.length ? (
+        <ActionButton label={`${snapshot.blockers.length} ${snapshot.blockers.length === 1 ? "issue" : "issues"}`}
+          tone="danger" onPress={() => router.navigate("/status")} />
+      ) : null}
     </Panel>
   );
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Text, View } from "react-native";
 import { useTheme } from "react-native-paper";
 
@@ -8,11 +9,13 @@ import { engineStatus, uploadProgress, uploadRemainingTime } from "@/lib/upload-
 export function UploadProgress({
   snapshot,
   now,
+  leadingAction,
   onRescan,
   scanning = false,
 }: {
   snapshot: EngineSnapshot;
   now: number;
+  leadingAction?: ReactNode;
   onRescan?: () => void;
   scanning?: boolean;
 }) {
@@ -23,19 +26,22 @@ export function UploadProgress({
 
   return (
     <View className="gap-2">
-      <View
-        accessible
-        accessibilityRole="progressbar"
-        accessibilityLabel="Upload progress"
-        accessibilityValue={{ min: 0, max: total || 1, now: uploaded, text: label }}
-        accessibilityState={{ busy: snapshot.worker.state === "uploading" }}
-        className="h-2 overflow-hidden rounded"
-        style={{ backgroundColor: theme.colors.outlineVariant }}
-      >
+      <View className="flex-row items-center gap-2">
+        {leadingAction}
         <View
-          className="h-full"
-          style={{ width: `${fraction * 100}%`, backgroundColor: theme.colors.primary }}
-        />
+          accessible
+          accessibilityRole="progressbar"
+          accessibilityLabel="Upload progress"
+          accessibilityValue={{ min: 0, max: total || 1, now: uploaded, text: label }}
+          accessibilityState={{ busy: snapshot.worker.state === "uploading" }}
+          className="h-2 flex-1 overflow-hidden rounded"
+          style={{ backgroundColor: theme.colors.outlineVariant }}
+        >
+          <View
+            className="h-full"
+            style={{ width: `${fraction * 100}%`, backgroundColor: theme.colors.primary }}
+          />
+        </View>
       </View>
       <View className="flex-row items-center gap-2">
         <Text className="flex-1 text-base font-semibold text-ink-light dark:text-ink-dark">{label}</Text>
