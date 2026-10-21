@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Linking, Text } from "react-native";
 
+import { completeServerUrl } from "./server-url";
+
 import webDavUploadEngine, {
   type AccountHealth,
   type EngineError,
@@ -63,7 +65,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
     }
     setBusy(true);
     setMessage(undefined);
-    const result = await webDavUploadEngine.startLoginFlow(serverUrl);
+    const result = await webDavUploadEngine.startLoginFlow(completeServerUrl(serverUrl));
     setBusy(false);
     if (!result.ok) {
       setMessage(errorText(result.error));
@@ -97,7 +99,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
     setMessage(undefined);
     const password = appPassword;
     const result = await webDavUploadEngine.connectManual({
-      serverUrl,
+      serverUrl: completeServerUrl(serverUrl),
       username,
       appPassword: password,
     });
@@ -136,6 +138,7 @@ export function AccountConnection({ account }: AccountConnectionProps) {
         autoCorrect={false}
         editable={!busy}
         onChangeText={setServerUrl}
+        onBlur={() => setServerUrl(completeServerUrl(serverUrl))}
         placeholder="https://cloud.example.com"
         value={serverUrl}
       />

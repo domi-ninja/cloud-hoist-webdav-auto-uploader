@@ -13,9 +13,18 @@ class MediaFoldersTest {
       item("Pictures/Random/", 40), item("Pictures/Random/", 10, "1234-5678"),
     ))
     assertEquals(3, folders.size)
-    assertEquals(MediaFolder("external_primary", "Android/media/chat.app/Media/", 2, 50), folders.first())
+    assertEquals(MediaFolder("external_primary", "Android/media/chat.app/Media/", 2, 50, 10), folders.first())
     assertEquals(100L, folders.sumOf { it.totalBytes })
   }
+  @Test fun newestFileUsesCreationOrModificationAndIgnoresUnknownDates() {
+    fun item(modified: Long?, created: Long?) = MediaStoreItem(
+      "id", "content://media/id", "file.jpg", 10, modified, "image/jpeg", "Pictures/Random/", "Random",
+      createdAtEpochSeconds = created,
+    )
+    assertEquals(50L, groupMediaFolders(listOf(item(10, 50), item(40, 30))).single().latestFileAt)
+    assertNull(groupMediaFolders(listOf(item(null, null), item(0, 0))).single().latestFileAt)
+  }
+
   @Test fun rejectsTraversalAndEmptyPaths() {
     for (path in listOf("", "/Pictures/", "Pictures/../", "Pictures/".removeSuffix("/"))) {
       try { validateMediaFolder("external_primary", path); fail("Accepted $path") }

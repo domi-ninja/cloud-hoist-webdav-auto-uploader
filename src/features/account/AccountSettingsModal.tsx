@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { completeServerUrl } from "./server-url";
+
 import webDavUploadEngine, {
   type AccountSummary,
   type EngineError,
@@ -80,7 +82,7 @@ export function AccountSettingsModal({ account, visible, onClose }: AccountSetti
     setBusy(true);
     setError(undefined);
     try {
-      const result = await webDavUploadEngine.replaceManualAccount({ serverUrl, username, appPassword });
+      const result = await webDavUploadEngine.replaceManualAccount({ serverUrl: completeServerUrl(serverUrl), username, appPassword });
       if (!result.ok) {
         setError(result.error);
         return;
@@ -140,6 +142,7 @@ export function AccountSettingsModal({ account, visible, onClose }: AccountSetti
                   autoCorrect={false}
                   editable={!busy}
                   onChangeText={setServerUrl}
+                  onBlur={() => setServerUrl(completeServerUrl(serverUrl))}
                   placeholder="https://cloud.example.com"
                   value={serverUrl}
                 />

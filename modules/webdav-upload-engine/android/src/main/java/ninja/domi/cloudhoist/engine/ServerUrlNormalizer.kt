@@ -6,7 +6,14 @@ import java.net.URISyntaxException
 object ServerUrlNormalizer {
   fun normalize(value: String): String {
     val uri = try {
-      URI(value.trim())
+      val trimmed = value.trim()
+      val hasScheme = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://").containsMatchIn(trimmed)
+      val completed = when {
+        trimmed.startsWith("//") -> "https:$trimmed"
+        hasScheme -> trimmed
+        else -> "https://$trimmed"
+      }
+      URI(completed)
     } catch (_: URISyntaxException) {
       throw AccountInvalidServerUrlException()
     }

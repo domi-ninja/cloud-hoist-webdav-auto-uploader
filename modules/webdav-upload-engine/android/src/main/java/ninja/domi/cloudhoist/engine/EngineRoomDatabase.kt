@@ -155,7 +155,7 @@ interface EngineDao {
       COUNT(CASE WHEN state = 'running' THEN 1 END) AS uploading,
       COUNT(CASE WHEN state = 'blocked' THEN 1 END) AS failed,
       COUNT(CASE WHEN state = 'completed' THEN 1 END) AS uploaded
-    FROM upload_jobs
+    FROM upload_jobs WHERE sourceId IN (SELECT id FROM sources WHERE enabled = 1)
   """)
   fun queueCounts(): QueueCounts
 
@@ -188,6 +188,7 @@ interface EngineDao {
     SELECT COALESCE(SUM(local_revisions.byteCount), 0) FROM upload_jobs
     INNER JOIN local_revisions ON local_revisions.id = upload_jobs.revisionId
     WHERE upload_jobs.state IN ('queued', 'running', 'retry_wait')
+      AND upload_jobs.sourceId IN (SELECT id FROM sources WHERE enabled = 1)
   """)
   fun remainingUploadBytes(): Long
 
@@ -198,6 +199,7 @@ interface EngineDao {
     INNER JOIN local_revisions ON local_revisions.id = upload_jobs.revisionId
     INNER JOIN upload_attempts ON upload_attempts.jobId = upload_jobs.id
     WHERE upload_jobs.state = 'completed' AND upload_jobs.completedAt >= :cutoff
+      AND upload_jobs.sourceId IN (SELECT id FROM sources WHERE enabled = 1)
       AND upload_attempts.finishedAt > upload_attempts.startedAt
     GROUP BY upload_jobs.id ORDER BY upload_jobs.completedAt DESC LIMIT 20
   """)

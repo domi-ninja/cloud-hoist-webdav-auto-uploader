@@ -37,6 +37,7 @@
     "android:seed-account": "./scripts/android/seed-debug-account.sh",
     "android:seed-photos": "./scripts/android/seed-random-photos.sh",
     "android:signing": "sh scripts/android/release.sh init",
+    "android:install": "sh scripts/android/install-beta.sh",
     "android:beta": "sh scripts/android/release.sh build",
     "android:publish": "sh scripts/android/release.sh publish",
     "test:publish": "node --test scripts/android/publish.test.mjs",

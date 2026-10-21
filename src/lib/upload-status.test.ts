@@ -128,7 +128,7 @@ describe("upload remaining time", () => {
     state.queue.estimatedRemainingSeconds = 4000;
     expect(uploadRemainingTime(state)).toBe("~1 hr 7 min left");
   });
-  it("hides stale estimates during pauses, waits, failures, and disabled backups", () => {
+  it("hides stale estimates during pauses, waits, and failures", () => {
     const state = uploading();
     state.queue.estimatedRemainingSeconds = 140;
     state.engine = { state: "paused", pausedAt: "2026-10-20T12:00:00Z" };
@@ -139,7 +139,7 @@ describe("upload remaining time", () => {
     state.queue.failed = 0;
     state.sources[0].enabled = false;
     state.sources[0].queue = { pending: 1, failed: 0 };
-    expect(uploadRemainingTime(state)).toBeNull();
+    expect(uploadRemainingTime(state)).toBe("~3 min left");
     state.sources[0].enabled = true;
     state.worker = { state: "waiting", reason: "Waiting for Wi-Fi" };
     expect(uploadRemainingTime(state)).toBeNull();

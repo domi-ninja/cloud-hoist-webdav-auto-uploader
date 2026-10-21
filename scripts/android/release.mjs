@@ -60,7 +60,9 @@ async function main() {
       ...betaEnv, NODE_ENV: 'production',
     });
   }
-  const apk = resolve('android/app/build/outputs/apk/release/app-release.apk');
+  const apk = mode === 'verify' && process.argv[3]
+    ? resolve(process.argv[3])
+    : resolve('android/app/build/outputs/apk/release/app-release.apk');
   const verification = spawnSync(join(process.env.ANDROID_HOME, 'build-tools/36.0.0/apksigner'),
     ['verify', '--verbose', '--print-certs', apk], { encoding: 'utf8' });
   if (verification.status !== 0) throw new Error('APK signature verification failed');

@@ -50,6 +50,25 @@ class EngineDaoTest {
   }
 
   @Test
+  fun queueTotalsExcludeEveryStateInDisabledFolders() {
+    dao.upsertSource(source().copy(id = "disabled", enabled = false))
+    for ((index, state) in listOf(JobState.QUEUED, JobState.RUNNING, JobState.BLOCKED, JobState.COMPLETED).withIndex()) {
+      val id = "disabled-$index"
+      dao.enqueueRevision(revision(id).copy(sourceId = "disabled", providerId = id),
+        job(id, id, index.toLong()).copy(sourceId = "disabled", state = state))
+    }
+    dao.enqueueRevision(revision("active"), job("active", "active", 100).copy(state = JobState.COMPLETED))
+    assertEquals(QueueCounts(0, 0, 0, 1), dao.queueCounts())
+    assertEquals(0L, dao.remainingUploadBytes())
+    assertEquals(2, dao.sourceQueueCounts().single { it.sourceId == "disabled" }.pending)
+    dao.upsertSource(source().copy(id = "disabled", enabled = true))
+    assertEquals(QueueCounts(1, 1, 1, 2), dao.queueCounts())
+    dao.upsertSource(source().copy(enabled = false))
+    dao.upsertSource(source().copy(id = "disabled", enabled = false))
+    assertEquals(QueueCounts(0, 0, 0, 0), dao.queueCounts())
+  }
+
+  @Test
   fun discoveryDeduplicatesExactRevisionsButQueuesChangesAndMoves() {
     assertTrue(dao.enqueueRevision(revision("r1"), job("j1", "r1", 1)))
     assertFalse(dao.enqueueRevision(revision("duplicate"), job("duplicate", "duplicate", 2)))

@@ -32,10 +32,7 @@ class RoomEngineView(
     val queue = dao.queueCounts()
     val sources = sources()
     val canEstimate = running != null && scheduler.pausedAt == null && blockers.isEmpty() &&
-      waitingReason == null && queue.failed == 0 && sources.none { source ->
-        val counts = source["queue"] as? Map<*, *>
-        source["enabled"] == false && ((counts?.get("pending") as? Int) ?: 0) > 0
-      }
+      waitingReason == null && queue.failed == 0
     val confirmedBytes = running?.let { (it.chunkSize ?: 0) * (it.confirmedChunks?.size ?: 0) } ?: 0
     val remainingSeconds = if (canEstimate) estimateRemainingSeconds(
       (dao.remainingUploadBytes() - confirmedBytes).coerceAtLeast(0),

@@ -335,6 +335,7 @@ class WebDavUploadEngineModule : Module() {
           mapOf(
             "volumeName" to folder.volumeName, "relativePath" to folder.relativePath,
             "fileCount" to folder.fileCount, "totalBytes" to folder.totalBytes,
+            "latestFileAt" to folder.latestFileAt?.let { java.time.Instant.ofEpochSecond(it).toString() },
           )
         }
       }

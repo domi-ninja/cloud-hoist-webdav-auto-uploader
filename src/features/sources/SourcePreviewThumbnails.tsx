@@ -12,9 +12,11 @@ import { ActionButton, LoadingState } from "@/components/ui";
 export function SourcePreviewThumbnails({
   preview,
   selection,
+  rows = 2,
 }: {
   preview: SourcePreview;
   selection: SourceSelection;
+  rows?: 1 | 2;
 }) {
   const [viewingImage, setViewingImage] = useState<string>();
   const [files, setFiles] = useState(preview.files);
@@ -45,8 +47,8 @@ export function SourcePreviewThumbnails({
   };
 
   const columns = Array.from(
-    { length: Math.ceil(files.length / 2) },
-    (_, index) => files.slice(index * 2, index * 2 + 2),
+    { length: Math.ceil(files.length / rows) },
+    (_, index) => files.slice(index * rows, index * rows + rows),
   );
   if (!files.length) return null;
 
@@ -56,7 +58,7 @@ export function SourcePreviewThumbnails({
     <FlatList
       accessibilityLabel="Files in this backup folder"
       horizontal
-      style={{ height: 200 }}
+      style={{ height: rows * 96 + (rows - 1) * 8 }}
       data={columns}
       keyExtractor={(column) => column[0].localUri}
       initialNumToRender={4}

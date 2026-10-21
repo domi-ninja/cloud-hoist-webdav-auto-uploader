@@ -273,6 +273,7 @@ export const selectedDocumentTreeSchema = z.object({
 });
 
 export const mediaFolderSchema = z.object({
+  latestFileAt: z.string().datetime().nullable().optional(),
   volumeName: z.string().min(1),
   relativePath: z.string().min(1),
   fileCount: z.number().int().positive(),

@@ -50,7 +50,7 @@ export function engineStatus(snapshot: EngineSnapshot, now: number) {
   return "Ready to upload";
 }
 
-// Include disabled folders and failed files: unfinished backups must not read as complete.
+// Native queue totals include only enabled sources; failed files still count as unfinished.
 export function uploadProgress(snapshot: EngineSnapshot) {
   const { queued, uploading, failed, uploaded } = snapshot.queue;
   const total = queued + uploading + failed + uploaded;
@@ -60,8 +60,7 @@ export function uploadProgress(snapshot: EngineSnapshot) {
 /** Only quote a completion time while the entire queue can make progress. */
 export function uploadRemainingTime(snapshot: EngineSnapshot) {
   if (snapshot.engine.state !== "running" || snapshot.worker.state !== "uploading" ||
-      snapshot.queue.failed > 0 || snapshot.blockers.length > 0 ||
-      snapshot.sources.some((source) => !source.enabled && (source.queue?.pending ?? 0) > 0)) return null;
+      snapshot.queue.failed > 0 || snapshot.blockers.length > 0) return null;
   const seconds = snapshot.queue.estimatedRemainingSeconds;
   if (seconds == null) return "Estimating…";
   if (seconds < 60) return "<1 min left";
