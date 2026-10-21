@@ -1,6 +1,6 @@
 # Repo-specific guidelines
 
-## Expo HAS CHANGED
+## Expo SDK
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
 
@@ -23,3 +23,9 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 - Build, test, install, and publish the same signed APK for a version. Do not publish another version of the same patch just because a CI run or push happened.
 - Rebuild a version only for a concrete reason such as a failed build or failed test. Fixes after publication get a new version. Retry failed uploads with the existing artifact.
 - Ordinary main pushes do not release. Release tags and manual Actions runs skip versions already published. When a local APK was tested on the phone, publish that artifact before pushing its version tag.
+
+## Documentation
+
+- Keep user setup in README.md, development and testing in docs/development.md, engine behavior in docs/architecture.md, and releases in docs/publishing.md.
+- Update those guides instead of adding plans, audit logs, completed-ticket archives, or per-fix reports. Git history retains previous decisions.
+- Documentation-only changes do not bump app versions or build APKs.

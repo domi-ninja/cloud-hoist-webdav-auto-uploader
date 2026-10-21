@@ -1,29 +1,36 @@
 # Cloud Hoist
 
-An Android app that automatically uploads photos, videos, and selected folders to Nextcloud. This is an independent project, unaffiliated with Nextcloud GmbH.
+An Android app that uploads selected phone folders to Nextcloud. Independent from Nextcloud GmbH. Requires Android 10 or newer and one Nextcloud account.
 
 ## Get started
 
-Download the current beta from [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/latest). There is no Google Play release yet.
+1. Download the APK from [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/latest), open it on your phone, and approve installation.
+2. Enter your Nextcloud server address and sign in through the browser. You can also use a Nextcloud app password.
+3. Tap **Start backup** on a suggested folder, or **Choose other directory to back up** below the suggestions. Grant access, check the destination, and tap **Save backup folder**.
+4. Open **Status** to see backed-up folders, progress, and failed files. Network and power rules are in **Settings**.
 
-1. Download the `.apk` file from the latest release and open it on your Android phone. Allow installation from that source if Android asks.
-2. Open Cloud Hoist, enter your Nextcloud server URL, and sign in through your browser. You can also connect with your username and a Nextcloud app password.
-3. Add a backup folder. Choose Camera, Screenshots, or a local folder, grant access when prompted, and check the destination in Nextcloud. Tap Save backup folder.
-4. Check Status for upload progress and errors. Check Settings if uploads are waiting for network or power conditions.
+All existing files in a selected folder are included. Start with a small folder if you want to try the app first.
 
-Adding a source includes its existing files. Choose a small folder first if you want to try the app before starting a larger backup.
+## Backup behavior
 
-Cloud Hoist uses a new Android application ID. It installs separately from earlier betas under the previous name; sign in and add your backup folders again. Disable uploads in the old app before enabling the same folders in Cloud Hoist. Existing files on your server stay in place. New backup folders default to `/Phone Uploads`; select an existing destination if you want to keep using it.
+- New backups default to `/Phone Uploads`, followed by the local parent and folder names. Change the destination during setup or the upload root in Settings. The root contains a readme with the last completed upload timestamp.
+- Local edits upload again and replace destination files by default. Originals stay on the phone. Deleting a phone file keeps its uploaded copy; deleting a server copy does not automatically upload an unchanged local file again.
+- Uploads wait for an unmetered connection and sufficient battery by default. Charging is optional. Android can delay background work; Status reports the current reason.
+- Pause stops uploads globally. A folder switch controls that folder. Disabled folders are excluded from overall progress. Removing a backup folder removes its queue and history, without deleting phone or server files.
 
-The app checks for newer builds and offers an update when one is available. You can also use Settings → App updates → Check for updates, or download the latest APK from GitHub. Android asks you to approve installation. Updates signed with the same key keep your settings and history. Switching from a development build to a beta requires uninstalling the development build first, which removes its settings and history.
+This is one-way upload. Generic WebDAV servers and Nextcloud end-to-end encrypted folders are unsupported.
+
+## Updates
+
+The app offers newer releases automatically. You can also use **Settings → App updates → Check for updates**. Android asks you to approve installation. Updates signed with the same key preserve accounts, settings, and history.
 
 ## Developer docs
 
-- [Set up, run, and test the app](docs/development.md)
-- [Build, sign, and publish a beta](docs/publishing.md)
-- [Product decisions](PLAN.md)
-- [Project tracking](docs/tickets/README.md)
+- [Development and testing](docs/development.md)
+- [Architecture and engine behavior](docs/architecture.md)
+- [Build and publish a beta](docs/publishing.md)
+- [Agent guidance](AGENTS.md)
 
 ## License
 
-Cloud Hoist is licensed under GPL-3.0-or-later. Third-party packages and retained scaffold assets keep their respective licenses.
+[GPL-3.0-or-later](LICENSE). Dependencies and retained scaffold assets keep their [third-party notices](THIRD_PARTY_NOTICES.md).

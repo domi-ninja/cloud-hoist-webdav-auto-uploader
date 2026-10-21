@@ -1,132 +1,62 @@
-# Development
+# Development and testing
 
-[Back to README](../README.md) · [Publish a beta](publishing.md)
+[README](../README.md) · [Architecture](architecture.md) · [Publishing](publishing.md)
 
-Product decisions are in [PLAN.md](../PLAN.md). [Project tracking](tickets/README.md) records completed work and outstanding checks. Repository rules are in [AGENTS.md](../AGENTS.md).
+## Setup
 
-## Development requirements
-
-- Linux on x86-64 with KVM available
-- Git
-- nvm
-
-The tested Android CLI version is `1.0.16261425`. Its built-in help accepts the emulator profile as a positional argument even though an earlier documentation example used `--profile`.
-
-## First setup
+Use Linux x86-64 with Git and nvm installed. KVM is needed for the emulator.
 
 ```sh
 ./scripts/setup.sh
 ```
 
-The setup script selects Node.js 24.20.0 through nvm, activates pnpm 11.3.0, installs project dependencies, installs Google's Android CLI when needed, installs the pinned JDK and Android SDK components, and creates the `medium_phone` API 36 emulator. Build Tools 35 and CMake are required by React Native dependencies.
+Setup installs the project dependencies, Android CLI, SDK components, and JDK when needed, and creates the API 36 `medium_phone` emulator. Node is pinned in `.nvmrc`; pnpm and the JavaScript runtime are pinned in `package.json`.
 
-The project also pins Node.js 24.20.0 through pnpm's `devEngines.runtime`. After `pnpm install`, project scripts and `pnpm exec node` use that runtime even when the shell defaults to another Node version. Use `nvm use` for direct `node` commands.
-
-## Run on Android
+## Run
 
 ```sh
 nvm use
-pnpm android
-```
-
-The command resolves Google's user-local SDK, generates the Android project through Expo prebuild when needed, builds the development client, installs it, and launches it. If no Android target is online, it starts the `medium_phone` emulator.
-
-When one target is online, the scripts use it automatically. When a real phone and an emulator are online together, select the first target of either type:
-
-```sh
 pnpm android emu
-pnpm android phone
 ```
 
-The `phone` and `emu` selectors also work with `pnpm android:seed-account`, `pnpm test:android`, `pnpm test:deep-links`, `pnpm test:account:live`, and `pnpm check`. Set `ANDROID_SERIAL` instead when you need an exact target among multiple phones or emulators. Device tests install builds on the selected target, and the live account test also clears this app's data there.
+`pnpm android` uses the single connected target, or starts the emulator when none is online. `pnpm android phone` selects a phone. Set `ANDROID_SERIAL` to select an exact device when several are connected.
 
-Fill the emulator's Camera and Screenshots collections with random JPEGs from
-[Lorem Picsum](https://picsum.photos/):
+Development builds use a different signing key from distributed betas. Use an emulator or disposable installation for them. Replacing a beta with a development build requires uninstalling the beta, which removes its local account, settings, queue, and history.
+
+For the user's configured phone, build and install a signed update through [Publishing](publishing.md). `pnpm android:install` verifies the release key, installs in place, and launches the app without clearing data.
+
+## Checks without a device
 
 ```sh
-pnpm android:seed-photos
-PHOTO_COUNT=20 pnpm android:seed-photos
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm test:native
+pnpm test:release
+pnpm test:publish
 ```
 
-The script targets emulators only and waits until Android MediaStore indexes
-every downloaded image.
+Native unit tests need the Android SDK and JDK. `pnpm test:privacy` builds and inspects an APK for prohibited permissions and known analytics or advertising dependencies. `pnpm icons:check` verifies generated icon assets against their source.
 
-Project automation is grouped by purpose: `scripts/setup.sh` prepares the project, `scripts/android/` contains Android environment, targeting, and launch helpers, `scripts/test/` contains test and verification runners, and `scripts/assets/` contains generated-asset tooling. Each script starts with its purpose, command, prerequisites, and material side effects.
+## Phone validation
 
-Run every required check with one command. The suite includes a live stress
-test on both an authorized phone and emulator, and requires `test-creds.tct`:
+Select the phone explicitly with `ANDROID_SERIAL`. Install the signed APK in place, inspect the affected screens, and exercise the changed controls. For upload changes, use generated files in an isolated folder and compare uploaded files with downloaded SHA-256 hashes. Remove only test-owned files and configuration. Preserve existing accounts, backup folders, queues, history, media, and device settings.
 
-```sh
-pnpm check emu
-```
+Save screenshots and results under ignored `test-results/`. Record the device, Android version, app version, checks performed, and failures. Review screenshots before sharing them; they can show account names and file paths.
 
-This command clean-reinstalls this app on **both targets**, clearing its account,
-backup configuration, queue, and history. Other apps and your original photos
-are left alone. `emu` selects the target for the preceding instrumentation and
-deep-link checks; the stress phase always runs phone and emulator concurrently.
+## Destructive test runners
 
-### Live stress test
+These are for disposable test installations. Do not run them against the user's configured app.
 
-Run the device stress phase alone with `pnpm test:stress`. It downloads six
-photographs from Lorem Picsum and generates 2,000 distinct JPEGs per device in
-Camera and Screenshots, then clean-reinstalls a bundled test build. It backs up
-only the generated photos through a test-owned SAF provider, using the real
-discovery, Room queue, WorkManager, and Nextcloud upload code. Your original
-photos are excluded from the test backup.
+| Command | Effect |
+| --- | --- |
+| `pnpm test:android emu` | Installs native test APKs and writes Room, preferences, and WorkManager state in the test host. |
+| `pnpm test:account:live emu` | Installs test builds, clears app data, authenticates against a real server, verifies direct and chunked uploads, and removes its fixtures. |
+| `pnpm test:stress` | Clean-reinstalls the app on both a phone and an emulator, resets local app data, creates at least 2,000 test photos per device, and exercises uploads and recovery. |
+| `pnpm check emu` | Runs the combined checks, including the destructive stress phase on both devices. |
 
-The runner checks navigation and thumbnails during uploads, 150% system text,
-emulator dark mode, the account dialog with its keyboard open,
-cold-start/process recovery, remote file counts, three downloaded SHA-256 samples
-per device, and Android crash/ANR records. The emulator uses a TLS-preserving
-CONNECT proxy with 96 KiB/s per connection/direction, 750 ms connection latency,
-and an intentional 15-second outage. It runs on battery for 25 minutes after
-process recovery, then simulates plugging in to check background continuation
-under Android's normal power rules. Job quotas are not disabled or reset.
-Phone networking and power settings are unchanged.
-Background progress is read from test-only status files, without repeatedly
-binding the app and altering Android's background-network eligibility.
+Live runners read the ignored `test-creds.tct` file. It accepts JSON with `serverUrl`, `username`, and `appPassword`. Use a dedicated test account; never commit, print, or package its credentials. The stress runner accepts `STRESS_PHONE_SERIAL`, `STRESS_EMULATOR_SERIAL`, `STRESS_PHOTO_COUNT`, and `STRESS_TIMEOUT_MINUTES`. Its reports are under `test-results/stress-*/`.
 
-Allow time for the Samsung: photo creation and installation can take minutes,
-and uploads have a two-hour deadline per target. Override `STRESS_PHOTO_COUNT`
-to test 2,000 to 20,000 photos or `STRESS_TIMEOUT_MINUTES` for a longer run. Use
-`STRESS_PHONE_SERIAL` and `STRESS_EMULATOR_SERIAL` when multiple devices exist.
+`pnpm test:deep-links` installs a debug-signed release build and force-stops the app. Its home-screen assertion still expects `Cloud Hoist`; update it to `Backups` before using it as a release check. The combined `pnpm check` runner includes this legacy assertion.
 
-Reports and screenshots are written under ignored `test-results/stress-*/`.
-Cleanup removes only that run's generated media and remote directory, restores
-emulator proxy, power, and system text settings, and reinstalls the normal release build.
-The test build uses separate Gradle variant `stress`; its acceptance provider
-is never included in release. Credentials are read from the ignored file and
-redacted from command output. Screenshots can show account display information,
-so review them before sharing. Cleanup failures are test failures and remain in
-the result JSON for recovery.
-
-`test:native` generates the ignored Android project when necessary, loads the
-pinned SDK/JDK environment, and runs the Kotlin engine module tests.
-
-`test:deep-links` builds and installs a release APK with its JavaScript bundle
-embedded, then verifies the Sources and Activity routes from a stopped process.
-This avoids Expo's development-client launcher intercepting the cold-start links.
-
-`test:privacy` checks the production dependency declarations for known telemetry
-or advertising SDKs, then inspects a release APK for overlay and advertising-ID
-permissions while preserving the permissions the upload engine requires.
-
-## Local credentials
-
-`test-creds.tct` is ignored and reserved for live acceptance tests. Never commit, bundle, print, or copy it into ordinary test output.
-
-With an Android target selected, the debug-only account acceptance path can
-consume that file without printing its values:
-
-```sh
-pnpm test:account:live emu
-```
-
-The harness clears only Cloud Hoist's app data on the selected target, drives the manual
-app-password form, force-stops the app, and verifies that Kotlin can authenticate
-again from Android Keystore-backed storage. It then creates two valid bitmap
-images in the target's Camera collection, discovers them through MediaStore,
-uploads one directly and the larger image through Nextcloud chunking when the
-server advertises it, and compares the downloaded SHA-256 hashes. Each run uses
-and removes its own remote folder and target media. The test harness is
-packaged separately from the application APK.
+No completed seven-day device soak or Nextcloud server-version compatibility matrix is recorded in the repository. Short UI checks do not establish either.

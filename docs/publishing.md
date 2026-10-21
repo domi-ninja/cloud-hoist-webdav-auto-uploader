@@ -1,132 +1,81 @@
-# Publish Android releases
+# Build and publish a beta
 
-[Back to README](../README.md) · [Development](development.md)
+[README](../README.md) · [Development](development.md) · [Architecture](architecture.md)
 
-## GitHub releases
+## Version and signing
 
-The private repository on `git.domi.ninja` is the primary upstream. The public
-[GitHub mirror](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader)
-builds on release tags such as `v2026-1`. Ordinary main pushes do not build a release.
-The Android release workflow can also be started manually from the Actions tab.
-It skips versions that already have a GitHub release.
+Use `year-minor` for each changed release bundle, for example `2026-3`. Set these together:
 
-This checkout sends `git push origin main` to both upstreams. In another checkout,
-add the GitHub remote and push both explicitly:
+| File | Value for that example |
+| --- | --- |
+| `app.json` → `expo.version` | `2026-3` |
+| `app.json` → `expo.android.versionCode` | `20260003`, calculated as year × 10000 + minor |
+| `package.json` → `version` | `2026.3.0` |
 
-```sh
-git remote add github git@github.com:domi-ninja/cloud-hoist-webdav-auto-uploader.git
-git push origin main
-git push github main
-```
+Increment the minor number for the next changed bundle. Start at 1 in a new year. Retry failed uploads with the existing artifact. Rebuild only to correct a failed build or test. Documentation-only changes do not create an app release.
 
-After merging a PR on the private server, pull its `main` before pushing it to
-GitHub. A merge on the private server alone does not start GitHub Actions.
+Reuse `.signing/release.p12` and `.signing/release.json`. Keep an encrypted backup of both; losing the key prevents compatible updates. They are ignored by Git and must never become source or release assets. `pnpm android:signing` creates a key only for the first release and refuses to replace an existing signing directory.
 
-The workflow runs TypeScript, lint, JavaScript, release-script, and native unit
-checks. It builds with the existing private signing key, verifies the signature,
-and publishes an APK, `SHA256SUMS`, and `update.json` to GitHub Releases. Public versions use year-minor, such as `2026-1`, then `2026-2`.
-Android versionCode is year × 10000 + minor, so `2026-1` is `20260001`.
-Increment both in app.json for a changed release bundle. A rerun keeps the same version.
-Use package.json's semver equivalent, `2026.1.0`, for tooling. The APK and update manifest remain available as Actions artifacts
-for 30 days. GitHub release assets remain available until someone removes them.
+## Build and test once
 
-The GitHub repository needs two Actions secrets. Use the existing `.signing/`
-files so updates retain the same signing identity:
+Run the [development checks](development.md#checks-without-a-device), then:
 
 ```sh
-base64 -w0 .signing/release.p12 | gh secret set ANDROID_RELEASE_KEYSTORE_BASE64 --repo domi-ninja/cloud-hoist-webdav-auto-uploader
-gh secret set ANDROID_RELEASE_SIGNING_JSON --repo domi-ninja/cloud-hoist-webdav-auto-uploader < .signing/release.json
+pnpm android:beta
+ANDROID_SERIAL=YOUR_PHONE_SERIAL pnpm android:install
 ```
 
-Do not upload signing files or Nextcloud credentials as source or release assets.
+The first command builds, signs, and verifies `dist/cloud-hoist-beta.apk`. The second verifies its signing key, installs it in place on the selected physical phone, and launches it without clearing app data. Follow the [phone validation procedure](development.md#phone-validation). Publish that tested APK.
 
-## Update destination
+The private `git.domi.ninja` repository is the primary upstream; GitHub hosts public source and APKs. This checkout pushes `origin` to both. Check `git remote -v` in other checkouts and push both remotes explicitly if needed. Commit the tested code and version, then push `main` before creating the release.
 
-`release.config.json` contains the public GitHub repository and the boolean
-`appIsInStore` flag. Keep it `false` until the app is published on Google Play.
+## Publish the tested APK
 
-With the flag off, the update action opens the new signed APK. With it on, the app
-checks whether Google Play can handle the configured Android package and opens
-that exact store listing. Devices without a working Play Store fall back to the
-APK. The app name and package come from `app.json`; a display name is not a unique
-Google Play identifier.
+Set release identity from the checkout and package the existing APK:
 
-The app checks on launch, when returning to the foreground after an hour, and
-every six hours while open. Settings has a manual check. Dismissing an update
-suppresses its prompt for the current app session. The update feed accepts only
-newer builds for the configured Android package and APK URLs in this GitHub
-repository. Android retains control of installation approval.
+```sh
+RELEASE_REPO=$(node -p 'require("./release.config.json").githubRepository')
+RELEASE_VERSION=$(node -p 'require("./app.json").expo.version')
+RELEASE_SHA=$(git rev-parse HEAD)
+GITHUB_REPOSITORY="$RELEASE_REPO" GITHUB_SHA="$RELEASE_SHA" node scripts/android/github-release.mjs package
+```
 
-## Private beta signing
+Edit `dist/github/release-notes.md` to describe the changes and validation, then publish:
 
-Run `pnpm android:signing` once to create the private release key. It refuses to
-overwrite an existing `.signing/` directory. Back up the entire directory securely
-in a password manager or encrypted offline storage. It contains both the keystore
-and its password, is owner-only, and is ignored by Git. Losing it prevents signing
-compatible updates. Never share it with testers.
+```sh
+gh release create "v$RELEASE_VERSION" \
+  "dist/github/cloud-hoist-$RELEASE_VERSION.apk" \
+  dist/github/update.json dist/github/SHA256SUMS \
+  --repo "$RELEASE_REPO" --target "$RELEASE_SHA" \
+  --title "Cloud Hoist $RELEASE_VERSION" \
+  --notes-file dist/github/release-notes.md --latest
+git tag "v$RELEASE_VERSION" "$RELEASE_SHA"
+git push origin "v$RELEASE_VERSION"
+```
 
-Run `pnpm android:beta` to generate the Android project, build and verify the signed
-APK, and copy it to `dist/cloud-hoist-beta.apk`. Share only that APK.
-The command never installs or uninstalls anything on connected devices.
-Install it on the selected physical phone with `ANDROID_SERIAL=<serial> pnpm android:install`.
-The command verifies the signature, updates in place, and launches the app without clearing data.
-Test this artifact, then package and publish that same APK. Do not build a second APK just to publish.
-If publishing locally, create the GitHub release before pushing its `v<version>` tag so CI skips it.
-Commit and push main to both remotes as usual.
+Verify the public APK against `SHA256SUMS` and confirm `releases/latest/download/update.json` identifies the same version, package, and APK. If publication fails after upload, inspect the release before retrying. Do not assign a new version just to retry publication.
 
-Only this beta command applies the private signing configuration. Ordinary local
-Gradle/test builds retain the debug key so device tests remain compatible. Do not
-distribute their APKs. A beta cannot update an existing debug-signed installation;
-switching requires uninstalling it first, which removes app settings and history.
-Future beta updates use the same private key and can install over the previous beta.
+## GitHub Actions
+
+The [Android release workflow](../.github/workflows/android-release.yml) runs on `v20*-*` tags or manual dispatch. Ordinary `main` pushes do not release. An existing GitHub release causes the build job to be skipped, including when the locally tested APK was published before pushing its tag.
+
+For an unpublished version, the workflow checks the app and release logic, tests the native engine, builds with the private signing key, verifies the signature, and publishes the APK, checksum, and update manifest.
+
+Configure these repository secrets from the existing signing files:
+
+```sh
+base64 -w0 .signing/release.p12 | gh secret set ANDROID_RELEASE_KEYSTORE_BASE64 --repo "$RELEASE_REPO"
+gh secret set ANDROID_RELEASE_SIGNING_JSON --repo "$RELEASE_REPO" < .signing/release.json
+```
+
+## In-app updates
+
+`release.config.json` selects the GitHub repository and `appIsInStore`. Keep the flag false for APK distribution. When true, devices with Google Play open the configured Android package's store listing; other devices use the APK. The app accepts only newer version codes for its own package and APK URLs in the configured repository. Android controls installation approval.
 
 ## Optional Nextcloud distribution
 
-Run `pnpm android:publish` to build locally, sign with the existing key, and upload
-to Nextcloud. The command needs no phone connection.
+`pnpm android:publish` builds a signed APK and uploads it to a dedicated Nextcloud beta folder. Configure `NEXTCLOUD_WEBDAV_URL`, `NEXTCLOUD_USERNAME`, `NEXTCLOUD_PASSWORD`, and `NEXTCLOUD_DIRECTORY` in ignored `.env`. The URL must be the account's DAV root; the target folder's parent must already exist. Use an app password and protect `.env` with `chmod 600 .env`.
 
-One-time setup:
+The publisher verifies the uploaded checksum and renames its temporary file without replacing existing betas. It does not increment versions. In-app update discovery still uses GitHub Releases.
 
-1. Complete the [development setup](development.md#first-setup) and ensure `.signing/release.json` and
-   `.signing/release.p12` exist. Reuse the existing signing key for subsequent releases. Keep an encrypted backup.
-2. Choose a dedicated beta folder in Nextcloud. The script creates it if missing;
-   its parent must already exist. Give testers a read-only,
-   password-protected folder share. The script does not create or change shares.
-3. Set these variables in the repository's `.env`. Use the actual URL-encoded
-   WebDAV account root, not the tester share link. Use a dedicated
-   Nextcloud app password, preferably for an account limited to this folder.
-
-```dotenv
-NEXTCLOUD_WEBDAV_URL="https://cloud.example.com/remote.php/dav/files/username"
-NEXTCLOUD_USERNAME="username"
-NEXTCLOUD_PASSWORD="YOUR-NEXTCLOUD-APP-PASSWORD"
-NEXTCLOUD_DIRECTORY="beta_apps"
-```
-
-Protect that file with `chmod 600 .env`. Both `.env` and the `.signing/`
-directory are ignored by Git. Never send these credentials or the signing key to testers.
-Existing shell environment variables take precedence over `.env`. Directory names
-are encoded automatically; use normal folder names in `NEXTCLOUD_DIRECTORY`.
-
-Each `pnpm android:publish` run checks the destination and refuses a version already
-published on GitHub. It builds and verifies the configured year-minor version,
-uploads a temporary file, downloads it to verify SHA-256, and renames it without replacing an existing beta.
-It does not increment versions automatically. Change app.json before releasing changed code.
-The APK filename includes the version and its build time in UTC.
-Settings shows the configured version, such as `Beta 2026-1`.
-
-The local APK remains at `dist/cloud-hoist-beta.apk`. On failure the command
-exits nonzero and attempts to remove only its own temporary upload. It never deletes
-previous betas. Refused connections are retried up to three times with short backoff;
-other failures stop the command. Nextcloud reserves `.part`, so staging uses a unique
-`.beta-<UUID>.apk` filename.
-A lost response to the final rename may mean publication succeeded;
-check the remote folder before retrying. Old versions remain for manual cleanup.
-If the process is killed, check that no build is still running before removing the
-empty `dist/.beta-build-lock` directory with `rmdir dist/.beta-build-lock`.
-
-Nextcloud distribution is manual; in-app update checks use GitHub Releases.
-Testers open the shared folder, download the highest-numbered APK, and approve the
-Android update. `pnpm android:beta` builds locally without uploading or
-incrementing the version. `pnpm test:publish` tests the upload protocol with a fake
-server, without touching Nextcloud.
+An interrupted build can leave `dist/.beta-build-lock`. Confirm no build is running before removing that empty directory with `rmdir`.
