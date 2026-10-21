@@ -6,7 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-data class SourceQueueCounts(val sourceId: String, val pending: Int, val failed: Int)
+data class SourceQueueCounts(val sourceId: String, val pending: Int, val failed: Int, val uploaded: Int)
 
 data class QueueCounts(val queued: Int, val uploading: Int, val failed: Int, val uploaded: Int)
 

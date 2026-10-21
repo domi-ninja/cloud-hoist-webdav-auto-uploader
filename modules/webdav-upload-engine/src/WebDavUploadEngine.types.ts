@@ -46,6 +46,7 @@ export const sourceSummarySchema = z.object({
   lastScanAt: z.string().datetime().nullable(),
   queue: z
     .object({
+      uploaded: z.number().int().nonnegative().optional(),
       pending: z.number().int().nonnegative(),
       failed: z.number().int().nonnegative(),
     })

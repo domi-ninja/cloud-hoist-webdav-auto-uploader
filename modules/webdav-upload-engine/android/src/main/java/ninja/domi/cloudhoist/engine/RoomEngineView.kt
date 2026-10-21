@@ -73,7 +73,7 @@ class RoomEngineView(
       "enabled" to source.enabled,
       "collisionPolicy" to source.collisionPolicy,
       "lastScanAt" to source.lastScanAt?.let(::instant),
-      "queue" to mapOf("pending" to (counts[source.id]?.pending ?: 0), "failed" to (counts[source.id]?.failed ?: 0)),
+      "queue" to mapOf("pending" to (counts[source.id]?.pending ?: 0), "failed" to (counts[source.id]?.failed ?: 0), "uploaded" to (counts[source.id]?.uploaded ?: 0)),
     )
     }
   }

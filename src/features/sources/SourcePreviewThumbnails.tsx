@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { Alert, FlatList, Pressable, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Icon } from "react-native-paper";
 
 import webDavUploadEngine, {
@@ -14,10 +15,14 @@ export function SourcePreviewThumbnails({
   preview,
   selection,
   rows = 2,
+  scrollGesture,
+  onLongPress,
 }: {
   preview: SourcePreview;
   selection: SourceSelection;
   rows?: 1 | 2;
+  scrollGesture?: ReturnType<typeof Gesture.Native>;
+  onLongPress?: () => void;
 }) {
   const [viewingImage, setViewingImage] = useState<string>();
   const [files, setFiles] = useState(preview.files);
@@ -54,8 +59,7 @@ export function SourcePreviewThumbnails({
   if (!files.length) return null;
 
   const images = files.filter((file) => file.mimeType?.startsWith("image/"));
-  return (
-    <>
+  const thumbnails = (
     <FlatList
       accessibilityLabel="Files in this backup folder"
       horizontal
@@ -78,7 +82,7 @@ export function SourcePreviewThumbnails({
               style={{ width: 96, height: 96 }}
             >
               {file.mimeType?.startsWith("image/") || file.mimeType?.startsWith("video/") ? (
-                <Pressable accessibilityRole="button" accessibilityLabel={`${file.mimeType?.startsWith("video/") ? "Play" : "Enlarge"} ${file.fileName}`}
+                <Pressable onLongPress={onLongPress} delayLongPress={400} accessibilityRole="button" accessibilityLabel={`${file.mimeType?.startsWith("video/") ? "Play" : "Enlarge"} ${file.fileName}`}
                   onPress={() => {
                     if (file.mimeType?.startsWith("video/")) {
                       void webDavUploadEngine.openLocalVideo(file.localUri).then((result) => {
@@ -106,6 +110,10 @@ export function SourcePreviewThumbnails({
         ) : null
       }
     />
+  );
+  return (
+    <>
+    {scrollGesture ? <GestureDetector gesture={scrollGesture}>{thumbnails}</GestureDetector> : thumbnails}
     {viewingImage ? (
       <SourceImageViewer files={images} initialIndex={Math.max(0, images.findIndex((file) => file.localUri === viewingImage))}
         hasMore={nextOffset != null} loading={loading} error={error}

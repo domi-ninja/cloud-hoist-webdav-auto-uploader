@@ -2,6 +2,7 @@ import { useState } from "react";
 import { usePathname } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FlatList, RefreshControl, Text, View } from "react-native";
+import { Snackbar } from "react-native-paper";
 
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
@@ -27,6 +28,7 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 export default function HomeScreen() {
   const focused = usePathname() === "/";
   const { hiddenMediaFolders, setHiddenMediaFolders } = useAppPreferences();
+  const [lastHiddenFolder, setLastHiddenFolder] = useState<MediaFolder>();
   const [initialSelection, setInitialSelection] = useState<SourceSelection>();
   const [selectingFolder, setSelectingFolder] = useState(false);
   const { data: snapshot, error: snapshotError, refetch } = useEngineSnapshot();
@@ -93,6 +95,19 @@ export default function HomeScreen() {
     } catch { setErrorMessage("Could not open the folder picker. Try again."); }
     finally { setSelectingFolder(false); }
   };
+  const hideSuggestion = async (folder: MediaFolder) => {
+    try {
+      await setHiddenMediaFolders([...hiddenMediaFolders, mediaFolderId(folder)]);
+      setLastHiddenFolder(folder);
+    } catch { setErrorMessage("Could not hide this suggestion."); }
+  };
+  const undoHide = async () => {
+    if (!lastHiddenFolder) return;
+    try {
+      await setHiddenMediaFolders(hiddenMediaFolders.filter((id) => id !== mediaFolderId(lastHiddenFolder)));
+      setLastHiddenFolder(undefined);
+    } catch { setErrorMessage("Could not restore this suggestion."); }
+  };
   const requestMediaAccess = async () => {
     const result = await webDavUploadEngine.requestMediaPermission();
     if (!result.ok) setErrorMessage(result.error.message);
@@ -129,15 +144,13 @@ export default function HomeScreen() {
             {connected ? (
               <View className="mt-2 gap-2">
                 <View className="flex-row flex-wrap items-center justify-between gap-2">
-                  <Text accessibilityRole="header" className="text-base font-semibold text-ink-light dark:text-ink-dark">Suggested folders</Text>
+                  <Text accessibilityRole="header" className="text-base font-semibold text-ink-light dark:text-ink-dark">Start backing up folder</Text>
                   {hiddenMediaFolders.length ? (
                     <IconAction icon="eye-outline" label="Show hidden suggestions" onPress={() => {
                       void setHiddenMediaFolders([]).catch(() => setErrorMessage("Could not restore hidden suggestions."));
                     }} />
                   ) : null}
                 </View>
-                <ActionButton icon="folder-outline" label="Backup other directory" disabled={selectingFolder}
-                  loading={selectingFolder} onPress={() => void chooseFolder()} />
                 {media.data?.permission.access === "denied" || media.data?.permission.access === "partial" ? (
                   <ActionButton icon="image-search-outline" label={media.data.permission.access === "denied" ? "Find media folders" : "Allow all media folders"}
                     onPress={() => void requestMediaAccess()} />
@@ -151,6 +164,12 @@ export default function HomeScreen() {
             ) : null}
           </View>
         }
+        ListFooterComponent={connected ? (
+          <View className="mt-2">
+            <ActionButton icon="folder-outline" label="Choose other directory to back up" disabled={selectingFolder}
+              loading={selectingFolder} onPress={() => void chooseFolder()} />
+          </View>
+        ) : null}
         refreshControl={
           <RefreshControl
             refreshing={scanning}
@@ -158,12 +177,13 @@ export default function HomeScreen() {
           />
         }
         renderItem={({ item: folder }) => (
-          <MediaFolderSuggestion folder={folder} onStart={() => startSuggestion(folder)} onHide={() => {
-            void setHiddenMediaFolders([...hiddenMediaFolders, mediaFolderId(folder)])
-              .catch(() => setErrorMessage("Could not hide this suggestion."));
-          }} />
+          <MediaFolderSuggestion folder={folder} onStart={() => startSuggestion(folder)} onHide={() => void hideSuggestion(folder)} />
         )}
       />
+      <Snackbar visible={Boolean(lastHiddenFolder)} onDismiss={() => setLastHiddenFolder(undefined)}
+        action={{ label: "Undo", onPress: () => void undoHide() }} duration={7_000}>
+        Folder hidden
+      </Snackbar>
       {connected && editingSourceId ? (
         <SourceEditor
           key={editingSourceId}

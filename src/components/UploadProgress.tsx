@@ -25,7 +25,7 @@ export function UploadProgress({
   const remainingTime = uploadRemainingTime(snapshot);
 
   return (
-    <View className="gap-2">
+    <View className="gap-1">
       <View className="flex-row items-center gap-2">
         {leadingAction}
         <View
@@ -46,7 +46,7 @@ export function UploadProgress({
       <View className="flex-row items-center gap-2">
         <Text className="flex-1 text-base font-semibold text-ink-light dark:text-ink-dark">{label}</Text>
         {remainingTime ? <Text className="text-base text-muted-light dark:text-muted-dark">{remainingTime}</Text> : null}
-        {onRescan ? <IconAction icon="refresh" label={scanning ? "Scanning…" : "Scan now"} loading={scanning} disabled={scanning} onPress={onRescan} /> : null}
+        {onRescan ? <IconAction style={{ margin: 0, width: 40, height: 32 }} hitSlop={8} icon="refresh" label={scanning ? "Scanning…" : "Scan now"} loading={scanning} disabled={scanning} onPress={onRescan} /> : null}
       </View>
       <Text
         accessibilityLiveRegion="polite"

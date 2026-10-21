@@ -69,6 +69,15 @@ class EngineDaoTest {
   }
 
   @Test
+  fun completedFolderCountIncludesDistinctBackedUpFiles() {
+    dao.enqueueRevision(revision("old"), job("old", "old", 1).copy(state = JobState.COMPLETED, remoteFileName = "photo.jpg"))
+    dao.enqueueRevision(revision("new", byteCount = 11), job("new", "new", 2).copy(state = JobState.COMPLETED, remoteFileName = "photo.jpg"))
+    dao.enqueueRevision(revision("other", providerId = "other"), job("other", "other", 3).copy(state = JobState.COMPLETED, remoteFileName = "other.jpg"))
+    assertEquals(2, dao.sourceQueueCounts().single().uploaded)
+    assertEquals(0, dao.sourceQueueCounts().single().pending)
+  }
+
+  @Test
   fun readmeTimestampUsesCompletedUploadsInTheDefaultRoot() {
     dao.upsertSource(source().copy(remotePathSegments = listOf("Phone Uploads", "Pictures")))
     dao.enqueueRevision(revision("readme"), job("readme", "readme", 1).copy(

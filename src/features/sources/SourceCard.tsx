@@ -9,7 +9,6 @@ import webDavUploadEngine, {
 } from "../../../modules/webdav-upload-engine";
 import { IconAction, Panel } from "@/components/ui";
 import { RestoreSourcePermission } from "./RestoreSourcePermission";
-import { sourceLocalLabel } from "./source-editor-state";
 
 type SourceCardProps = {
   snapshot: EngineSnapshot;
@@ -64,6 +63,8 @@ export function SourceCard({ snapshot, source, onEdit }: SourceCardProps) {
       { kind: "permission" }
     > => blocker.kind === "permission" && blocker.sourceId === source.id,
   );
+  const complete = source.queue !== undefined && source.queue.pending === 0 && source.queue.failed === 0;
+  const count = complete ? source.queue?.uploaded ?? 0 : source.queue?.pending ?? 0;
   const status = [
     sourceStatus(snapshot, source),
     source.queue?.failed ? `${source.queue.failed} failed` : null,
@@ -111,18 +112,18 @@ export function SourceCard({ snapshot, source, onEdit }: SourceCardProps) {
   };
 
   return (
-    <Panel>
+    <Panel compact>
       <View className="flex-row items-center justify-between gap-2">
         <View className="min-w-0 flex-1 flex-row items-center gap-2">
           <Text className="min-w-0 flex-1 text-base font-semibold text-ink-light dark:text-ink-dark">
             {source.name}
           </Text>
           <View className="flex-row items-center gap-2">
-            {(source.queue?.pending ?? 0) === 0 && !source.queue?.failed ? (
+            {complete ? (
               <Icon source="check-circle" size={20} color={theme.colors.primary} />
             ) : null}
             <Text className="shrink-0 text-base text-muted-light dark:text-muted-dark">
-              {source.queue?.pending ?? 0} {source.queue?.pending === 1 ? "file" : "files"} pending
+              {count} {count === 1 ? "file" : "files"} {complete ? "done" : "pending"}
             </Text>
           </View>
         </View>
@@ -133,6 +134,7 @@ export function SourceCard({ snapshot, source, onEdit }: SourceCardProps) {
             anchor={
               <IconAction
                 icon="dots-vertical"
+                style={{ margin: 0, width: 48, height: 32 }} hitSlop={{ top: 8, bottom: 8 }}
                 label={`Actions for ${source.name}`}
                 accessibilityState={{ expanded: menuOpen }}
                 disabled={busy}
@@ -171,7 +173,7 @@ export function SourceCard({ snapshot, source, onEdit }: SourceCardProps) {
         </Text>
       ) : null}
       <Text className="text-base text-muted-light dark:text-muted-dark">
-        {sourceLocalLabel(source)} → {source.remotePath}
+        → {source.remotePath}
       </Text>
       {error ? (
         <Text

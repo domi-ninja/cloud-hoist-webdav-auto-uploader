@@ -1,5 +1,6 @@
 import "../../global.css";
 
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Tabs } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme, useWindowDimensions } from "react-native";
@@ -37,73 +38,75 @@ export default function RootLayout() {
   };
 
   return (
-    <PaperProvider
-      theme={theme}
-      settings={{
-        icon: (props) => (
-          <MaterialCommunityIcons
-            {...props}
-            name={props.name as keyof typeof MaterialCommunityIcons.glyphMap}
-          />
-        ),
-      }}
-    >
-      <AppPreferencesProvider>
-        <EngineQueryProvider>
-          <Tabs
-            screenOptions={{
-              headerShown: false,
-              tabBarActiveTintColor: theme.colors.primary,
-              tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
-              tabBarLabelStyle: { fontSize: 16 },
-              tabBarAllowFontScaling: true,
-              tabBarStyle: {
-                height: 56 + insets.bottom + Math.max(0, fontScale - 1) * 20,
-                backgroundColor: dark ? "#242720" : "#e6e8e1",
-                borderTopColor: dark ? "#42473d" : "#c5cbbf",
-              },
-            }}
-          >
-            <Tabs.Screen
-              name="index"
-              options={{
-                title: "Backups",
-                tabBarAccessibilityLabel: "Backups",
-                tabBarIcon: (props) => (
-                  <MaterialCommunityIcons
-                    {...props}
-                    name="folder-sync-outline"
-                  />
-                ),
-              }}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PaperProvider
+        theme={theme}
+        settings={{
+          icon: (props) => (
+            <MaterialCommunityIcons
+              {...props}
+              name={props.name as keyof typeof MaterialCommunityIcons.glyphMap}
             />
-            <Tabs.Screen
-              name="status"
-              options={{
-                title: "Status",
-                tabBarAccessibilityLabel: "Status",
-                tabBarIcon: (props) => (
-                  <MaterialCommunityIcons {...props} name="transfer" />
-                ),
+          ),
+        }}
+      >
+        <AppPreferencesProvider>
+          <EngineQueryProvider>
+            <Tabs
+              screenOptions={{
+                headerShown: false,
+                tabBarActiveTintColor: theme.colors.primary,
+                tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+                tabBarLabelStyle: { fontSize: 16 },
+                tabBarAllowFontScaling: true,
+                tabBarStyle: {
+                  height: 56 + insets.bottom + Math.max(0, fontScale - 1) * 20,
+                  backgroundColor: dark ? "#242720" : "#e6e8e1",
+                  borderTopColor: dark ? "#42473d" : "#c5cbbf",
+                },
               }}
-            />
-            <Tabs.Screen name="activity" options={{ href: null }} />
-            <Tabs.Screen name="upload-failure" options={{ href: null }} />
-            <Tabs.Screen
-              name="settings"
-              options={{
-                title: "Settings",
-                tabBarAccessibilityLabel: "Settings",
-                tabBarIcon: (props) => (
-                  <MaterialCommunityIcons {...props} name="cog-outline" />
-                ),
-              }}
-            />
-          </Tabs>
-          <AutomaticUpdatePrompt />
-          <StatusBar style="auto" />
-        </EngineQueryProvider>
-      </AppPreferencesProvider>
-    </PaperProvider>
+            >
+              <Tabs.Screen
+                name="index"
+                options={{
+                  title: "Backups",
+                  tabBarAccessibilityLabel: "Backups",
+                  tabBarIcon: (props) => (
+                    <MaterialCommunityIcons
+                      {...props}
+                      name="folder-sync-outline"
+                    />
+                  ),
+                }}
+              />
+              <Tabs.Screen
+                name="status"
+                options={{
+                  title: "Status",
+                  tabBarAccessibilityLabel: "Status",
+                  tabBarIcon: (props) => (
+                    <MaterialCommunityIcons {...props} name="transfer" />
+                  ),
+                }}
+              />
+              <Tabs.Screen name="activity" options={{ href: null }} />
+              <Tabs.Screen name="upload-failure" options={{ href: null }} />
+              <Tabs.Screen
+                name="settings"
+                options={{
+                  title: "Settings",
+                  tabBarAccessibilityLabel: "Settings",
+                  tabBarIcon: (props) => (
+                    <MaterialCommunityIcons {...props} name="cog-outline" />
+                  ),
+                }}
+              />
+            </Tabs>
+            <AutomaticUpdatePrompt />
+            <StatusBar style="auto" />
+          </EngineQueryProvider>
+        </AppPreferencesProvider>
+      </PaperProvider>
+    </GestureHandlerRootView>
   );
 }

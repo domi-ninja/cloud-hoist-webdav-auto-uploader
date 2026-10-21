@@ -170,7 +170,8 @@ interface EngineDao {
   @Query("""
     SELECT sourceId,
       SUM(CASE WHEN state IN ('queued', 'running', 'retry_wait') THEN 1 ELSE 0 END) AS pending,
-      SUM(CASE WHEN state = 'blocked' THEN 1 ELSE 0 END) AS failed
+      SUM(CASE WHEN state = 'blocked' THEN 1 ELSE 0 END) AS failed,
+      COUNT(DISTINCT CASE WHEN state = 'completed' THEN remotePathSegments || '/' || remoteFileName END) AS uploaded
     FROM upload_jobs GROUP BY sourceId
   """)
   fun sourceQueueCounts(): List<SourceQueueCounts>

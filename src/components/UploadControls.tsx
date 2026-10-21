@@ -40,10 +40,11 @@ export function UploadControls({ snapshot, now, onError, onScanned }: {
     finally { setPausing(false); }
   };
   return (
-    <Panel>
+    <Panel compact>
       <UploadProgress snapshot={snapshot} now={now}
         leadingAction={connected ? (
           <IconAction icon={paused || stopped ? "play" : "pause"} disabled={pausing} loading={pausing}
+            style={{ margin: 0, width: 40, height: 32 }} hitSlop={8}
             label={paused ? "Resume uploads" : stopped ? "Start uploads" : "Pause uploads"}
             onPress={() => void toggle()} />
         ) : undefined}

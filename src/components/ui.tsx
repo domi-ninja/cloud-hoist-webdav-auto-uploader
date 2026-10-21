@@ -66,13 +66,13 @@ export function ActionButton({
   );
 }
 
-export function Panel({ children }: PropsWithChildren) {
+export function Panel({ children, compact = false }: PropsWithChildren<{ compact?: boolean }>) {
   const theme = useTheme();
   return (
     <Surface
       elevation={0}
       style={{
-        gap: 8,
+        gap: compact ? 4 : 8,
         padding: 8,
         borderRadius: 8,
         backgroundColor: theme.colors.surfaceVariant,
