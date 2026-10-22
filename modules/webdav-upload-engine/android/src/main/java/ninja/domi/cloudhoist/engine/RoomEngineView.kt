@@ -3,6 +3,7 @@ package ninja.domi.cloudhoist.engine
 import androidx.work.WorkInfo
 import java.time.Instant
 import java.util.UUID
+import kotlin.concurrent.withLock
 import java.util.concurrent.TimeUnit
 
 /** Produces the bridge contract from the same Room state used by headless workers. */
@@ -99,20 +100,24 @@ class RoomEngineView(
       mapOf(
         "id" to "failure-${job.id}",
         "code" to code,
-        "message" to failureMessage(code),
+        "message" to uploadFailureMessage(code),
         "jobId" to job.id,
         "occurredAt" to instant(job.startedAt ?: job.createdAt),
         "retryable" to (job.state == JobState.RETRY_WAIT),
       )
     }
 
-  fun addOrUpdateSource(input: SourceInputRecord, accountId: String) {
+  fun addOrUpdateSource(input: SourceInputRecord, accountId: String) = EngineOperations.lock.withLock {
+    EngineOperations.requireAvailable(dao)
     if (input.name.isBlank()) throw EngineInvalidInputException("Source name is required.")
     if (input.kind !in setOf("media_store", "saf")) {
       throw EngineInvalidInputException("Source kind is invalid.")
     }
     val path = DavPath.validate(input.remotePath.split('/').filter(String::isNotBlank))
     val existing = input.id?.let(dao::source)
+    if (existing != null && existing.remotePathSegments != path) {
+      throw EngineInvalidInputException("Confirm moving files or uploading new copies before changing this destination.")
+    }
     dao.upsertSource(
       SourceEntity(
         id = input.id ?: UUID.randomUUID().toString(),
@@ -131,12 +136,14 @@ class RoomEngineView(
     invalidate()
   }
 
-  fun removeSource(sourceId: String) {
+  fun removeSource(sourceId: String) = EngineOperations.lock.withLock {
+    EngineOperations.requireAvailable(dao)
     if (!dao.removeSource(sourceId)) throw EngineSourceNotFoundException(sourceId)
     invalidate()
   }
 
-  fun resetSourceHistory(sourceId: String) {
+  fun resetSourceHistory(sourceId: String) = EngineOperations.lock.withLock {
+    EngineOperations.requireAvailable(dao)
     if (!dao.resetSourceHistory(sourceId)) throw EngineSourceNotFoundException(sourceId)
     invalidate()
   }
@@ -152,7 +159,7 @@ class RoomEngineView(
       "remotePath" to (job.remotePathSegments + job.remoteFileName).joinToString("/", prefix = "/"),
       "state" to job.state, "attemptCount" to job.attemptCount,
       "errorCode" to job.lastErrorCode,
-      "errorMessage" to job.lastErrorCode?.let(::failureMessage),
+      "errorMessage" to job.lastErrorCode?.let(::uploadFailureMessage),
     )
   }
 
@@ -184,7 +191,7 @@ class RoomEngineView(
         mapOf(
           "kind" to "account",
           "code" to if (blocked.blockerCode == "invalid_credentials") "unauthorized" else "unreachable",
-          "message" to failureMessage(blocked.blockerCode ?: "account"),
+          "message" to uploadFailureMessage(blocked.blockerCode ?: "account"),
         ),
       )
     }
@@ -204,7 +211,7 @@ class RoomEngineView(
           "kind" to "job",
           "jobId" to job.id,
           "code" to code,
-          "message" to failureMessage(code),
+          "message" to uploadFailureMessage(code),
         ),
       )
     }
@@ -255,6 +262,7 @@ class RoomEngineView(
     waitingReason: String?,
     queueDrain: QueueDrainStatus,
   ): Map<String, Any?> = when {
+    EngineOperations.held(dao) -> mapOf("state" to "waiting", "reason" to "Destination change unfinished")
     running != null && queueDrain.state == WorkInfo.State.RUNNING -> mapOf(
       "state" to "uploading",
       "jobId" to running.id,
@@ -297,7 +305,15 @@ class RoomEngineView(
 
   private fun instant(epochMillis: Long) = Instant.ofEpochMilli(epochMillis).toString()
 
-  private fun failureMessage(code: String) = when (code) {
+
+  companion object {
+    private const val ACTIVITY_PAGE_SIZE = 20
+    private const val MAX_ACTIVITY_PAGE_SIZE = 50
+    private val ACTIVITY_RETENTION_MILLIS = TimeUnit.DAYS.toMillis(30)
+  }
+}
+
+internal fun uploadFailureMessage(code: String) = when (code) {
     "invalid_credentials" -> "Reconnect the Nextcloud account."
     "certificate" -> "Check the server certificate."
     "remote_permission" -> "Nextcloud denied access to the destination."
@@ -316,10 +332,3 @@ class RoomEngineView(
     "unexpected" -> "An unexpected transfer error stopped this upload."
     else -> "Upload failed ($code)."
   }
-
-  companion object {
-    private const val ACTIVITY_PAGE_SIZE = 20
-    private const val MAX_ACTIVITY_PAGE_SIZE = 50
-    private val ACTIVITY_RETENTION_MILLIS = TimeUnit.DAYS.toMillis(30)
-  }
-}

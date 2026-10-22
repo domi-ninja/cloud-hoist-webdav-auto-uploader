@@ -15,6 +15,7 @@ type SourceCardProps = {
   source: SourceSummary;
   now: number;
   onEdit: () => void;
+  inventoryError?: string;
 };
 
 function sourceStatus(
@@ -50,7 +51,7 @@ function sourceStatus(
   return null;
 }
 
-export function SourceCard({ snapshot, source, onEdit }: SourceCardProps) {
+export function SourceCard({ snapshot, source, onEdit, inventoryError }: SourceCardProps) {
   const theme = useTheme();
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -175,6 +176,7 @@ export function SourceCard({ snapshot, source, onEdit }: SourceCardProps) {
       <Text className="text-base text-muted-light dark:text-muted-dark">
         → {source.remotePath}
       </Text>
+      {inventoryError ? <Text accessibilityLiveRegion="polite" className="text-base text-red-700 dark:text-red-300">{inventoryError}</Text> : null}
       {error ? (
         <Text
           accessibilityLiveRegion="polite"

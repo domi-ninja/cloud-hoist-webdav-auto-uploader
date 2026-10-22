@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import java.util.UUID
 import java.util.concurrent.TimeUnit
+import kotlin.concurrent.withLock
 
 data class QueueDrainResult(
   val completedJobs: Int,
@@ -38,7 +39,12 @@ class QueueDrainRunner(
   private val onFailure: (UploadJobEntity, TransferFailure) -> Unit = { _, _ -> },
   private val onAttemptFinished: (String) -> Unit = {},
 ) {
-  fun run(): QueueDrainResult {
+  fun run(): QueueDrainResult = EngineOperations.lock.withLock {
+    if (EngineOperations.held(dao)) return QueueDrainResult(0, retryWorker = false)
+    runLocked()
+  }
+
+  private fun runLocked(): QueueDrainResult {
     val startedAt = elapsed()
     dao.recoverAbandoned(now() - ABANDONED_AFTER_MILLIS)
     val credential = accountRepository.credential()
@@ -46,7 +52,7 @@ class QueueDrainRunner(
     var completed = 0
 
     while (completed < maxJobs && elapsed() - startedAt < maxRunMillis) {
-      if (isPaused()) return QueueDrainResult(completed, retryWorker = false)
+      if (isPaused() || EngineOperations.held(dao)) return QueueDrainResult(completed, retryWorker = false)
       if (isStopped()) return QueueDrainResult(completed, retryWorker = true)
       if (!canStartNextFile()) {
         return QueueDrainResult(completed, retryWorker = dao.pendingWorkCount() > 0)
@@ -76,7 +82,7 @@ class QueueDrainRunner(
             dao.source(job.sourceId)?.collisionPolicy ?: CollisionPolicy.REPLACE.value,
           ),
           isCancelled = {
-            isPaused() || isStopped() || elapsed() - startedAt >= maxRunMillis
+            isPaused() || isStopped() || EngineOperations.held(dao) || elapsed() - startedAt >= maxRunMillis
           },
           onProgress = { uploadedBytes ->
             onProgress(

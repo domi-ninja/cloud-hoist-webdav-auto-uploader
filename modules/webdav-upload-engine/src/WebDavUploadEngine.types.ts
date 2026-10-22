@@ -74,6 +74,7 @@ export const jobStateSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("failed"),
     code: z.string().min(1),
+    message: z.string().optional(),
     retryable: z.boolean(),
   }),
 ]);
@@ -422,3 +423,23 @@ export type EngineCommandResult =
 export type EngineValueResult<T> =
   | { ok: true; value: T }
   | { ok: false; error: EngineError };
+
+export const destinationChangeRequestSchema = z.object({
+  sourceId: z.string().optional(),
+  pathSegments: remotePathSegmentsSchema,
+  rootChange: z.boolean(),
+});
+export const destinationChangeSchema = z.object({
+  id: z.string(),
+  state: z.enum(["running", "failed", "completed"]),
+  mode: z.enum(["move", "copy"]),
+  routes: z.object({ sourceId: z.string(), name: z.string(), from: remotePathSegmentsSchema, to: remotePathSegmentsSchema }).array(),
+  total: z.number().int().nonnegative(),
+  processed: z.number().int().nonnegative(),
+  root: remotePathSegmentsSchema.nullable(),
+  message: z.string().nullable(),
+  errorSourceId: z.string().nullable(),
+  errorFile: z.string().nullable(),
+});
+export type DestinationChangeRequest = z.infer<typeof destinationChangeRequestSchema>;
+export type DestinationChange = z.infer<typeof destinationChangeSchema>;

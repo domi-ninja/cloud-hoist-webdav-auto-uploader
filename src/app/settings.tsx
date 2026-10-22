@@ -2,17 +2,20 @@ import { Fragment, useState } from "react";
 import Constants from "expo-constants";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScrollView, Text, View } from "react-native";
+import { useQuery } from "@tanstack/react-query";
 import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { project } from "@/config/project";
 import { useEngineSnapshot } from "@/lib/engine-query";
 import webDavUploadEngine, {
+  type DestinationChangeRequest,
   type TransferConstraints,
 } from "../../modules/webdav-upload-engine";
-import { IconAction, Panel, Separator } from "@/components/ui";
+import { ActionButton, IconAction, Panel, Separator } from "@/components/ui";
 import { AccountSettingsModal } from "@/features/account/AccountSettingsModal";
 import { InstanceIcon } from "@/features/account/InstanceIcon";
+import { DestinationChangeModal } from "@/features/sources/DestinationChangeModal";
 import { RemoteFolderPicker } from "@/features/sources/RemoteFolderPicker";
 import { formatRemoteRoot, useAppPreferences } from "@/lib/app-preferences";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -24,26 +27,19 @@ export default function SettingsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ account?: string }>();
   const { data: snapshot, error } = useEngineSnapshot();
-  const { remoteRootPath, setRemoteRootPath } = useAppPreferences();
+  const { remoteRootPath } = useAppPreferences();
   const [saving, setSaving] = useState<ConstraintKey>();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [accountOpen, setAccountOpen] = useState(false);
   const [choosingRoot, setChoosingRoot] = useState(false);
   const [rootError, setRootError] = useState<string>();
-  const [savingRoot, setSavingRoot] = useState(false);
-
-  const selectRemoteRoot = async (pathSegments: string[]) => {
-    setSavingRoot(true);
-    setRootError(undefined);
-    setChoosingRoot(false);
-    try {
-      await setRemoteRootPath(pathSegments);
-    } catch {
-      setRootError("The upload root could not be saved.");
-    } finally {
-      setSavingRoot(false);
-    }
-  };
+  const [destinationRequest, setDestinationRequest] = useState<DestinationChangeRequest>();
+  const [resumingChange, setResumingChange] = useState(false);
+  const pending = useQuery({ queryKey: ["engine", "destination-change"], queryFn: async () => {
+    const result = await webDavUploadEngine.getDestinationChange();
+    if (!result.ok) throw new Error(result.error.message);
+    return result.value;
+  }, refetchInterval: 2000 });
 
   const closeAccount = () => {
     setAccountOpen(false);
@@ -125,7 +121,7 @@ export default function SettingsScreen() {
             </View>
             <IconAction
               icon={choosingRoot ? "chevron-up" : "folder-edit-outline"}
-              disabled={savingRoot || snapshot?.account.status !== "connected"}
+              disabled={Boolean(pending.data) || snapshot?.account.status !== "connected"}
               accessibilityState={{ expanded: choosingRoot }}
               label={
                 choosingRoot ? "Hide folder browser" : "Choose upload root"
@@ -135,8 +131,7 @@ export default function SettingsScreen() {
             />
           </View>
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            New backups go here, followed by their local parent and folder name.
-            Use / to upload from the Nextcloud account root.
+            Backup destinations stay inside this folder.
           </Text>
           {rootError ? (
             <Text
@@ -151,10 +146,18 @@ export default function SettingsScreen() {
           <RemoteFolderPicker
             onClose={() => setChoosingRoot(false)}
             initialPathSegments={remoteRootPath}
-            onSelect={(pathSegments) => void selectRemoteRoot(pathSegments)}
+            onError={setRootError}
+            onSelect={(pathSegments) => {
+              setChoosingRoot(false);
+              setDestinationRequest({ pathSegments, rootChange: true });
+            }}
             title="Choose upload root"
           />
         ) : null}
+        {pending.data ? <Panel compact>
+          <Text className="text-base text-ink-light dark:text-ink-dark">Destination change unfinished</Text>
+          <ActionButton label="Continue destination change" onPress={() => setResumingChange(true)} />
+        </Panel> : null}
         <Text className="mt-2 text-base font-semibold text-ink-light dark:text-ink-dark">
           Transfer rules
         </Text>
@@ -212,6 +215,10 @@ export default function SettingsScreen() {
           </Text>
         </Panel>
       </ScrollView>
+      {destinationRequest || (resumingChange && pending.data) ? <DestinationChangeModal
+        request={destinationRequest} pending={resumingChange ? pending.data ?? undefined : undefined}
+        onClose={() => { setDestinationRequest(undefined); setResumingChange(false); void pending.refetch(); }}
+        onCompleted={() => { setDestinationRequest(undefined); setResumingChange(false); void pending.refetch(); }} /> : null}
       {(accountOpen || params.account === "open") &&
       snapshot?.account.status === "connected" ? (
         <AccountSettingsModal

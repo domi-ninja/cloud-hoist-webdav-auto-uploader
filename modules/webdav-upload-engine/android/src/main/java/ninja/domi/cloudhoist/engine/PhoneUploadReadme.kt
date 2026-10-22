@@ -12,7 +12,7 @@ internal fun phoneUploadReadme(lastUpload: Instant?): String = """
 Cloud Hoist phone uploads
 
 Cloud Hoist uploads the phone folders you selected to this Nextcloud folder.
-Subfolders follow the folder names on your phone. Your original files stay on the phone.
+Each backup uses the destination you chose in the app. Your original files stay on the phone.
 Changes to phone files update their uploaded copies. Deleting a file on the phone does not delete its uploaded copy.
 Manage backup folders and pause or resume uploads in the Cloud Hoist app.
 
@@ -22,8 +22,8 @@ This timestamp updates after syncing finishes. This file is maintained by Cloud 
 
 /** Metadata failure retries separately without changing the successfully uploaded media. */
 class PhoneUploadReadme(private val http: OkHttpClient = OkHttpClient()) {
-  fun write(credential: StoredAccountCredential, lastUpload: Instant?, onlyIfMissing: Boolean = false) {
-    val url = NextcloudDavUrl.file(credential.account, listOf("Phone Uploads"), "Read me - Cloud Hoist.txt")
+  fun write(credential: StoredAccountCredential, lastUpload: Instant?, onlyIfMissing: Boolean = false, root: List<String> = listOf("Phone Uploads")) {
+    val url = NextcloudDavUrl.file(credential.account, root, "Read me - Cloud Hoist.txt")
     val request = Request.Builder().url(url)
       .header("Authorization", Credentials.basic(credential.account.loginName, credential.appPassword, Charsets.UTF_8))
       .apply { if (onlyIfMissing) header("If-None-Match", "*") }
@@ -35,12 +35,15 @@ class PhoneUploadReadme(private val http: OkHttpClient = OkHttpClient()) {
 
   fun updateAfterSync(context: Context, dao: EngineDao, credential: StoredAccountCredential): Boolean {
     if (dao.pendingWorkCount() > 0) return true
-    val completed = dao.latestCompletedUploadInPhoneUploads() ?: return true
+    if (EngineOperations.held(dao)) return true
+    val rootJson = dao.setting(BACKUP_ROOT) ?: "[\"Phone Uploads\"]"
+    val root = org.json.JSONArray(rootJson).let { a -> List(a.length(), a::getString) }
+    val completed = dao.latestCompletedUploadInRoot(rootJson, rootJson.dropLast(1) + ",%") ?: return true
     val preferences = context.getSharedPreferences("phone_upload_readme", Context.MODE_PRIVATE)
-    val key = credential.account.id + ":" + credential.account.serverUrl
+    val key = credential.account.id + ":" + credential.account.serverUrl + ":" + rootJson
     if (preferences.getLong(key, 0) >= completed) return true
     return runCatching {
-      write(credential, Instant.ofEpochMilli(completed))
+      write(credential, Instant.ofEpochMilli(completed), root = root)
       preferences.edit().putLong(key, completed).commit()
     }.getOrDefault(false)
   }

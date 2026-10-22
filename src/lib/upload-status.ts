@@ -19,11 +19,10 @@ export function engineStatus(snapshot: EngineSnapshot, now: number) {
   if (snapshot.worker.state === "waiting" || snapshot.worker.state === "stopped") {
     return snapshot.worker.reason;
   }
-  const blocker = attentionBlockers(snapshot.blockers)[0];
+  const blocker = attentionBlockers(snapshot.blockers).find((item) => item.kind !== "job");
   if (blocker) {
     switch (blocker.kind) {
       case "account":
-      case "job":
         return blocker.message;
       case "permission": {
         const source = snapshot.sources.find(

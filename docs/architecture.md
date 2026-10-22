@@ -27,7 +27,7 @@ Global constraints default to unmetered networks and battery-not-low, with charg
 
 Successful upload records are the completion receipts. Completed-folder counts deduplicate remote target paths, so editing and uploading the same file again does not increase the file count. Normal scans do not restore remotely deleted files. Removing a backup clears its queue and history, leaving phone and server files intact.
 
-`PhoneUploadReadme` maintains `Read me - Cloud Hoist.txt` inside the default `Phone Uploads` root. When enabled pending work is finished, it writes the timestamp of the latest completed upload in that root. Metadata-write failures retry without re-uploading completed media.
+`PhoneUploadReadme` maintains `Read me - Cloud Hoist.txt` inside the configured backup root, initially `Phone Uploads`. When enabled pending work is finished, it writes the timestamp of the latest completed upload in that root. Metadata-write failures retry without re-uploading completed media.
 
 ## Native boundary and credentials
 
@@ -42,3 +42,13 @@ The app has no analytics SDK or hosted crash reporter. Diagnostics stay local. R
 `FileInventory` joins current local revisions with a WebDAV listing. A parent destination excludes subfolders owned by another configured backup, including disabled backups, so a screenshot is not listed twice under both its parent and its own backup. Temporary upload objects are also excluded.
 
 A server-only entry can still be valid after its phone copy is deleted, another client adds it, or Android no longer grants access to the local copy. Presence is shown with icons. The inventory does not turn server-only files into upload jobs.
+
+## Destination changes
+
+Room owns the backup root and a pending destination-change journal. Changing the root rebases every configured backup, including disabled ones, preserving each destination suffix. Legacy `/Cloud Hoist` and `/Phone Uploads` paths retain their suffix when repairing older preference-only root changes. A custom destination outside the former root keeps its complete path below the new root. The confirmation lists every old and new path before applying changes.
+
+Individual destination browsing stops at the backup root and selects the exact folder. Multiple backups can share a destination. Changing an existing destination offers moving known remote files or leaving them and uploading copies. Moves include current local files and tracked remote uploads, including archived files whose phone copy is gone. Uploading copies queues only files still present locally. Unknown remote files and empty old folders stay where they are.
+
+Destination changes hold uploads and serialize against discovery and transfers without changing the user's pause setting. Each conditional DAV MOVE uses the original ETag and `Overwrite: F`. Shared originals are copied when another backup still uses them. Folder listings cache remote versions for a run, and each file result gets a small journal row. Retry checks the destination ETag after a lost response. A conflict or network failure stops the operation and identifies the affected file. Settings can resume an interrupted operation or leave the remaining originals and queue uploads. Source paths, current jobs, the root, and completion commit together. Old chunk checkpoints are discarded when jobs change destinations.
+
+Upload errors appear on the file row and its detail screen, including failures whose local file disappeared. DAV listing errors appear on the affected backup card. Picker and save errors remain visible in the backup editor.

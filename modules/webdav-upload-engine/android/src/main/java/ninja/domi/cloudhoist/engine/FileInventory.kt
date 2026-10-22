@@ -34,6 +34,7 @@ data class RemoteInventoryEntry(
   val mimeType: String?,
   val byteCount: Long?,
   val modifiedAt: Long?,
+  val etag: String? = null,
 )
 
 data class InventoryError(
@@ -71,7 +72,7 @@ class NextcloudInventoryClient(
     val pending = ArrayDeque<List<String>>().apply { add(rootPathSegments) }
     while (pending.isNotEmpty()) {
       val folder = pending.removeFirst()
-      list(credential, folder).forEach { entry ->
+      listFolder(credential, folder).forEach { entry ->
         if (entry.collection) {
           pending.add(entry.pathSegments)
         } else {
@@ -87,7 +88,7 @@ class NextcloudInventoryClient(
     return files
   }
 
-  private fun list(
+  internal fun listFolder(
     credential: StoredAccountCredential,
     pathSegments: List<String>,
   ): List<RemoteInventoryEntry> {
@@ -130,7 +131,7 @@ class NextcloudInventoryClient(
   private companion object {
     val XML_MEDIA_TYPE = "application/xml; charset=utf-8".toMediaType()
     const val INVENTORY_BODY =
-      """<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/></d:prop></d:propfind>"""
+      """<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:resourcetype/><d:getcontenttype/><d:getcontentlength/><d:getlastmodified/><d:getetag/></d:prop></d:propfind>"""
   }
 }
 
@@ -157,6 +158,7 @@ object RemoteInventoryXmlDecoder {
         val name = childSegments.last()
         add(
           RemoteInventoryEntry(
+            etag = property(response, "getetag"),
             name = name,
             pathSegments = parentPath + name,
             collection = response.getElementsByTagNameNS("DAV:", "collection").length > 0,
@@ -202,7 +204,16 @@ class FileInventoryManager(
   fun page(offset: Int, pageSize: Int = PAGE_SIZE, filter: InventoryFilter = InventoryFilter()): InventoryPage {
     require(offset >= 0)
     val credential = accountRepository.credential() ?: throw AccountNotConfiguredException()
-    val locals = dao.localInventory().groupBy(LocalInventoryView::sourceId)
+    val currentLocals = dao.localInventory()
+    val visibleJobs = currentLocals.mapNotNull { it.jobId }.toSet()
+    val failedLocals = dao.unresolvedJobs().filter { it.id !in visibleJobs }.mapNotNull { job ->
+      val revision = dao.revision(job.revisionId) ?: return@mapNotNull null
+      val source = dao.source(job.sourceId) ?: return@mapNotNull null
+      LocalInventoryView(source.id, source.name, source.remotePathSegments, revision.localUri,
+        revision.relativePath, revision.mimeType, revision.byteCount, revision.modifiedAt,
+        job.id, job.remotePathSegments, job.remoteFileName, job.state, job.completedAt, job.retryAt, job.lastErrorCode)
+    }
+    val locals = (currentLocals + failedLocals).groupBy(LocalInventoryView::sourceId)
     val errors = mutableListOf<InventoryError>()
     val sources = dao.allSources()
     val items = sources.filter { filter.sourceId == null || it.id == filter.sourceId }.flatMap { source ->
@@ -215,7 +226,17 @@ class FileInventoryManager(
         )
         emptyList()
       }
-      reconcileInventory(source, locals[source.id].orEmpty(), remoteForSource(source, sources, remote))
+      val own = locals[source.id].orEmpty()
+      val ownPaths = own.map(::targetRelativePath).toSet()
+      val otherPaths = locals.filterKeys { it != source.id }.values.flatten().map { local ->
+        (local.jobRemotePathSegments ?: local.sourceRemotePathSegments) + (local.jobRemoteFileName ?: local.localRelativePath.substringAfterLast('/'))
+      }.toSet()
+      val sharedOwner = sources.firstOrNull { it.remotePathSegments == source.remotePathSegments }?.id
+      val visibleRemote = remoteForSource(source, sources, remote).filter { file ->
+        file.relativePath in ownPaths ||
+          (source.remotePathSegments + file.relativePath.split('/')) !in otherPaths && sharedOwner == source.id
+      }
+      reconcileInventory(source, own, visibleRemote)
     }.sortedWith(
       compareByDescending<Map<String, Any?>> { it["modifiedAt"] as? String }
         .thenBy { it["relativePath"] as String },
@@ -340,11 +361,13 @@ private fun transferMap(local: LocalInventoryView): Map<String, Any?> = when (lo
   JobState.RETRY_WAIT -> mapOf(
     "status" to "failed",
     "code" to (local.jobLastErrorCode ?: "retry_wait"),
+    "message" to uploadFailureMessage(local.jobLastErrorCode ?: "retry_wait"),
     "retryable" to true,
   )
   else -> mapOf(
     "status" to "failed",
     "code" to (local.jobLastErrorCode ?: local.jobState ?: "blocked"),
+    "message" to uploadFailureMessage(local.jobLastErrorCode ?: local.jobState ?: "blocked"),
     "retryable" to false,
   )
 }

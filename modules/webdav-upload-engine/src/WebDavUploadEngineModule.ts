@@ -2,6 +2,9 @@ import { NativeModule, requireNativeModule } from "expo";
 import { z } from "zod";
 
 import {
+  destinationChangeSchema,
+  destinationChangeRequestSchema,
+  type DestinationChangeRequest,
   mediaFolderSchema,
   uploadDetailSchema,
   activityPageSchema,
@@ -56,6 +59,12 @@ import {
 } from "./WebDavUploadEngine.types";
 
 declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineModuleEvents> {
+  getBackupRootAsync(fallback: string[]): Promise<unknown>;
+  previewDestinationChangeAsync(request: DestinationChangeRequest): Promise<unknown>;
+  beginDestinationChangeAsync(request: DestinationChangeRequest, mode: "move" | "copy"): Promise<unknown>;
+  getDestinationChangeAsync(): Promise<unknown>;
+  runDestinationChangeAsync(id: string, uploadCopies: boolean): Promise<unknown>;
+  acknowledgeDestinationChangeAsync(id: string): Promise<void>;
   openPlayStoreAsync(androidPackage: string): Promise<boolean>;
   getSnapshotAsync(): Promise<unknown>;
   getSourcesAsync(): Promise<unknown>;
@@ -172,6 +181,27 @@ async function runValueCommand<T>(
 }
 
 export const webDavUploadEngine = {
+  getBackupRoot: (fallback: string[]) => runValueCommand(
+    () => nativeModule.getBackupRootAsync(remotePathSegmentsSchema.parse(fallback)),
+    (value) => remotePathSegmentsSchema.parse(value),
+  ),
+  previewDestinationChange: (request: DestinationChangeRequest) => runValueCommand(
+    () => nativeModule.previewDestinationChangeAsync(destinationChangeRequestSchema.parse(request)),
+    (value) => destinationChangeSchema.parse(value),
+  ),
+  beginDestinationChange: (request: DestinationChangeRequest, mode: "move" | "copy") => runValueCommand(
+    () => nativeModule.beginDestinationChangeAsync(destinationChangeRequestSchema.parse(request), mode),
+    (value) => destinationChangeSchema.parse(value),
+  ),
+  getDestinationChange: () => runValueCommand(
+    () => nativeModule.getDestinationChangeAsync(),
+    (value) => destinationChangeSchema.nullable().parse(value),
+  ),
+  runDestinationChange: (id: string, uploadCopies = false) => runValueCommand(
+    () => nativeModule.runDestinationChangeAsync(id, uploadCopies),
+    (value) => destinationChangeSchema.parse(value),
+  ),
+  acknowledgeDestinationChange: (id: string) => runCommand(() => nativeModule.acknowledgeDestinationChangeAsync(id)),
   openPlayStore: (androidPackage: string) => runValueCommand(
     () => nativeModule.openPlayStoreAsync(androidPackage),
     (value) => z.boolean().parse(value),

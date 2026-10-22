@@ -26,7 +26,6 @@ import {
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { SourceCard } from "@/features/sources/SourceCard";
 import { SourceEditor } from "@/features/sources/SourceEditor";
-import { RestoreSourcePermission } from "@/features/sources/RestoreSourcePermission";
 import { attentionBlockers } from "@/lib/upload-status";
 import { UploadControls } from "@/components/UploadControls";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -124,6 +123,7 @@ const FileRow = memo(function FileRow({
         >
           {entry.fileName}
         </Text>
+        {entry.transfer?.status === "failed" ? <Text className="text-base text-red-700 dark:text-red-300">{entry.transfer.message ?? `Upload failed (${entry.transfer.code}).`}</Text> : null}
         {transfer ? (
           <Text className="text-base text-muted-light dark:text-muted-dark">
             {transfer}
@@ -166,15 +166,9 @@ export default function StatusScreen() {
     [inventory.data],
   );
   const inventoryErrors = inventory.data?.pages[0]?.errors ?? [];
-  const blockers = attentionBlockers(snapshot.data?.blockers ?? []);
+  const blockers = attentionBlockers(snapshot.data?.blockers ?? []).filter((blocker) => blocker.kind !== "job" && blocker.kind !== "permission");
   const actionableFailures = failures.data?.filter((failure) => !failure.retryable);
   const hasFailures = Boolean(actionableFailures?.length);
-  const failureDetails = actionableFailures?.filter(
-    (failure) =>
-      !snapshot.data?.blockers.some(
-        (blocker) => blocker.kind === "job" && blocker.jobId === failure.jobId,
-      ),
-  );
 
   const retryFailed = async () => {
     setRetrying(true);
@@ -242,7 +236,8 @@ export default function StatusScreen() {
             {snapshot.data ? <UploadControls snapshot={snapshot.data} now={now} onError={setErrorMessage} onScanned={() => inventory.refetch()} /> : null}
             {snapshot.data?.sources.map((source) => (
               <SourceCard key={source.id} source={source} snapshot={snapshot.data!}
-                now={now} onEdit={() => setEditingSourceId(source.id)} />
+                now={now} inventoryError={inventoryErrors.find((error) => error.sourceId === source.id)?.message}
+                onEdit={() => setEditingSourceId(source.id)} />
             ))}
             {snapshot.isLoading || inventory.isLoading ? (
               <Text
@@ -276,14 +271,8 @@ export default function StatusScreen() {
                     />
                   ) : null}
                 </View>
-                <Panel>
+                {blockers.length ? <Panel>
                   {blockers.map((blocker, index) => {
-                    const source =
-                      blocker.kind === "permission"
-                        ? snapshot.data?.sources.find(
-                            (item) => item.id === blocker.sourceId,
-                          )
-                        : undefined;
                     return (
                       <Fragment key={`${blocker.kind}-${index}`}>
                         {index ? <Separator /> : null}
@@ -302,49 +291,15 @@ export default function StatusScreen() {
                               }
                               tone="primary"
                             />
-                          ) : blocker.kind === "permission" && source ? (
-                            <RestoreSourcePermission
-                              blocker={blocker}
-                              source={source}
-                            />
                           ) : null}
                         </View>
                       </Fragment>
                     );
                   })}
-                  {failureDetails?.slice(0, 10).map((failure, index) => (
-                    <Fragment key={failure.id}>
-                      {index || blockers.length ? (
-                        <Separator />
-                      ) : null}
-                      <Text className="text-base text-ink-light dark:text-ink-dark">
-                        {failure.message}
-                      </Text>
-                    </Fragment>
-                  ))}
-                  {failureDetails && failureDetails.length > 10 ? (
-                    <Text className="text-base text-muted-light dark:text-muted-dark">
-                      {failureDetails.length - 10} more failures. Use the Failed
-                      filter to browse affected files.
-                    </Text>
-                  ) : null}
-                </Panel>
+                </Panel> : null}
+                {hasFailures ? <ActionButton label="Show failed files" onPress={() => { setStatusFilter("failed"); setSourceFilter(null); }} /> : null}
               </View>
             ) : null}
-            {inventoryErrors.map((error) => (
-              <Text
-                accessibilityLiveRegion="polite"
-                className="text-base text-red-700 dark:text-red-300"
-                key={error.sourceId}
-              >
-                Nextcloud files for{" "}
-                {snapshot.data?.sources.find(
-                  (source) => source.id === error.sourceId,
-                )?.name ?? "this source"}{" "}
-                could not be loaded. {error.message} Local files are still
-                shown.
-              </Text>
-            ))}
             <View className="mt-2 gap-2">
               <View className="flex-row items-center justify-between gap-2">
                 <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">

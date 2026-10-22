@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 
+import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { project } from "@/config/project";
 import { remotePathSegmentsSchema } from "../../modules/webdav-upload-engine/src/WebDavUploadEngine.types";
 
@@ -17,7 +18,7 @@ const defaultRemoteRootPath: string[] = [project.defaultRemoteFolder];
 
 type AppPreferences = { remoteRootPath: string[]; hiddenMediaFolders: string[] };
 type AppPreferencesContextValue = AppPreferences & {
-  setRemoteRootPath: (path: string[]) => Promise<void>;
+  refreshRemoteRoot: () => Promise<void>;
   setHiddenMediaFolders: (folders: string[]) => Promise<void>;
 };
 
@@ -36,8 +37,7 @@ function readPreferences(value: string | null): AppPreferences {
       ? parsed.hiddenMediaFolders.filter((value): value is string => typeof value === "string")
       : [];
     return remoteRootPath.success
-      ? { remoteRootPath: remoteRootPath.data.length === 1 && remoteRootPath.data[0] === "Cloud Hoist"
-          ? defaultRemoteRootPath : remoteRootPath.data, hiddenMediaFolders }
+      ? { remoteRootPath: remoteRootPath.data, hiddenMediaFolders }
       : { remoteRootPath: defaultRemoteRootPath, hiddenMediaFolders: [] };
   } catch {
     return { remoteRootPath: defaultRemoteRootPath, hiddenMediaFolders: [] };
@@ -49,18 +49,20 @@ export function AppPreferencesProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     void AsyncStorage.getItem(STORAGE_KEY)
-      .then((value) => {
-        setPreferences(readPreferences(value));
+      .then(async (value) => {
+        const saved = readPreferences(value);
+        const root = await webDavUploadEngine.getBackupRoot(saved.remoteRootPath);
+        setPreferences({ ...saved, remoteRootPath: root.ok ? root.value : saved.remoteRootPath });
       })
       .catch(() => {
         setPreferences({ remoteRootPath: defaultRemoteRootPath, hiddenMediaFolders: [] });
       });
   }, []);
 
-  const setRemoteRootPath = async (remoteRootPath: string[]) => {
-    const next = { ...preferences!, remoteRootPath };
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    setPreferences(next);
+  const refreshRemoteRoot = async () => {
+    const root = await webDavUploadEngine.getBackupRoot(defaultRemoteRootPath);
+    if (!root.ok) throw new Error(root.error.message);
+    setPreferences((previous) => previous ? { ...previous, remoteRootPath: root.value } : previous);
   };
 
   const setHiddenMediaFolders = async (hiddenMediaFolders: string[]) => {
@@ -73,7 +75,7 @@ export function AppPreferencesProvider({ children }: PropsWithChildren) {
 
   return (
     <AppPreferencesContext.Provider
-      value={{ ...preferences, setRemoteRootPath, setHiddenMediaFolders }}
+      value={{ ...preferences, refreshRemoteRoot, setHiddenMediaFolders }}
     >
       {children}
     </AppPreferencesContext.Provider>

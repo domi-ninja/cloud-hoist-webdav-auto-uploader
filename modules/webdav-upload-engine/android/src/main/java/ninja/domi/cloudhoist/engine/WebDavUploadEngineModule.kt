@@ -41,6 +41,9 @@ class WebDavUploadEngineModule : Module() {
   private val remoteFolderManager by lazy {
     RemoteFolderManager(accountRepository, NextcloudDavClient())
   }
+  private val destinationChanges by lazy {
+    DestinationChangeManager(engineDatabase, accountRepository)
+  }
   private val fileInventoryManager by lazy {
     FileInventoryManager(
       engineDatabase.engineDao(),
@@ -175,6 +178,41 @@ class WebDavUploadEngineModule : Module() {
       )
     }
 
+    AsyncFunction("getBackupRootAsync") Coroutine { fallback: List<String> ->
+      withContext(Dispatchers.IO) { destinationChanges.root(fallback) }
+    }
+
+    AsyncFunction("previewDestinationChangeAsync") Coroutine { request: DestinationChangeRequest ->
+      withContext(Dispatchers.IO) { destinationChanges.preview(request) }
+    }
+
+    AsyncFunction("beginDestinationChangeAsync") Coroutine { request: DestinationChangeRequest, mode: String ->
+      withContext(Dispatchers.IO) { destinationChanges.begin(request, mode).also { engine.invalidate() } }
+    }
+
+    AsyncFunction("getDestinationChangeAsync") Coroutine { ->
+      withContext(Dispatchers.IO) { destinationChanges.pending()?.summary() }
+    }
+
+    AsyncFunction("runDestinationChangeAsync") Coroutine { id: String, uploadCopies: Boolean ->
+      withContext(Dispatchers.IO) { destinationChanges.run(id, uploadCopies).also { engine.invalidate() } }
+    }
+
+    AsyncFunction("acknowledgeDestinationChangeAsync") Coroutine { id: String ->
+      withContext(Dispatchers.IO) {
+        destinationChanges.acknowledge(id)
+        val root = destinationChanges.root()
+        val rootJson = org.json.JSONArray(root).toString()
+        val lastUpload = engineDatabase.engineDao().latestCompletedUploadInRoot(rootJson, rootJson.dropLast(1) + ",%")
+        accountRepository.credential()?.let { credential ->
+          runCatching { PhoneUploadReadme().write(credential, lastUpload?.let(java.time.Instant::ofEpochMilli), onlyIfMissing = true, root = root) }
+        }
+        engine.invalidate()
+        workScheduler.requestFullScan()
+        workScheduler.requestQueueDrain()
+      }
+    }
+
     AsyncFunction("getSourcesAsync") {
       engine.sources()
     }
@@ -280,6 +318,7 @@ class WebDavUploadEngineModule : Module() {
     }
 
     AsyncFunction("replaceManualAccountAsync") { input: ManualAccountInputRecord ->
+      EngineOperations.requireAvailable(engineDatabase.engineDao())
       accountManager.replaceManual(
         serverUrl = input.serverUrl,
         username = input.username,
@@ -317,8 +356,8 @@ class WebDavUploadEngineModule : Module() {
         parentPathSegments: List<String>, name: String ->
       withContext(Dispatchers.IO) {
         remoteFolderManager.create(parentPathSegments, name).also { folder ->
-          if (folder.pathSegments == listOf("Phone Uploads")) {
-            accountRepository.credential()?.let { PhoneUploadReadme().write(it, null, onlyIfMissing = true) }
+          if (folder.pathSegments == destinationChanges.root()) {
+            accountRepository.credential()?.let { PhoneUploadReadme().write(it, null, onlyIfMissing = true, root = folder.pathSegments) }
           }
         }.toMap()
       }

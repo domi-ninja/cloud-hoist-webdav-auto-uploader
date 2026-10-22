@@ -82,9 +82,9 @@ class EngineDaoTest {
     dao.upsertSource(source().copy(remotePathSegments = listOf("Phone Uploads", "Pictures")))
     dao.enqueueRevision(revision("readme"), job("readme", "readme", 1).copy(
       state = JobState.COMPLETED, completedAt = 1234, remotePathSegments = listOf("Phone Uploads", "Pictures")))
-    assertEquals(1234L, dao.latestCompletedUploadInPhoneUploads())
+    assertEquals(1234L, dao.latestCompletedUploadInRoot("[\"Phone Uploads\"]", "[\"Phone Uploads\",%"))
     dao.upsertSource(source().copy(remotePathSegments = listOf("Other")))
-    assertNull(dao.latestCompletedUploadInPhoneUploads())
+    assertNull(dao.latestCompletedUploadInRoot("[\"Phone Uploads\"]", "[\"Phone Uploads\",%"))
   }
 
   @Test
@@ -438,6 +438,18 @@ class EngineDaoTest {
       migrated.query("SELECT lastSeenAt FROM local_revisions WHERE id = 'revision-1'").use { cursor ->
         assertTrue(cursor.moveToFirst())
         assertEquals(100L, cursor.getLong(0))
+      }
+    }
+  }
+
+  @Test
+  fun migrationSixToSevenPreservesExistingSourcesAndAddsDurableDestinationSettings() {
+    val name = "engine-migration-six-seven.db"
+    migrationHelper.createDatabase(name, 6).apply { close() }
+    migrationHelper.runMigrationsAndValidate(name, 7, true, EngineRoomDatabase.MIGRATION_6_7).use { migrated ->
+      migrated.execSQL("INSERT INTO engine_settings (`key`, value) VALUES ('backup_root', '[\"Phone Uploads\"]')")
+      migrated.query("SELECT value FROM engine_settings WHERE `key` = 'backup_root'").use { cursor ->
+        assertTrue(cursor.moveToFirst()); assertEquals("[\"Phone Uploads\"]", cursor.getString(0))
       }
     }
   }

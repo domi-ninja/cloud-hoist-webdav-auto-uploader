@@ -14,6 +14,7 @@ All existing files in a selected folder are included. Start with a small folder 
 ## Backup behavior
 
 - New backups default to `/Phone Uploads`, followed by the local parent and folder names. Change the destination during setup or the upload root in Settings. The root contains a readme with the last completed upload timestamp.
+- Changing the upload root updates every backup destination while keeping custom subpaths. Destination changes offer moving existing files or uploading copies. Multiple backups can share the same remote folder.
 - Local edits upload again and replace destination files by default. Originals stay on the phone. Deleting a phone file keeps its uploaded copy; deleting a server copy does not automatically upload an unchanged local file again.
 - Uploads wait for an unmetered connection and sufficient battery by default. Charging is optional. Android can delay background work; Status reports the current reason.
 - Pause stops uploads globally. A folder switch controls that folder. Disabled folders are excluded from overall progress. Removing a backup folder removes its queue and history, without deleting phone or server files.

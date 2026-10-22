@@ -49,6 +49,9 @@ export function UploadControls({ snapshot, now, onError, onScanned }: {
             onPress={() => void toggle()} />
         ) : undefined}
         onRescan={connected ? () => void scan() : undefined} scanning={scanning} />
+      {snapshot.worker.state === "waiting" && snapshot.worker.reason === "Destination change unfinished" ? (
+        <ActionButton label="Continue destination change" onPress={() => router.navigate("/settings")} />
+      ) : null}
       {connected && snapshot.blockers.length ? (
         <ActionButton label={`${snapshot.blockers.length} ${snapshot.blockers.length === 1 ? "issue" : "issues"}`}
           tone="danger" onPress={() => router.navigate("/status")} />

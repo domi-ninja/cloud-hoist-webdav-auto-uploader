@@ -1,3 +1,4 @@
+import { ensureRemoteDestination } from "./default-destination";
 import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
@@ -11,6 +12,7 @@ import { List } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
+  remotePathSegmentSchema,
   type RemoteFolder,
 } from "../../../modules/webdav-upload-engine";
 import {
@@ -24,6 +26,8 @@ import {
 
 type RemoteFolderPickerProps = {
   initialPathSegments?: string[];
+  rootPathSegments?: string[];
+  onError?: (message: string) => void;
   onSelect: (pathSegments: string[]) => void;
   onClose: () => void;
   title?: string;
@@ -31,19 +35,26 @@ type RemoteFolderPickerProps = {
 
 export function RemoteFolderPicker({
   initialPathSegments = [],
+  rootPathSegments = [],
+  onError,
   onSelect,
   onClose,
   title = "Choose upload destination",
 }: RemoteFolderPickerProps) {
-  const [pathSegments, setPathSegments] = useState(initialPathSegments);
+  const withinRoot = (path: string[]) => rootPathSegments.every((segment, index) => path[index] === segment);
+  const [pathSegments, setPathSegments] = useState(withinRoot(initialPathSegments) ? initialPathSegments : rootPathSegments);
   const [folders, setFolders] = useState<RemoteFolder[]>([]);
   const [newFolderName, setNewFolderName] = useState("");
   const [addingFolder, setAddingFolder] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
+  const [missing, setMissing] = useState(false);
   const [reload, setReload] = useState(0);
   const request = useRef(0);
+  useEffect(function reportFolderError() {
+    if (error) onError?.(error);
+  }, [error, onError]);
 
   useEffect(() => {
     const id = ++request.current;
@@ -52,7 +63,10 @@ export function RemoteFolderPicker({
       .then((result) => {
         if (request.current !== id) return;
         if (result.ok) setFolders(result.value);
-        else setError(result.error.message);
+        else {
+          setError(result.error.message);
+          setMissing(result.error.code === "dav_not_found");
+        }
       })
       .catch(() => {
         if (request.current === id)
@@ -71,17 +85,24 @@ export function RemoteFolderPicker({
   const refresh = () => {
     setLoading(true);
     setError(undefined);
+    setMissing(false);
     setReload((value) => value + 1);
   };
   const openPath = (path: string[]) => {
+    if (!withinRoot(path)) { setError("Choose a folder inside the backup root."); return; }
     setLoading(true);
     setError(undefined);
     setFolders([]);
+    setMissing(false);
     setPathSegments(path);
   };
   const createFolder = async () => {
     const name = newFolderName.trim();
     if (!name || creating) return;
+    if (!remotePathSegmentSchema.safeParse(name).success) {
+      setError("Enter a folder name without slashes, or . or .. as the whole name.");
+      return;
+    }
     setCreating(true);
     setError(undefined);
     try {
@@ -101,6 +122,16 @@ export function RemoteFolderPicker({
     } finally {
       setCreating(false);
     }
+  };
+
+  const createCurrentFolder = async () => {
+    setCreating(true);
+    try {
+      const result = await ensureRemoteDestination(pathSegments, webDavUploadEngine.createRemoteFolder);
+      if (!result.ok) { setError(result.error.message); return; }
+      refresh();
+    } catch { setError("The destination folder could not be created."); }
+    finally { setCreating(false); }
   };
 
   return (
@@ -142,7 +173,7 @@ export function RemoteFolderPicker({
               <IconAction
                 icon="arrow-up"
                 label="Up one folder"
-                disabled={!pathSegments.length || creating}
+                disabled={pathSegments.length <= rootPathSegments.length || creating}
                 onPress={() => openPath(pathSegments.slice(0, -1))}
               />
               <Text
@@ -175,6 +206,7 @@ export function RemoteFolderPicker({
               </View>
             ) : null}
             {error ? <ErrorNotice message={error} onRetry={refresh} /> : null}
+            {missing ? <ActionButton label="Create this folder" disabled={creating} loading={creating} onPress={() => void createCurrentFolder()} /> : null}
             <ActionButton
               icon="check"
               label="Use this folder"

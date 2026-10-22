@@ -180,3 +180,7 @@ data class ChunkSessionRecord(
   val modifiedAt: Long,
   val createdAt: Long?,
 )
+
+/** Root and pending destination operation share Room transactions with source/job changes. */
+@Entity(tableName = "engine_settings")
+data class EngineSettingEntity(@PrimaryKey val key: String, val value: String)

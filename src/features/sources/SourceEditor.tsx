@@ -3,6 +3,7 @@ import { Alert, Modal, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import webDavUploadEngine, {
+  type DestinationChangeRequest,
   type EngineError,
   type SourcePreview,
   type SourceSelection,
@@ -18,6 +19,7 @@ import {
   ensureRemoteDestination,
 } from "./default-destination";
 import { LocalSourcePicker } from "./LocalSourcePicker";
+import { DestinationChangeModal } from "./DestinationChangeModal";
 import { RemoteFolderPicker } from "./RemoteFolderPicker";
 import { SourcePreviewThumbnails } from "./SourcePreviewThumbnails";
 import {
@@ -77,6 +79,8 @@ export function SourceEditor({
   const [previewAttempt, setPreviewAttempt] = useState(0);
   const [selectingLocal, setSelectingLocal] = useState(false);
   const [choosingRemote, setChoosingRemote] = useState(false);
+  const [confirmingDestination, setConfirmingDestination] = useState<DestinationChangeRequest>();
+  const [destinationError, setDestinationError] = useState<string>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<EngineError>();
   useEffect(() => {
@@ -162,8 +166,12 @@ export function SourceEditor({
     );
   };
 
-  const save = async () => {
+  const save = async (destinationConfirmed = false) => {
     if (!selection || !canSave) return;
+    if (source && source.remotePath !== `/${remotePathSegments.join("/")}` && !destinationConfirmed) {
+      setConfirmingDestination({ sourceId: source.id, pathSegments: remotePathSegments, rootChange: false });
+      return;
+    }
     setBusy(true);
     setError(undefined);
     try {
@@ -173,7 +181,7 @@ export function SourceEditor({
       );
       if (!destination.ok) {
         setBusy(false);
-        setError(destination.error);
+        setDestinationError(destination.error.message);
         return;
       }
 
@@ -198,17 +206,14 @@ export function SourceEditor({
 
       if (!result.ok) {
         setBusy(false);
-        setError(result.error);
+        setDestinationError(result.error.message);
         return;
       }
 
       setBusy(false);
       onSaved();
     } catch {
-      setError({
-        code: "native_failure",
-        message: "The backup folder could not be saved. Please try again.",
-      });
+      setDestinationError("The backup folder could not be saved. Check the destination and try again.");
     } finally {
       setBusy(false);
     }
@@ -348,23 +353,30 @@ export function SourceEditor({
                   />
                 </View>
               </Panel>
+              {confirmingDestination ? (
+                <DestinationChangeModal
+                  request={confirmingDestination}
+                  onClose={() => setConfirmingDestination(undefined)}
+                  onCompleted={() => { setConfirmingDestination(undefined); void save(true); }}
+                />
+              ) : null}
               {choosingRemote ? (
                 <RemoteFolderPicker
                   onClose={() => setChoosingRemote(false)}
-                  title="Choose destination parent folder"
-                  initialPathSegments={remoteRootPath}
+                  title="Choose backup destination"
+                  initialPathSegments={remotePathSegments}
+                  rootPathSegments={remoteRootPath}
+                  onError={setDestinationError}
                   onSelect={(pathSegments) => {
-                    setRemotePathSegments(
-                      selection
-                        ? defaultRemotePath(selection, pathSegments)
-                        : pathSegments,
-                    );
+                    setRemotePathSegments(pathSegments);
+                    setDestinationError(undefined);
                     setChoosingRemote(false);
                   }}
                 />
               ) : null}
             </>
           ) : null}
+          {destinationError ? <Text accessibilityLiveRegion="polite" className="text-base text-red-700 dark:text-red-300">{destinationError}</Text> : null}
           {error ? (
             <Text
               accessibilityLiveRegion="polite"

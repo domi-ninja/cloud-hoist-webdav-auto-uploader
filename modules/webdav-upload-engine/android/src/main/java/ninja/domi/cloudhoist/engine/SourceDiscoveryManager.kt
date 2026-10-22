@@ -1,6 +1,7 @@
 package ninja.domi.cloudhoist.engine
 
 import java.util.UUID
+import kotlin.concurrent.withLock
 
 enum class SourceType {
   CAMERA,
@@ -61,7 +62,12 @@ class SourceDiscoveryManager(
     return discovery.files.toSourcePreview(discovery.permissionAccess, offset, pageSize = 40)
   }
 
-  fun commit(input: SourceCommit): SourceCommitResult {
+  fun commit(input: SourceCommit): SourceCommitResult = EngineOperations.lock.withLock {
+    recorder.requireAvailable()
+    commitLocked(input)
+  }
+
+  private fun commitLocked(input: SourceCommit): SourceCommitResult {
     val account = accountRepository.currentAccount() ?: throw AccountNotConfiguredException()
     if (input.name.isBlank()) throw EngineInvalidInputException("Source name is required.")
     val destination = DavPath.validate(input.remotePathSegments)
@@ -89,7 +95,12 @@ class SourceDiscoveryManager(
     return SourceCommitResult(sourceId, recorded.preview, recorded.jobsAdded)
   }
 
-  fun scan(sourceId: String): SourceScanResult {
+  fun scan(sourceId: String): SourceScanResult = EngineOperations.lock.withLock {
+    recorder.requireAvailable()
+    scanLocked(sourceId)
+  }
+
+  private fun scanLocked(sourceId: String): SourceScanResult {
     val source = recorder.source(sourceId) ?: throw EngineSourceNotFoundException(sourceId)
     return try {
       val discovery = discover(source.selection())

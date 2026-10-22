@@ -82,6 +82,30 @@ class EngineTypeConverters {
 
 @Dao
 interface EngineDao {
+  @Query("SELECT value FROM engine_settings WHERE `key` = :key")
+  fun setting(key: String): String?
+
+  @Query("SELECT * FROM engine_settings WHERE `key` LIKE :prefix || '%'")
+  fun settingsWithPrefix(prefix: String): List<EngineSettingEntity>
+
+  @Query("DELETE FROM engine_settings WHERE `key` LIKE :prefix || '%'")
+  fun deleteSettingsWithPrefix(prefix: String): Int
+
+  @Upsert
+  fun putSetting(setting: EngineSettingEntity)
+
+  @Query("DELETE FROM engine_settings WHERE `key` = :key")
+  fun deleteSetting(key: String): Int
+
+  @Query("SELECT * FROM upload_jobs WHERE sourceId = :sourceId")
+  fun sourceJobs(sourceId: String): List<UploadJobEntity>
+
+  @Upsert
+  fun updateJob(job: UploadJobEntity)
+
+  @Query("SELECT * FROM local_revisions WHERE sourceId = :sourceId AND lastSeenAt = :scanAt")
+  fun currentRevisions(sourceId: String, scanAt: Long): List<LocalRevisionEntity>
+
   @Upsert
   fun upsertAccount(account: AccountEntity)
 
@@ -144,9 +168,9 @@ interface EngineDao {
     SELECT MAX(upload_jobs.completedAt) FROM upload_jobs
     INNER JOIN sources ON sources.id = upload_jobs.sourceId
     WHERE upload_jobs.state = 'completed' AND sources.enabled = 1
-      AND (sources.remotePathSegments = '["Phone Uploads"]' OR sources.remotePathSegments LIKE '["Phone Uploads",%')
+      AND (:root = '[]' OR sources.remotePathSegments = :root OR sources.remotePathSegments LIKE :descendants)
   """)
-  fun latestCompletedUploadInPhoneUploads(): Long?
+  fun latestCompletedUploadInRoot(root: String, descendants: String): Long?
 
   @Query("SELECT * FROM accounts WHERE blockerCode IS NOT NULL ORDER BY id ASC")
   fun blockedAccounts(): List<AccountEntity>
@@ -492,6 +516,9 @@ interface EngineDao {
   @Transaction
   fun wipe() {
     deleteAllAccounts()
+    deleteSetting(DESTINATION_CHANGE)
+    deleteSettingsWithPrefix("destination-file:")
+    deleteSetting(BACKUP_ROOT)
   }
 
   @Transaction
@@ -542,8 +569,9 @@ interface EngineDao {
     UploadJobEntity::class,
     UploadAttemptEntity::class,
     ChunkCheckpointEntity::class,
+    EngineSettingEntity::class,
   ],
-  version = 6,
+  version = 7,
   exportSchema = true,
 )
 @TypeConverters(EngineTypeConverters::class)
@@ -565,6 +593,7 @@ abstract class EngineRoomDatabase : RoomDatabase() {
         MIGRATION_3_4,
         MIGRATION_4_5,
         MIGRATION_5_6,
+        MIGRATION_6_7,
       ).build()
         .also { instance = it }
     }
@@ -683,5 +712,11 @@ abstract class EngineRoomDatabase : RoomDatabase() {
         database.execSQL("UPDATE local_revisions SET lastSeenAt = discoveredAt")
       }
     }
+    val MIGRATION_6_7 = object : Migration(6, 7) {
+      override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("CREATE TABLE IF NOT EXISTS engine_settings (`key` TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL)")
+      }
+    }
+
   }
 }

@@ -13,6 +13,8 @@ class SourceRevisionRecorder(
   private val newId: () -> String = { UUID.randomUUID().toString() },
   private val now: () -> Long = System::currentTimeMillis,
 ) {
+  fun requireAvailable() = EngineOperations.requireAvailable(dao)
+
   fun source(sourceId: String): SourceEntity? = dao.source(sourceId)
 
   fun markBlocked(sourceId: String, blocker: SourceAccessBlocker) {
