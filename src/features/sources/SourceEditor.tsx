@@ -357,7 +357,15 @@ export function SourceEditor({
                 <DestinationChangeModal
                   request={confirmingDestination}
                   onClose={() => setConfirmingDestination(undefined)}
-                  onCompleted={() => { setConfirmingDestination(undefined); void save(true); }}
+                  onCompleted={(completed) => {
+                    setConfirmingDestination(undefined);
+                    const route = completed.routes.find((route) => route.sourceId === source?.id);
+                    if (route && JSON.stringify(route.to) === JSON.stringify(confirmingDestination.pathSegments)) {
+                      void save(true);
+                    } else {
+                      onSaved(); onClose();
+                    }
+                  }}
                 />
               ) : null}
               {choosingRemote ? (

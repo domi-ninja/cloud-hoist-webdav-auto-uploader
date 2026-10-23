@@ -74,15 +74,79 @@ class DestinationChangeTest {
     assertEquals("completed", op.state)
     assertEquals(JobState.QUEUED, dao.job("job-one")!!.state)
   }
-  @Test fun conflictingFilenameIsReportedWithSpecificFileAndDoesNotOverwrite() {
+  @Test fun conflictingFilenameGetsNextFreeSuffixAndUpdatesJob() {
     val old = source("one"); val target = listOf("Old", "New", "one.jpg")
     network.files[target] = "unrelated"
+    network.files[numberedDestination(target, 1)] = "also-unrelated"
+    val op = run(target.dropLast(1))
+    assertEquals("completed", op.state)
+    assertEquals("unrelated", network.files[target]); assertFalse(network.files.containsKey(old))
+    assertEquals("etag-one", network.files[numberedDestination(target, 2)])
+    assertEquals("one_2.jpg", dao.job("job-one")!!.remoteFileName)
+  }
+  @Test fun identicalContentWithDifferentEtagsDeletesOnlyOriginal() {
+    val old = source("one"); val target = listOf("Old", "New", "one.jpg")
+    network.files[target] = "different-version"
+    network.hashes[old] = "same-content"; network.hashes[target] = "same-content"
+    val op = run(target.dropLast(1))
+    assertEquals("completed", op.state)
+    assertFalse(network.files.containsKey(old)); assertEquals("different-version", network.files[target])
+    assertEquals(listOf(old), network.deletions); assertTrue(network.calls.isEmpty())
+  }
+  @Test fun lostDeleteResponseRecoversUsingDestinationVersionAfterRestart() {
+    val old = source("one"); val target = listOf("Old", "New", "one.jpg")
+    network.files[target] = "different-version"
+    network.hashes[old] = "same"; network.hashes[target] = "same"
+    network.loseDeleteResponse = true
     val op = run(target.dropLast(1))
     assertEquals("failed", op.state)
-    assertEquals("one", op.errorSourceId); assertEquals("/Old/Custom/one.jpg", op.errorFile)
-    assertTrue(op.message!!.contains("already exists"))
-    assertEquals("unrelated", network.files[target]); assertTrue(network.files.containsKey(old))
-    assertEquals(listOf("Old", "Custom"), dao.source("one")!!.remotePathSegments)
+    manager().run(op.id)
+    assertEquals("completed", manager().pending()!!.state)
+    assertEquals(1, network.deletions.size)
+    assertEquals(JobState.COMPLETED, dao.job("job-one")!!.state)
+  }
+  @Test fun lostRenamedMoveResponseRetainsChosenNameAfterRestart() {
+    source("one"); val target = listOf("Old", "New", "one.jpg")
+    network.files[target] = "other"; network.loseResponse = true
+    val op = run(target.dropLast(1))
+    assertEquals("failed", op.state)
+    manager().run(op.id)
+    assertEquals("completed", manager().pending()!!.state)
+    assertEquals("one_1.jpg", dao.job("job-one")!!.remoteFileName)
+    assertEquals(1, network.calls.size)
+  }
+  private fun collidingBatch(count: Int): DestinationOperation {
+    for (i in 1..count) {
+      val old = source("batch-$i", listOf("Old", "Batch"))
+      val target = listOf("New", "Batch", "batch-$i.jpg")
+      network.files[target] = "destination-$i"
+      network.hashes[old] = "same"; network.hashes[target] = "same"
+    }
+    return run(listOf("New"), null)
+  }
+  @Test fun twentyFilesCompareContent() {
+    assertEquals("completed", collidingBatch(20).state)
+    assertEquals(40, network.hashCalls); assertEquals(20, network.deletions.size)
+  }
+  @Test fun twentyOneFilesSkipHashingEvenWhenIdentical() {
+    assertEquals("completed", collidingBatch(21).state)
+    assertEquals(0, network.hashCalls); assertTrue(network.deletions.isEmpty())
+    assertEquals("batch-1_1.jpg", dao.job("job-batch-1")!!.remoteFileName)
+  }
+  @Test fun sharedIdenticalOriginalIsNotDeleted() {
+    val old = source("one", name = "shared.jpg"); source("two", name = "shared.jpg")
+    val target = listOf("Old", "New", "shared.jpg")
+    network.files[target] = "different"
+    network.hashes[old] = "same"; network.hashes[target] = "same"
+    assertEquals("completed", run(target.dropLast(1)).state)
+    assertTrue(network.files.containsKey(old)); assertTrue(network.deletions.isEmpty())
+  }
+  @Test fun collisionAppearingAfterLookupRetriesAutomatically() {
+    source("one"); network.raceDestination = true
+    val op = run(listOf("Old", "New"))
+    assertEquals("completed", op.state)
+    assertEquals("one_1.jpg", dao.job("job-one")!!.remoteFileName)
+    assertEquals("racing-file", network.files[listOf("Old", "New", "one.jpg")])
   }
   @Test fun interruptedMoveRecoversAfterManagerRestartWithoutSecondMove() {
     val old = source("one"); network.loseResponse = true
@@ -92,6 +156,36 @@ class DestinationChangeTest {
     assertEquals("completed", manager().pending()!!.state)
     assertEquals(1, network.calls.size)
     assertEquals(JobState.COMPLETED, dao.job("job-one")!!.state)
+  }
+  @Test fun switchingToCopiesAfterLostMoveResponseKeepsRemoteOnlyArchiveTracked() {
+    source("one")
+    dao.upsertSource(dao.source("one")!!.copy(lastScanAt = 200))
+    network.loseResponse = true
+    val op = run(listOf("Old", "New"))
+    assertEquals("failed", op.state)
+    manager().run(op.id, uploadCopies = true)
+    assertEquals("completed", manager().pending()!!.state)
+    assertEquals(listOf("Old", "New"), dao.job("job-one")!!.remotePathSegments)
+    assertEquals(JobState.COMPLETED, dao.job("job-one")!!.state)
+  }
+  @Test fun changedDestinationAfterLostDeleteResponseDoesNotClaimSuccess() {
+    val old = source("one"); val target = listOf("Old", "New", "one.jpg")
+    network.files[target] = "different-version"
+    network.hashes[old] = "same"; network.hashes[target] = "same"
+    network.loseDeleteResponse = true
+    val op = run(target.dropLast(1))
+    network.files[target] = "changed-after-delete"
+    manager().run(op.id)
+    assertEquals("failed", manager().pending()!!.state)
+    assertEquals(listOf("Old", "Custom"), dao.source("one")!!.remotePathSegments)
+  }
+  @Test fun sharedPhysicalCollisionIsRenamedOnlyOnceAcrossBackups() {
+    source("one", name = "shared.jpg"); source("two", name = "shared.jpg")
+    network.files[listOf("New", "Custom", "shared.jpg")] = "other"
+    val op = run(listOf("New"), null)
+    assertEquals("completed", op.state); assertEquals(1, network.calls.size)
+    assertEquals("shared_1.jpg", dao.job("job-one")!!.remoteFileName)
+    assertEquals("shared_1.jpg", dao.job("job-two")!!.remoteFileName)
   }
   @Test fun remoteChangedDuringInterruptedMoveIsNotMovedOnRetry() {
     val old = source("one"); network.failBeforeMove = true
@@ -104,7 +198,7 @@ class DestinationChangeTest {
   }
   @Test fun partialFailureCanLeaveRemainingFilesAndUploadCopies() {
     val a = source("one", listOf("Old", "A")); val b = source("two", listOf("Old", "B"))
-    network.files[listOf("New", "B", "two.jpg")] = "conflict"
+    network.failPath = b
     val op = run(listOf("New"), null)
     assertEquals("failed", op.state); assertEquals(1, op.files.count { it.done })
     manager().run(op.id, uploadCopies = true)
@@ -169,7 +263,9 @@ class DestinationChangeTest {
     assertTrue(EngineOperations.held(dao))
     assertThrows(EngineInvalidInputException::class.java) { EngineOperations.requireAvailable(dao) }
     assertThrows(EngineInvalidInputException::class.java) { manager().acknowledge(manager().pending()!!.id) }
-    val op = manager().pending()!!; manager().run(op.id); manager().acknowledge(op.id)
+    val op = manager().pending()!!; manager().run(op.id)
+    assertFalse(EngineOperations.held(dao))
+    manager().acknowledge(op.id)
     assertFalse(EngineOperations.held(dao))
   }
   @Test fun failedFileNoLongerOnPhoneStillAppearsWithItsReason() {
@@ -187,14 +283,30 @@ class DestinationChangeTest {
   private class FakeDestinationNetwork : DestinationNetworkClient {
     val files = mutableMapOf<List<String>, String>()
     val calls = mutableListOf<Triple<List<String>, List<String>, Boolean>>()
+    val hashes = mutableMapOf<List<String>, String>()
+    val deletions = mutableListOf<List<String>>()
+    var hashCalls = 0
+    var loseDeleteResponse = false
+    var raceDestination = false
+    var failPath: List<String>? = null
+    override fun hash(credential: StoredAccountCredential, path: List<String>, etag: String): String {
+      check(files[path] == etag); hashCalls++
+      return hashes[path] ?: "content-$etag"
+    }
+    override fun deleteDuplicate(credential: StoredAccountCredential, from: List<String>, to: List<String>, sourceEtag: String, targetEtag: String) {
+      check(files[from] == sourceEtag && files[to] == targetEtag)
+      files.remove(from); deletions.add(from)
+      if (loseDeleteResponse) { loseDeleteResponse = false; throw AccountNetworkException() }
+    }
     var loseResponse = false
     var failBeforeMove = false
     override fun etag(credential: StoredAccountCredential, path: List<String>) = files[path]
     override fun ensureFolder(credential: StoredAccountCredential, path: List<String>) = Unit
     override fun relocate(credential: StoredAccountCredential, from: List<String>, to: List<String>, etag: String, copy: Boolean) {
-      if (failBeforeMove) throw AccountNetworkException()
+      if (failBeforeMove || from == failPath) throw AccountNetworkException()
       check(files[from] == etag)
-      if (to in files) throw EngineInvalidInputException("A file already exists at the destination. No existing file was overwritten.")
+      if (raceDestination) { raceDestination = false; files[to] = "racing-file" }
+      if (to in files) throw DestinationPreconditionException()
       calls.add(Triple(from, to, copy)); files[to] = files[from]!!
       if (!copy) files.remove(from)
       if (loseResponse) { loseResponse = false; throw AccountNetworkException() }

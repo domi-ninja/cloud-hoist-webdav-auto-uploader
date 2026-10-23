@@ -44,7 +44,7 @@ Select the phone explicitly with `ANDROID_SERIAL`. Install the signed APK in pla
 
 Save screenshots and results under ignored `test-results/`. Record the device, Android version, app version, checks performed, and failures. Review screenshots before sharing them; they can show account names and file paths.
 
-Native destination-change tests use an isolated in-memory Room database in the test APK. They cover custom suffixes, disabled sources, shared destinations, collisions, missing files, interrupted responses, retries, and switching a partial move to uploads. `DestinationChangeLiveTest` uses unique server folders and downloaded SHA-256 hashes, never the app's configured backups. After building and installing the engine test APK, run `ANDROID_SERIAL=<phone> node scripts/test/destination-live.mjs`. It reads the ignored test credentials, redacts output, and removes only its own UUID-named server directory.
+Native destination-change tests use an isolated in-memory Room database in the test APK. They cover custom suffixes, disabled sources, shared destinations, automatic collision renaming, identical-content deletion, the 20/21-file hashing cutoff, missing files, interrupted MOVE and DELETE responses, concurrent collisions, retries, and switching a partial move to uploads. `DestinationChangeLiveTest` uses unique server folders and downloaded SHA-256 hashes to check moves, duplicate deletion, numbered collisions, and queued copies, never the app's configured backups. After building and installing the engine test APK, run `ANDROID_SERIAL=<phone> node scripts/test/destination-live.mjs`. It reads the ignored test credentials, redacts output, and removes only its own UUID-named server directory.
 
 ## Destructive test runners
 

@@ -1,6 +1,7 @@
 package ninja.domi.cloudhoist.engine
 
 import java.io.IOException
+import java.security.MessageDigest
 import okhttp3.Credentials
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
@@ -8,6 +9,7 @@ import okhttp3.Request
 
 /** Destination changes never overwrite an existing file, regardless of the upload collision policy. */
 class NextcloudDestinationClient(private val http: OkHttpClient = OkHttpClient()) : DestinationNetworkClient {
+  private companion object { const val COLLECTION_ETAG = "cloud-hoist-directory" }
   private val folders = mutableMapOf<List<String>, MutableMap<String, String?>>()
   override fun reset() { folders.clear() }
 
@@ -15,7 +17,7 @@ class NextcloudDestinationClient(private val http: OkHttpClient = OkHttpClient()
     val entries = folders.getOrPut(path.dropLast(1)) {
       try {
         NextcloudInventoryClient(http).listFolder(credential, path.dropLast(1))
-          .filterNot { it.collection }.associate { it.name to it.etag }.toMutableMap()
+          .associate { it.name to if (it.collection) COLLECTION_ETAG else it.etag }.toMutableMap()
       } catch (_: DavNotFoundException) { mutableMapOf() }
     }
     if (path.last() !in entries) return null
@@ -27,6 +29,38 @@ class NextcloudDestinationClient(private val http: OkHttpClient = OkHttpClient()
           ?: throw EngineInvalidInputException("Nextcloud did not provide a file version. The file was not moved.")
       }
     }
+  }
+
+  /** Hash a conditional stream, never the whole file in memory. ETags are versions, not hashes. */
+  override fun hash(credential: StoredAccountCredential, path: List<String>, etag: String): String? {
+    if (etag == COLLECTION_ETAG) return null
+    val url = NextcloudDavUrl.file(credential.account, path.dropLast(1), path.last())
+    return execute(request(credential, url).get().header("If-Match", etag).build()) { response ->
+      // Collections can occupy a filename too; they are never duplicate files.
+      if (response.code == 405) return@execute null
+      requireSuccess(response.code)
+      val digest = MessageDigest.getInstance("SHA-256")
+      val body = response.body ?: throw AccountUnsupportedResponseException()
+      body.byteStream().use { input ->
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+          val count = input.read(buffer)
+          if (count < 0) break
+          digest.update(buffer, 0, count)
+        }
+      }
+      digest.digest().joinToString("") { "%02x".format(it) }
+    }
+  }
+
+  override fun deleteDuplicate(credential: StoredAccountCredential, from: List<String>, to: List<String>, sourceEtag: String, targetEtag: String) {
+    val origin = NextcloudDavUrl.file(credential.account, from.dropLast(1), from.last())
+    val target = NextcloudDavUrl.file(credential.account, to.dropLast(1), to.last())
+    // Both versions must still exist when the server removes the redundant source.
+    val deletion = request(credential, origin).delete().header("If-Match", sourceEtag)
+      .header("If", "<$target> ([$targetEtag])").build()
+    execute(deletion) { response -> requireSuccess(response.code) }
+    folders[from.dropLast(1)]?.remove(from.last())
   }
 
   override fun ensureFolder(credential: StoredAccountCredential, path: List<String>) {
@@ -55,7 +89,7 @@ class NextcloudDestinationClient(private val http: OkHttpClient = OkHttpClient()
       403 -> throw DavPermissionException()
       404 -> throw DavNotFoundException()
       409 -> throw DavInvalidPathException()
-      412 -> throw EngineInvalidInputException("The file changed or the destination already contains a file. No existing file was overwritten.")
+      412 -> { reset(); throw DestinationPreconditionException() }
       423 -> throw EngineInvalidInputException("Nextcloud has locked this file. Retry when it is unlocked.")
       507 -> throw DavQuotaException()
       else -> throw EngineInvalidInputException("Nextcloud could not move the file (HTTP $code).")

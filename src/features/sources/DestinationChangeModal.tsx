@@ -11,7 +11,7 @@ type Props = {
   request?: DestinationChangeRequest;
   pending?: DestinationChange;
   onClose: () => void;
-  onCompleted: () => void;
+  onCompleted: (completed: DestinationChange) => void;
 };
 
 /** Used inside the editor's native modal as well as Settings. The journal survives dismissal/process death. */
@@ -26,11 +26,17 @@ export function DestinationChangeModal({ request, pending, onClose, onCompleted 
   useEffect(function loadDestinationPlan() {
     if (!request || pending) return;
     let active = true;
-    void webDavUploadEngine.previewDestinationChange(request).then((result) => {
+    async function load() {
+      const existing = await webDavUploadEngine.getDestinationChange();
+      if (!active) return;
+      if (!existing.ok) { setError(existing.error.message); return; }
+      if (existing.value) { setChange(existing.value); return; }
+      const result = await webDavUploadEngine.previewDestinationChange(request!);
       if (!active) return;
       if (result.ok) setPreview(result.value);
       else setError(result.error.message);
-    });
+    }
+    void load();
     return () => { active = false; };
   }, [request, pending]);
 
@@ -51,7 +57,7 @@ export function DestinationChangeModal({ request, pending, onClose, onCompleted 
     const acknowledged = await webDavUploadEngine.acknowledgeDestinationChange(completed.id);
     if (!acknowledged.ok) throw new Error(acknowledged.error.message);
     await client.invalidateQueries({ queryKey: ["engine"] });
-    onCompleted();
+    onCompleted(completed);
   };
 
   const run = async (mode: "move" | "copy") => {
@@ -96,7 +102,7 @@ export function DestinationChangeModal({ request, pending, onClose, onCompleted 
             </Panel>
           ))}
           {!change ? <Text className="text-base text-ink-light dark:text-ink-dark">
-            Move known files already on Nextcloud, or leave them in place and upload new copies. Existing files at the destination will not be overwritten during a move. Files still used by another backup stay in place.
+            Move existing backups to this destination, or keep them and upload new copies.
           </Text> : null}
 
         </ScrollView>

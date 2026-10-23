@@ -80,12 +80,39 @@ class DestinationChangeLiveTest {
       assertEquals(dao.source("one")!!.remotePathSegments, dao.source("two")!!.remotePathSegments)
       verify(root + listOf("After", "Custom-two", "Grüezi one #.bin"))
       verify(root + listOf("After", "Custom-two", "Grüezi two #.bin"))
+      val filename = "Grüezi one #.bin"
+      val duplicateFolder = root + listOf("After", "Duplicates")
+      uploader.upload(credential, DavUploadRequest("content://test/one", duplicateFolder, filename, bytes.size.toLong(), "application/octet-stream", System.currentTimeMillis() / 1000, System.currentTimeMillis() / 1000))
+      change(duplicateFolder, "one")
+      verify(duplicateFolder + filename)
+      // The shared folder is still owned by backup two, so its original must remain.
+      assertNotNull(NextcloudDestinationClient().etag(credential, root + listOf("After", "Custom-two", filename)))
+      val secondDuplicate = root + listOf("After", "SecondDuplicate")
+      uploader.upload(credential, DavUploadRequest("content://test/one", secondDuplicate, filename, bytes.size.toLong(), "application/octet-stream", System.currentTimeMillis() / 1000, System.currentTimeMillis() / 1000))
+      change(secondDuplicate, "one")
+      verify(secondDuplicate + filename)
+      assertNull(NextcloudDestinationClient().etag(credential, duplicateFolder + filename))
+      val conflictFolder = root + listOf("After", "Conflicts")
+      val otherBytes = "Keep this existing file".toByteArray()
+      val otherUploader = NextcloudUploadClient(LocalContentSource { otherBytes.inputStream() })
+      for (name in listOf(filename, "Grüezi one #_1.bin")) {
+        otherUploader.upload(credential, DavUploadRequest("content://test/other", conflictFolder, name, otherBytes.size.toLong(), "application/octet-stream", System.currentTimeMillis() / 1000, System.currentTimeMillis() / 1000))
+      }
+      change(conflictFolder, "one")
+      assertEquals("Grüezi one #_2.bin", dao.job("j-one")!!.remoteFileName)
+      verify(conflictFolder + "Grüezi one #_2.bin")
+      for (name in listOf(filename, "Grüezi one #_1.bin")) {
+        http.newCall(request(conflictFolder + name).get().build()).execute().use { response ->
+          assertTrue(response.isSuccessful)
+          assertArrayEquals(otherBytes, response.body!!.bytes())
+        }
+      }
       change(root + listOf("After", "Copies"), "one", "copy")
       assertEquals(JobState.QUEUED, dao.job("j-one")!!.state)
       val drain = QueueDrainRunner(dao, repository, uploader, mimeType = { "application/octet-stream" }, isPaused = { false }).run()
       assertEquals(1, drain.completedJobs)
-      verify(root + listOf("After", "Copies", "Grüezi one #.bin"))
-      verify(root + listOf("After", "Custom-two", "Grüezi one #.bin"))
+      verify(root + listOf("After", "Copies", "Grüezi one #_2.bin"))
+      verify(conflictFolder + "Grüezi one #_2.bin")
     } finally {
       database.close()
       if (owned) http.newCall(request(root).delete().build()).execute().use {

@@ -20,12 +20,33 @@ class DestinationTransportTest {
       assertTrue(request.getHeader("Destination")!!.endsWith("/New/Custom/Gr%C3%BCezi%20%23.jpg"))
     }
   }
+  @Test fun hashesConditionalContentAndGuardsBothFilesWhenDeletingDuplicate() {
+    MockWebServer().use { server ->
+      server.enqueue(MockResponse().setBody("abc")); server.enqueue(MockResponse().setResponseCode(204)); server.start()
+      val client = NextcloudDestinationClient()
+      assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", client.hash(credential(server), listOf("a"), "\"source\""))
+      val hash = server.takeRequest()
+      assertEquals("GET", hash.method); assertEquals("\"source\"", hash.getHeader("If-Match"))
+      client.deleteDuplicate(credential(server), listOf("a"), listOf("b"), "\"source\"", "\"target\"")
+      val deletion = server.takeRequest()
+      assertEquals("DELETE", deletion.method); assertEquals("\"source\"", deletion.getHeader("If-Match"))
+      assertTrue(deletion.getHeader("If")!!.endsWith("/b> ([\"target\"])"))
+    }
+  }
+  @Test fun changedContentCannotBeHashedOrDeletedWithStaleVersions() {
+    MockWebServer().use { server ->
+      server.enqueue(MockResponse().setResponseCode(412)); server.enqueue(MockResponse().setResponseCode(412)); server.start()
+      val client = NextcloudDestinationClient()
+      assertThrows(DestinationPreconditionException::class.java) { client.hash(credential(server), listOf("a"), "old") }
+      assertThrows(DestinationPreconditionException::class.java) { client.deleteDuplicate(credential(server), listOf("a"), listOf("b"), "old", "target") }
+    }
+  }
   @Test fun reportsConditionalConflictAndPermissionsInsteadOfPretendingSuccess() {
     MockWebServer().use { server ->
       server.enqueue(MockResponse().setResponseCode(412)); server.enqueue(MockResponse().setResponseCode(403)); server.start()
       val client = NextcloudDestinationClient()
-      val error = assertThrows(EngineInvalidInputException::class.java) { client.relocate(credential(server), listOf("a"), listOf("b"), "etag", false) }
-      assertTrue(error.message!!.contains("No existing file was overwritten"))
+      val error = assertThrows(DestinationPreconditionException::class.java) { client.relocate(credential(server), listOf("a"), listOf("b"), "etag", false) }
+      assertTrue(error.message!!.contains("changed"))
       assertThrows(DavPermissionException::class.java) { client.etag(credential(server), listOf("a")) }
     }
   }

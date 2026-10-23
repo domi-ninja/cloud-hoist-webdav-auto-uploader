@@ -12,7 +12,7 @@ import org.json.JSONObject
 object EngineOperations {
   val lock = ReentrantLock(true)
   @Volatile var destinationRequested = false
-  fun held(dao: EngineDao) = destinationRequested || dao.setting(DESTINATION_CHANGE) != null
+  fun held(dao: EngineDao) = destinationRequested || dao.setting(DESTINATION_CHANGE)?.let { DestinationOperation.read(it).state != "completed" } == true
   fun requireAvailable(dao: EngineDao) {
     if (held(dao)) throw EngineInvalidInputException("Finish the destination change before editing backups.")
   }
@@ -45,9 +45,11 @@ data class DestinationRoute(val sourceId: String, val name: String, val from: Li
 
 data class DestinationFile(
   val sourceId: String, val revisionId: String, val jobId: String?,
-  val from: List<String>, val to: List<String>,
+  val from: List<String>, var to: List<String>,
   var etag: String? = null, var attempted: Boolean = false, var done: Boolean = false, var present: Boolean = false,
   val localAvailable: Boolean = true,
+  var duplicateEtag: String? = null,
+  val originalTo: List<String> = to,
 )
 
 /** One durable journal, retained on failure and acknowledged only after the UI sees completion. */
@@ -62,6 +64,7 @@ data class DestinationOperation(
     .put("files", JSONArray(files.map { file -> JSONObject()
       .put("sourceId", file.sourceId).put("revisionId", file.revisionId).put("jobId", file.jobId)
       .put("from", JSONArray(file.from)).put("to", JSONArray(file.to)).put("etag", file.etag).put("localAvailable", file.localAvailable)
+      .put("duplicateEtag", file.duplicateEtag).put("originalTo", JSONArray(file.originalTo))
       .put("attempted", file.attempted).put("done", file.done).put("present", file.present)
     }))
 
@@ -81,7 +84,8 @@ data class DestinationOperation(
       }
       val files = json.getJSONArray("files").objects().map {
         DestinationFile(it.getString("sourceId"), it.getString("revisionId"), it.nullableString("jobId"),
-          it.path("from"), it.path("to"), it.nullableString("etag"), it.optBoolean("attempted"), it.getBoolean("done"), it.getBoolean("present"), it.optBoolean("localAvailable", true))
+          it.path("from"), it.path("to"), it.nullableString("etag"), it.optBoolean("attempted"), it.getBoolean("done"), it.getBoolean("present"), it.optBoolean("localAvailable", true), it.nullableString("duplicateEtag"),
+          if (it.has("originalTo")) it.path("originalTo") else it.path("to"))
       }
       return DestinationOperation(json.getString("id"), routes, files,
         if (json.isNull("root")) null else json.path("root"), json.getString("mode"), json.getString("state"),
@@ -96,6 +100,8 @@ private fun JSONArray.objects() = List(length(), ::getJSONObject)
 interface DestinationNetworkClient {
   fun reset() = Unit
   fun etag(credential: StoredAccountCredential, path: List<String>): String?
+  fun hash(credential: StoredAccountCredential, path: List<String>, etag: String): String?
+  fun deleteDuplicate(credential: StoredAccountCredential, from: List<String>, to: List<String>, sourceEtag: String, targetEtag: String)
   fun ensureFolder(credential: StoredAccountCredential, path: List<String>)
   fun relocate(credential: StoredAccountCredential, from: List<String>, to: List<String>, etag: String, copy: Boolean)
 }
@@ -121,6 +127,8 @@ class DestinationChangeManager(
       for (progress in dao.settingsWithPrefix("destination-file:${operation.id}:")) {
         val saved = JSONObject(progress.value)
         files[saved.getString("revisionId")]?.apply {
+          if (saved.has("to")) to = saved.path("to")
+          duplicateEtag = saved.nullableString("duplicateEtag")
           etag = saved.nullableString("etag"); attempted = saved.getBoolean("attempted")
           done = saved.getBoolean("done"); present = saved.getBoolean("present")
         }
@@ -192,7 +200,8 @@ class DestinationChangeManager(
   }
 
   private fun saveFile(op: DestinationOperation, file: DestinationFile) {
-    val progress = JSONObject().put("revisionId", file.revisionId).put("etag", file.etag)
+    val progress = JSONObject().put("revisionId", file.revisionId).put("etag", file.etag).put("to", JSONArray(file.to))
+      .put("duplicateEtag", file.duplicateEtag).put("originalTo", JSONArray(file.originalTo))
       .put("attempted", file.attempted).put("done", file.done).put("present", file.present)
     dao.putSetting(EngineSettingEntity("destination-file:${op.id}:${file.revisionId}", progress.toString()))
   }
@@ -217,33 +226,65 @@ class DestinationChangeManager(
       for (file in op.files) {
         current = file
         if (file.done) continue
-        if (op.mode == "copy") { file.done = true; saveFile(op, file); continue }
-        val same = op.files.firstOrNull { it !== file && it.from == file.from && it.to == file.to && it.done }
+        if (op.mode == "copy") {
+          // Switching modes after a lost response must retain already-moved remote archives too.
+          if ((file.attempted || file.duplicateEtag != null) && network.etag(credential, file.from) == null) {
+            file.present = network.etag(credential, file.to) == (file.duplicateEtag ?: file.etag)
+          }
+          file.done = true; saveFile(op, file); continue
+        }
+        val same = op.files.firstOrNull { it !== file && it.from == file.from && it.originalTo == file.originalTo && it.done }
         if (same != null) {
-          file.present = same.present; file.done = true; saveFile(op, file); continue
+          file.to = same.to; file.present = same.present; file.done = true; saveFile(op, file); continue
         }
         if (file.from == file.to) { file.present = true; file.done = true; saveFile(op, file); continue }
         val sourceEtag = network.etag(credential, file.from)
         if (sourceEtag == null) {
           // A missing source is only a recovered MOVE when its recorded ETag agrees at the destination.
-          file.present = file.etag != null && network.etag(credential, file.to) == file.etag
+          file.present = file.etag != null && network.etag(credential, file.to) == (file.duplicateEtag ?: file.etag)
           if (file.etag != null && !file.present) throw EngineInvalidInputException("The file changed or disappeared during the move. Check both destinations before retrying.")
           file.done = true; saveFile(op, file); continue
         }
         if (file.etag != null && file.etag != sourceEtag) throw EngineInvalidInputException("The remote file changed during the move. Leave it in place and upload a new copy, or restore the original before retrying.")
         file.etag = sourceEtag
         saveFile(op, file) // Persist before the request can move anything on the server.
-        val targetEtag = if (file.attempted) network.etag(credential, file.to) else null
-        if (targetEtag != null && file.attempted && targetEtag == file.etag) {
-          file.present = true; file.done = true; saveFile(op, file); continue
-        }
-        if (targetEtag != null) throw EngineInvalidInputException("A file already exists at /${file.to.joinToString("/")}. No existing file was overwritten.")
-        if (ensured.add(file.to.dropLast(1))) network.ensureFolder(credential, file.to.dropLast(1))
-        // A shared original must remain for other backups, and for later branches of this same operation.
+        // Shared originals stay available to other backups and later branches of this operation.
         val copy = otherSources.any { file.from.under(it.remotePathSegments) } ||
-          op.files.any { it !== file && !it.done && it.from == file.from && it.to != file.to }
-        file.attempted = true; saveFile(op, file)
-        network.relocate(credential, file.from, file.to, sourceEtag, copy)
+          op.files.any { it !== file && !it.done && it.from == file.from && it.originalTo != file.originalTo }
+        val sourceHash by lazy { network.hash(credential, file.from, sourceEtag) }
+        var races = 0
+        var suffix = 1
+        while (true) {
+          val targetEtag = network.etag(credential, file.to)
+          if (file.attempted && copy && targetEtag == file.etag) break
+          if (targetEtag != null) {
+            val identical = op.files.size <= 20 && (
+              file.duplicateEtag == targetEtag ||
+                sourceHash?.let { hash ->
+                  hash == network.hash(credential, file.to, targetEtag)
+                } == true)
+            if (identical) {
+              file.duplicateEtag = targetEtag
+              saveFile(op, file)
+              if (!copy) network.deleteDuplicate(credential, file.from, file.to, sourceEtag, targetEtag)
+              break
+            }
+            file.to = numberedDestination(file.originalTo, suffix++)
+            file.attempted = false; file.duplicateEtag = null
+            saveFile(op, file)
+            continue
+          }
+          if (ensured.add(file.to.dropLast(1))) network.ensureFolder(credential, file.to.dropLast(1))
+          file.duplicateEtag = null; file.attempted = true; saveFile(op, file)
+          try {
+            network.relocate(credential, file.from, file.to, sourceEtag, copy)
+            break
+          } catch (error: DestinationPreconditionException) {
+            // A destination can appear after the listing. Refresh before choosing another name.
+            network.reset()
+            if (++races >= 20 || network.etag(credential, file.from) != sourceEtag) throw error
+          }
+        }
         file.present = true; file.done = true; saveFile(op, file)
       }
       current = null
@@ -264,7 +305,7 @@ class DestinationChangeManager(
             val path = file?.to?.dropLast(1) ?: (route.to + relative)
             val requeue = file != null && file.localAvailable && !file.present || job.state != JobState.COMPLETED
             dao.deleteChunkCheckpoint(job.id)
-            dao.updateJob(job.copy(remotePathSegments = path,
+            dao.updateJob(job.copy(remotePathSegments = path, remoteFileName = file?.to?.last() ?: job.remoteFileName,
               state = if (requeue) JobState.QUEUED else job.state,
               completedAt = if (requeue) null else job.completedAt, startedAt = null, retryAt = null,
               attemptCount = 0, claimToken = null, blockerCode = null, lastErrorCode = null))
@@ -292,3 +333,12 @@ class DestinationChangeManager(
     op.summary()
   }
 }
+
+/** Keep the extension so renamed photos and videos still open normally. */
+internal fun numberedDestination(path: List<String>, number: Int): List<String> {
+  val name = path.last()
+  val dot = name.lastIndexOf('.').takeIf { it > 0 } ?: name.length
+  return path.dropLast(1) + "${name.take(dot)}_${number}${name.drop(dot)}"
+}
+
+class DestinationPreconditionException : Exception("The file changed on Nextcloud. Please retry.")
