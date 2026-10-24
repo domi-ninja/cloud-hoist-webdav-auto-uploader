@@ -4,7 +4,7 @@ Updated October 24, 2026. Candidate: `ninja.domi.cloudhoist`, `2026-7` / `202600
 
 ## Goal and result
 
-F-Droid is the only distribution target. Google Play, EAS OTA, GitHub APK publishing, and the app's GitHub updater are removed from the plan and release workflow. GitHub remains public source hosting and an issue tracker. Existing published releases are left intact.
+F-Droid is the only distribution target. Google Play, EAS OTA, and the app's GitHub updater are removed from the plan and release workflow. GitHub hosts source, issues, and signed reference APKs for F-Droid verification. Existing published releases are left intact.
 
 The candidate builds through F-Droid's own tools, reproduces locally, and updates the existing physical-phone installation with the original key. It is **not listed or published in F-Droid**. Submission and review remain external gates; no messages, inclusion requests, issues, PRs, or merge requests were sent on Domi's behalf.
 
@@ -36,6 +36,7 @@ The repository now contains the candidate recipe, version-tag discovery, listing
 | Native dependency notice gate | All 188 coordinates match; deliberately removing one reviewed entry correctly rejects the build |
 | Independent build comparison | Byte-identical unsigned APKs from the working tree, a clean local F-Droid checkout, and an independent GitHub CI runner |
 | Developer-signature verification | F-Droid `verify_apks` passes; signature-copy reconstruction matches the signed APK byte-for-byte |
+| Public reference APK | Anonymous GitHub download matches the phone-tested APK byte-for-byte; signature and F-Droid reconstruction pass |
 | Physical installation and changed UI | Signed in-place update on Samsung SM-A166B, Android 16; version, license search/expansion, empty search, reopening, and Android Back verified |
 | Existing app state | Original account, three backup folders, two disabled/one enabled states, 19/14 pending-file counts, and 21 completed uploads retained |
 
@@ -54,19 +55,24 @@ Existing signing certificate SHA-256:
 
 The [final CI run](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/actions/runs/40106053725) passed and produced the same unsigned SHA-256. Local builds used Ubuntu OpenJDK 21; the independent Ubuntu CI runner used Temurin 21. Local checkouts shared dependency caches; CI built separately. F-Droid must still confirm its dedicated build environment. Privileged build-server provisioning was not run on the workstation.
 
+## Reference hosting
+
+The [GitHub verification prerelease](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/fdroid-reference-2026-7) contains the existing phone-tested APK and `SHA256SUMS`. The reference tag points to tested source commit `ac3f9932397aad2e42316f51aa2cc79c232285fc`; the recipe pins that commit, the versioned `Binaries` URL, and the existing signing certificate.
+
+The public download matches the original signed APK byte-for-byte and passes F-Droid signature reconstruction against the independently rebuilt unsigned APK. No APK was rebuilt or signed again, and no private signing files were uploaded. The prerelease does not replace the normal latest release, `v2026-6`, or participate in normal version-tag discovery. User installs and updates remain with F-Droid.
+
 ## Remaining gates
 
-1. **Signed reference hosting.** Preserving upgrades for existing installations requires F-Droid's developer-signed workflow. Local rebuild/signature verification now passes, but no public reference-APK URL is configured. The recipe is disabled, with the existing certificate recorded. Set `Binaries` only after choosing a host for verification artifacts; do not introduce another app-managed update channel or share the private key.
-2. **Upstream attribution review.** The offline inventory contains 874 app/library/font entries. Sixteen npm packages omit standalone license files and rely on preserved published declarations, source headers, or README notices. These fallbacks remain explicit review items. The missing notice in `@expo/xcpretty` 4.4.4 was resolved by pinning 4.4.6, which supplies the full license and inherited credits. The notice inventory is not an exhaustive attribution manifest for code embedded inside native binaries, including the NDK C++ runtime and React Native vendor libraries. Maven POM declarations alone do not establish that coverage. This remains part of the upstream attribution review; a successful scanner run is not an independent legal audit.
-3. **F-Droid build-server and maintainer review.** The local recipe passed, but F-Droid must validate it in its environment and review dependencies, assets, and any anti-feature decisions. Agents must not open that submission under the current instruction.
-4. **Project maturity.** History starts September 4, 2026. Before December 4, 2026, inclusion needs an applicable exception, such as accurate evidence of existing users. Otherwise, wait for the normal development period. Maintainers decide whether an exception applies.
+1. **Upstream attribution review.** The offline inventory contains 874 app/library/font entries. Sixteen npm packages omit standalone license files and rely on preserved published declarations, source headers, or README notices. These fallbacks remain explicit review items. The missing notice in `@expo/xcpretty` 4.4.4 was resolved by pinning 4.4.6, which supplies the full license and inherited credits. The notice inventory is not an exhaustive attribution manifest for code embedded inside native binaries, including the NDK C++ runtime and React Native vendor libraries. Maven POM declarations alone do not establish that coverage. This remains part of the upstream attribution review; a successful scanner run is not an independent legal audit.
+2. **F-Droid build-server and maintainer review.** The local recipe passed, but F-Droid must validate it in its environment and review dependencies, assets, and any anti-feature decisions. Agents must not open that submission under the current instruction.
+3. **Project maturity.** History starts September 4, 2026. Before December 4, 2026, inclusion needs an applicable exception, such as accurate evidence of existing users. Otherwise, wait for the normal development period. Maintainers decide whether an exception applies.
 
 A different F-Droid signing key cannot normally update the existing installation. Do not uninstall or clear app data as an automatic migration. No company registration, D-U-N-S number, or Google-style 12-testers-for-14-days process is part of the reviewed F-Droid procedure.
 
 ## Handoff
 
-Use [docs/publishing.md](docs/publishing.md) for commands and signing/submission steps, and [release-plan.md](release-plan.md) for the remaining sequence. The signed candidate is local at `dist/cloud-hoist-2026-7.apk`; it has not been uploaded as another GitHub release. No release tag has been pushed.
+Use the [publishing guide](publishing.md) for commands and signing/submission steps, and [release plan](release-plan.md) for the remaining sequence. The signed candidate is local at `dist/cloud-hoist-2026-7.apk` and public in the verification prerelease. The normal source release tag `v2026-7` has not been published. The recipe remains disabled pending review; the app is not listed in F-Droid.
 
-Local logs, scan results, APK comparisons, and private phone captures are under ignored `test-results/fdroid-audit/`. Public listing screenshots are under `fastlane/metadata/android/en-US/images/phoneScreenshots/`.
+Local logs, scan results, APK comparisons, and private phone captures are under ignored `test-results/fdroid-audit/`. Public-download and reference-hosting checks are under ignored `test-results/fdroid-hosting/`. Public listing screenshots are under `fastlane/metadata/android/en-US/images/phoneScreenshots/`.
 
 References: [inclusion policy](https://f-droid.org/docs/Inclusion_Policy/), [submission guide](https://f-droid.org/docs/Submitting_to_F-Droid_Quick_Start_Guide/), [build metadata](https://f-droid.org/docs/Build_Metadata_Reference/), and [developer-signed reproducible builds](https://f-droid.org/docs/Reproducible_Builds/).

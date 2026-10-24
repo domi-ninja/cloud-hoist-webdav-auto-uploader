@@ -1,6 +1,6 @@
 # F-Droid release plan
 
-F-Droid is Cloud Hoist's only distribution target. Google Play, hosted EAS updates, separate beta application IDs, and GitHub APK publishing are no longer planned. GitHub remains public source hosting and an issue tracker.
+F-Droid is Cloud Hoist's only distribution target. Google Play, hosted EAS updates, separate beta application IDs, and GitHub-based user updates are no longer planned. GitHub hosts source, issues, and the signed APKs used by F-Droid for verification.
 
 ## One app and one update path
 
@@ -15,17 +15,17 @@ Use `year-minor`, Android versionCode = year × 10000 + minor, and package.json 
 - Offline license notices and a build gate for changes to the reviewed Android dependency inventory.
 - F-Droid source/build/APK checks, byte-identical local and independent CI builds, and successful developer-signature reconstruction.
 - Signed in-place installation of candidate `2026-7` on the physical phone, changed-control checks, isolated destination edge tests, and real Nextcloud hash checks. Existing app data is retained.
-- Read-only CI checks and unsigned artifacts, with no store submission or GitHub APK publishing.
+- Read-only CI checks and unsigned artifacts, with no store submission.
+- GitHub verification prereleases for signed reference APKs, with a versioned `Binaries` URL and the existing signing certificate pinned in the recipe.
 
 ## Remaining sequence
 
 1. Resolve the remaining upstream notice-attribution review and confirm the recipe on F-Droid's build infrastructure.
-2. Choose a public host for the already tested signed reference artifact needed by F-Droid's verification. This is verification evidence, not a separate app-managed update channel. Keep the private key local.
-3. Set the recipe's `Binaries` URL, retain `AllowedAPKSigningKeys` for the existing certificate, and resolve the candidate disable flag. Never accept a new signing identity or clear existing app data silently.
-4. Publish the tested source revision/tag when the reference-artifact arrangement is ready. The APK must match the phone-tested candidate; upload retries reuse it.
-5. Domi submits the prepared work. The project began September 4, 2026; submission before December 4 needs an applicable maturity exception supported by accurate evidence of existing users.
-6. After acceptance, enable the recipe's automatic version-tag builds. Users install and update through F-Droid.
+2. Retain the configured GitHub `Binaries` URL and `AllowedAPKSigningKeys` for the existing certificate. Resolve the candidate disable flag after review. Never accept a new signing identity or clear existing app data silently.
+3. Publish normal version tags at the tested source revision when preparing accepted releases. Each new reference APK must match its phone-tested candidate; upload retries reuse the file.
+4. Domi submits the prepared work. The project began September 4, 2026; submission before December 4 needs an applicable maturity exception supported by accurate evidence of existing users.
+5. After acceptance, enable the recipe's automatic version-tag builds. Users install and update through F-Droid.
 
-Do not contact maintainers or file inclusion issues, PRs, or merge requests under the current instruction. No APK or release tag has been published during preparation; reference hosting and review remain unresolved. The current recipe remains disabled and automatic build updates remain off. F-Droid acceptance and publication are outstanding.
+Do not contact maintainers or file inclusion issues, PRs, or merge requests under the current instruction. The signed reference APK is hosted in GitHub Releases under `fdroid-reference-2026-7`. F-Droid review and publication remain unresolved. The current recipe remains disabled and automatic build updates remain off. F-Droid acceptance and publication are outstanding.
 
-Commands belong in [docs/publishing.md](docs/publishing.md). Evidence, limits, artifact hashes, and blockers are in [fdroid-readiness-report.md](fdroid-readiness-report.md).
+Commands belong in [publishing.md](publishing.md). Evidence, limits, artifact hashes, and blockers are in [fdroid-readiness-report.md](fdroid-readiness-report.md).

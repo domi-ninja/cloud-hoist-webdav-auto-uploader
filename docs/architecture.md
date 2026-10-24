@@ -59,4 +59,4 @@ Upload errors appear on the file row and its detail screen, including failures w
 
 ## Application distribution
 
-F-Droid is the only distribution target. The app has no GitHub update polling, APK download controls, Play Store integration, or EAS OTA delivery. Application code ships in complete reviewed APKs. Expo modules are configured to build from source. Open-source notices are bundled for offline viewing in Settings.
+F-Droid is the only distribution target. The app has no GitHub update polling, APK download controls, Play Store integration, or EAS OTA delivery. Application code ships in complete reviewed APKs. GitHub Releases stores signed reference APKs for F-Droid verification; the recipe pins their source commit and signing certificate. Expo modules are configured to build from source. Open-source notices are bundled for offline viewing in Settings.

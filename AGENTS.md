@@ -20,8 +20,8 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 
 - Use `$year-$minorversion` for the public app version, starting with `2026-1`. Increment the minor number for each changed release bundle. Start at 1 in a new year.
 - Keep `app.json` as the release identity. Android versionCode is year × 10000 + minor. The package.json tooling version uses year.minor.0.
-- F-Droid is the only distribution target. Do not add Google Play, EAS OTA, GitHub APK publishing, or app-managed executable updates.
-- Build unsigned candidates without private signing credentials. Sign the same artifact with the existing key only for local physical-phone validation.
+- F-Droid is the only distribution target. Do not add Google Play, EAS OTA, or app-managed executable updates. GitHub Releases may host signed reference APKs for F-Droid verification; user installs and updates stay with F-Droid.
+- Build unsigned candidates without private signing credentials. Sign the same artifact with the existing key for physical-phone validation and the matching F-Droid reference upload.
 - Preserve the existing package and signing identity. Do not uninstall or clear existing app data to bypass a signature mismatch.
 - Rebuild a version only for a concrete build or test failure. Once distributed, app fixes get a new version. Retry failed uploads with the existing artifact.
 - Ordinary source pushes run checks and retain unsigned validation artifacts. They do not publish APKs or contact F-Droid.
