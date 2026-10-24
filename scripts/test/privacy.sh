@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 
 # Checks dependencies and a release APK for prohibited telemetry, advertising, and permissions.
-# Use `pnpm test:privacy`; this builds generated Android files but does not use a device.
+# Use `pnpm test:privacy [APK]` after building; it never rebuilds or uses a device.
 # The allowlist preserves the network, notification, and foreground-service permissions the app needs.
 
 set -eu
@@ -21,11 +21,13 @@ if grep -Eiq "$FORBIDDEN_DEPENDENCIES" $DEPENDENCY_FILES; then
   exit 1
 fi
 
-pnpm exec expo prebuild --platform android --no-install >/dev/null
-NODE_ENV=production ./android/gradlew -p android :app:assembleRelease >/dev/null
-
 AAPT="$ANDROID_PROJECT_SDK/build-tools/36.0.0/aapt"
-APK=android/app/build/outputs/apk/release/app-release.apk
+VERSION=$(node -p 'require("./app.json").expo.version')
+APK=${1:-dist/cloud-hoist-$VERSION-unsigned.apk}
+if [ ! -f "$APK" ]; then
+  printf '%s\n' 'Build the candidate first with pnpm fdroid:build.' >&2
+  exit 1
+fi
 PERMISSIONS=$($AAPT dump permissions "$APK")
 MANIFEST=$($AAPT dump xmltree "$APK" AndroidManifest.xml)
 

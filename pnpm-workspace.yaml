@@ -8,3 +8,6 @@ minimumReleaseAgeExclude:
   - '@expo/ui@57.0.16'
   - expo-router@57.0.19
   - expo-build-properties@57.0.17
+# 4.4.4 omits its BSD notice; 4.4.6 supplies the upstream license and inherited credits.
+overrides:
+  '@expo/cli@57.0.22>@expo/xcpretty': 4.4.6

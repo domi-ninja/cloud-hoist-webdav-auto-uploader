@@ -1,0 +1,9 @@
+Cloud Hoist backs up selected Android folders to your own Nextcloud server.
+
+Choose media folders or another directory, set the remote destination, and follow upload progress and failures. Backups can wait for an unmetered network, sufficient battery, or charging. Pause all uploads or disable individual folders.
+
+Change a backup destination by moving existing remote files or uploading new copies. Filename collisions are resolved without overwriting unrelated destination files.
+
+Original files stay on the phone. Deleting a phone file keeps its uploaded copy. This is one-way backup, not two-way synchronization. Local edits replace destination files by default. Nextcloud end-to-end encrypted folders and generic WebDAV servers are not supported.
+
+Requires Android 10 or newer and a Nextcloud account. Cloud Hoist is independent from Nextcloud GmbH and is not affiliated with or endorsed by it. No ads or analytics SDK are included. F-Droid manages application updates.

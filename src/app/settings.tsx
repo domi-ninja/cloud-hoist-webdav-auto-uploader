@@ -19,7 +19,7 @@ import { DestinationChangeModal } from "@/features/sources/DestinationChangeModa
 import { RemoteFolderPicker } from "@/features/sources/RemoteFolderPicker";
 import { formatRemoteRoot, useAppPreferences } from "@/lib/app-preferences";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { AppUpdates } from "@/features/updates/AppUpdates";
+import { OpenSourceLicenses } from "@/features/about/OpenSourceLicenses";
 
 type ConstraintKey = keyof TransferConstraints;
 
@@ -198,7 +198,6 @@ export default function SettingsScreen() {
             ) : null}
           </Panel>
         ) : null}
-        <AppUpdates />
         <Panel>
           <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">
             About
@@ -207,12 +206,13 @@ export default function SettingsScreen() {
             {project.displayName} · {project.license}
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
-            {process.env.EXPO_PUBLIC_RELEASE_CHANNEL === "beta" ? "Beta" : "Version"}{" "}
+            Version{" "}
             {Constants.expoConfig?.version ?? "unknown"}
           </Text>
           <Text className="text-base text-muted-light dark:text-muted-dark">
             {project.compatibilityNotice}
           </Text>
+          <OpenSourceLicenses />
         </Panel>
       </ScrollView>
       {destinationRequest || (resumingChange && pending.data) ? <DestinationChangeModal

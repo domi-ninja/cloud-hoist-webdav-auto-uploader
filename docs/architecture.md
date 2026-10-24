@@ -9,7 +9,7 @@ Cloud Hoist connects directly to one Nextcloud account. It has no application ba
 | Location | Responsibility |
 | --- | --- |
 | [`src/app`](../src/app/) | Backups, Status, Settings, and upload-detail routes. |
-| [`src/features`](../src/features/) | Connection forms, folder setup, previews, suggestions, and app updates. |
+| [`src/features`](../src/features/) | Connection forms, folder setup, previews, suggestions, and license notices. |
 | [`src/lib/engine-query.tsx`](../src/lib/engine-query.tsx) | Snapshot queries, invalidation, and inventory pagination. |
 | [`modules/webdav-upload-engine/src`](../modules/webdav-upload-engine/src/) | Native API wrapper, Zod schemas, and inferred TypeScript types. |
 | [`modules/webdav-upload-engine/android/src/main/java/ninja/domi/cloudhoist/engine`](../modules/webdav-upload-engine/android/src/main/java/ninja/domi/cloudhoist/engine/) | Room, MediaStore/SAF discovery, WorkManager, and Nextcloud clients. |
@@ -56,3 +56,7 @@ The journal records the selected filename and duplicate destination version befo
 Source paths, current jobs, the root, and completion commit together. That commit releases the upload hold even if the screen closes before acknowledging completion. Old chunk checkpoints are discarded when jobs change destinations.
 
 Upload errors appear on the file row and its detail screen, including failures whose local file disappeared. DAV listing errors appear on the affected backup card. Picker and save errors remain visible in the backup editor.
+
+## Application distribution
+
+F-Droid is the only distribution target. The app has no GitHub update polling, APK download controls, Play Store integration, or EAS OTA delivery. Application code ships in complete reviewed APKs. Expo modules are configured to build from source. Open-source notices are bundled for offline viewing in Settings.

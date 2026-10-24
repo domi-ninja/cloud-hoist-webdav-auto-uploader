@@ -9,7 +9,6 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { MD3DarkTheme, MD3LightTheme, PaperProvider } from "react-native-paper";
 import { EngineQueryProvider } from "@/lib/engine-query";
 import { AppPreferencesProvider } from "@/lib/app-preferences";
-import { AutomaticUpdatePrompt } from "@/features/updates/AppUpdates";
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -102,7 +101,6 @@ export default function RootLayout() {
                 }}
               />
             </Tabs>
-            <AutomaticUpdatePrompt />
             <StatusBar style="auto" />
           </EngineQueryProvider>
         </AppPreferencesProvider>

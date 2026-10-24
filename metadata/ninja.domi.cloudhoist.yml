@@ -1,0 +1,59 @@
+Categories:
+  - Cloud Storage & File Sync
+License: GPL-3.0-or-later
+SourceCode: https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader
+IssueTracker: https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/issues
+AutoName: Cloud Hoist
+Summary: Automatically back up phone folders to your Nextcloud server
+Description: |-
+  Cloud Hoist backs up selected Android media folders to your own Nextcloud server.
+  Choose a destination for each folder and set charging, network, and battery conditions.
+
+  Files stay on your phone. Conflicting destination files are kept with numbered names.
+  No advertising or analytics. Requires Android 10 or later and a Nextcloud account.
+
+RepoType: git
+Repo: https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader.git
+
+Builds:
+  - versionName: 2026-7
+    versionCode: 20260007
+    disable: Candidate; signing migration and F-Droid build-server validation are pending
+    commit: v2026-7
+    sudo:
+      - apt-get update
+      - apt-get install -y openjdk-21-jdk-headless npm python3 xz-utils
+      - curl -Lo node.tar.xz https://nodejs.org/dist/v24.20.0/node-v24.20.0-linux-x64.tar.xz
+      - echo "2f2c0da162318f0de47665410c7c8c2ed3d36c8f3105de4bbc61176c70a7cbf2  node.tar.xz" | sha256sum -c -
+      - tar xf node.tar.xz --strip-components=1 -C /usr/local/
+      - rm node.tar.xz
+      - npm install -g pnpm@11.3.0
+    init:
+      - export CI=1 EXPO_NO_TELEMETRY=1 EXPO_NO_DOTENV=1
+      - pnpm install --frozen-lockfile --prod=false --ignore-scripts --no-runtime
+    prebuild:
+      - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ANDROID_HOME=$$SDK$$
+      - sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'cmake;3.22.1'
+      - pnpm fdroid:prepare
+    # Hermes is explicitly allowed by F-Droid policy. Every other finding is fixed or removed.
+    scanignore:
+      - node_modules/.pnpm/hermes-compiler@250829098.0.17/node_modules/hermes-compiler/hermesc/linux64-bin/hermesc
+    build:
+      - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ANDROID_HOME=$$SDK$$
+      - GRADLE=gradlew-fdroid sh scripts/fdroid/assemble.sh
+    ndk: 27.1.12297006
+    output: dist/cloud-hoist-$$VERSION$$-unsigned.apk
+
+MaintainerNotes: |-
+  Local candidate only; do not submit unchanged. The source tag is not published yet.
+  Expo generates android/ during preparation, so there is no generated native subdir in git.
+  Expo Android modules build from source. Unused npm prebuilts and legacy local Maven repositories are removed.
+  The source scan has one font warning (unused Fontisto.ttf). No blanket node_modules exclusion.
+  Developer-signed reproducibility and a reference-artifact URL must be settled before enabling this build.
+  Existing installations must not be uninstalled or cleared to switch signing keys.
+
+AutoUpdateMode: None
+UpdateCheckMode: Tags ^v[0-9]{4}-[0-9]+$
+UpdateCheckData: 'app.json|"versionCode":\s*(\d+)|.|"version":\s*"([^"]+)"'
+CurrentVersion: 2026-7
+CurrentVersionCode: 20260007

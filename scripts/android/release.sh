@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
-# Creates signing credentials, builds a beta, or builds and publishes to Nextcloud. Never installs on devices.
-# Usage: pnpm android:signing; pnpm android:beta; sh scripts/android/release.sh verify
+# Signs or verifies local validation APKs using the existing key. Never publishes.
+# Usage: pnpm android:signing; pnpm android:release; sh scripts/android/release.sh verify
 set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$SCRIPT_DIR/../.."

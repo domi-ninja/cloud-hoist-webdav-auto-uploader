@@ -24,6 +24,8 @@ expo-env.d.ts
 local.properties
 
 # Tool output
+__pycache__/
+*.pyc
 coverage/
 test-results/
 *.tsbuildinfo

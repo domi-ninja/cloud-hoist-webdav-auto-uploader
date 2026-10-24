@@ -2,7 +2,7 @@
   "expo": {
     "name": "Cloud Hoist",
     "slug": "cloud-hoist",
-    "version": "2026-6",
+    "version": "2026-7",
     "scheme": "cloud-hoist",
     "platforms": [
       "android"
@@ -12,7 +12,7 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "android": {
-      "versionCode": 20260006,
+      "versionCode": 20260007,
       "package": "ninja.domi.cloudhoist",
       "predictiveBackGestureEnabled": false,
       "blockedPermissions": [
@@ -42,6 +42,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "updates": {
+      "enabled": false
     }
   }
 }

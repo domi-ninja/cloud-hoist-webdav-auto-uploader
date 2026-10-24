@@ -28,14 +28,15 @@ const monochrome = foreground
 
 const outputs = new Map([
   ["assets/icon.png", source],
+  ["fastlane/metadata/android/en-US/images/icon.png", source],
   ["assets/android-icon-foreground.png", foreground],
   ["assets/android-icon-background.png", background],
   ["assets/android-icon-monochrome.png", monochrome],
 ]);
 
-const render = (svg) =>
+const render = (svg, width) =>
   new Resvg(svg, {
-    fitTo: { mode: "width", value: 1024 },
+    fitTo: { mode: "width", value: width },
   })
     .render();
 
@@ -56,7 +57,7 @@ let stale = false;
 
 for (const [relativePath, svg] of outputs) {
   const outputPath = new URL(`../../${relativePath}`, import.meta.url);
-  const image = render(svg);
+  const image = render(svg, relativePath.startsWith("fastlane/") ? 512 : 1024);
   if (relativePath === "assets/android-icon-foreground.png" || relativePath === "assets/android-icon-monochrome.png") {
     checkAdaptiveSafeArea(image, relativePath);
   }

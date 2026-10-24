@@ -1,5 +1,11 @@
 # Third-party notices
 
+The app bundles an offline inventory at `assets/third-party-notices.json`, available from Settings → About → Open source licenses. It includes JavaScript packages, resolved Android runtime dependencies, and the two bundled font families. Build-only packages can also appear because Expo's production dependency graph includes its tooling.
+
+`scripts/fdroid/licenses.mjs` generates the inventory from installed packages and the evidence under `licenses/`. Run `pnpm licenses:generate` after a dependency change and `pnpm licenses:check` to verify it. The collector records published Maven POMs and embedded notices; npm supplements use pinned upstream commits when available. `licenses/declarations.json` retains package declarations and README notices for packages that omit standalone license files. Those fallbacks remain visible review items, rather than a claim that a scanner has audited every file.
+
+Material Symbols and Material Design Icons fonts use Apache-2.0. Their notices and license text are under `licenses/`. The app icon's editable source is `assets/icon.svg`, distributed under this repository's GPL-3.0-or-later license. Listing screenshots use app-owned or test-owned content and the same license.
+
 ## Expo blank template
 
 The initial project structure and placeholder image assets derive from the Expo blank template.

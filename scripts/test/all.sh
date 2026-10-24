@@ -10,7 +10,6 @@ set -eu
 pnpm typecheck
 pnpm lint
 pnpm test
-pnpm test:publish
 pnpm test:release
 pnpm test:native
 pnpm test:android "${1:-emu}"

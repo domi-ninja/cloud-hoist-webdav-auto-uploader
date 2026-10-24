@@ -65,7 +65,6 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   getDestinationChangeAsync(): Promise<unknown>;
   runDestinationChangeAsync(id: string, uploadCopies: boolean): Promise<unknown>;
   acknowledgeDestinationChangeAsync(id: string): Promise<void>;
-  openPlayStoreAsync(androidPackage: string): Promise<boolean>;
   getSnapshotAsync(): Promise<unknown>;
   getSourcesAsync(): Promise<unknown>;
   getActivityPageAsync(offset: number): Promise<unknown>;
@@ -202,10 +201,6 @@ export const webDavUploadEngine = {
     (value) => destinationChangeSchema.parse(value),
   ),
   acknowledgeDestinationChange: (id: string) => runCommand(() => nativeModule.acknowledgeDestinationChangeAsync(id)),
-  openPlayStore: (androidPackage: string) => runValueCommand(
-    () => nativeModule.openPlayStoreAsync(androidPackage),
-    (value) => z.boolean().parse(value),
-  ),
   async getSnapshot(): Promise<EngineSnapshot> {
     return engineSnapshotSchema.parse(await nativeModule.getSnapshotAsync());
   },

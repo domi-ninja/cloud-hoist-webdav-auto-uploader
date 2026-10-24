@@ -4,7 +4,11 @@ An Android app that uploads selected phone folders to Nextcloud. Independent fro
 
 ## Get started
 
-1. Download the APK from [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/latest), open it on your phone, and approve installation.
+F-Droid packaging is in progress. Cloud Hoist is not yet listed in the main F-Droid repository. Existing installations can continue using their configured backups; keep them installed to preserve local settings and history. Developers can build a local validation APK using the [development guide](docs/development.md).
+
+Once the F-Droid listing is available:
+
+1. Install Cloud Hoist through F-Droid.
 2. Enter your Nextcloud server address and sign in through the browser. You can also use a Nextcloud app password.
 3. Tap **Start backup** on a suggested folder, or **Choose other directory to back up** below the suggestions. Grant access, check the destination, and tap **Save backup folder**.
 4. Open **Status** to see backed-up folders, progress, and failed files. Network and power rules are in **Settings**.
@@ -23,13 +27,13 @@ This is one-way upload. Generic WebDAV servers and Nextcloud end-to-end encrypte
 
 ## Updates
 
-The app offers newer releases automatically. You can also use **Settings → App updates → Check for updates**. Android asks you to approve installation. Updates signed with the same key preserve accounts, settings, and history.
+F-Droid manages app updates. Cloud Hoist does not check external release feeds or download code. Migration of existing GitHub installations depends on preserving the signing identity; do not uninstall or clear app data to resolve an update mismatch.
 
 ## Developer docs
 
 - [Development and testing](docs/development.md)
 - [Architecture and engine behavior](docs/architecture.md)
-- [Build and publish a beta](docs/publishing.md)
+- [F-Droid releases](docs/publishing.md)
 - [Agent guidance](AGENTS.md)
 
 ## License

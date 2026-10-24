@@ -1,81 +1,54 @@
-# Build and publish a beta
+# F-Droid releases
 
 [README](../README.md) · [Development](development.md) · [Architecture](architecture.md)
 
-## Version and signing
+F-Droid is the only distribution target. The app does not check GitHub for updates or download executable code. Google Play and EAS are not part of this workflow. GitHub is a source mirror and issue tracker.
 
-Use `year-minor` for each changed release bundle, for example `2026-3`. Set these together:
+## Version and source identity
 
-| File | Value for that example |
-| --- | --- |
-| `app.json` → `expo.version` | `2026-3` |
-| `app.json` → `expo.android.versionCode` | `20260003`, calculated as year × 10000 + minor |
-| `package.json` → `version` | `2026.3.0` |
+Keep `app.json` as the release identity. For `2026-7`, set `expo.version` to `2026-7`, Android versionCode to `20260007`, and package.json version to `2026.7.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
 
-Increment the minor number for the next changed bundle. Start at 1 in a new year. Retry failed uploads with the existing artifact. Rebuild only to correct a failed build or test. Documentation-only changes do not create an app release.
+## Build without signing credentials
 
-Reuse `.signing/release.p12` and `.signing/release.json`. Keep an encrypted backup of both; losing the key prevents compatible updates. They are ignored by Git and must never become source or release assets. `pnpm android:signing` creates a key only for the first release and refuses to replace an existing signing directory.
-
-## Build and test once
-
-Run the [development checks](development.md#checks-without-a-device), then:
+Install dependencies with the pinned Node and pnpm versions, then:
 
 ```sh
-pnpm android:beta
+nvm use
+pnpm install --frozen-lockfile
+pnpm fdroid:build
+```
+
+This generates the Android project and builds `dist/cloud-hoist-<version>-unsigned.apk`. It requires the SDK and JDK described in [Development](development.md), but does not require private signing files, an Expo account, or Google Play access. Expo telemetry and dotenv loading are disabled for this build.
+
+The F-Droid recipe is `metadata/ninja.domi.cloudhoist.yml`. Its preparation must run from a clean checkout and provision only build tools, not an emulator or Play system image. Validate the fully prepared source, not just the tracked repository. The recipe keeps builds disabled and automatic build updates off until signing and build-server validation are settled.
+
+## Local phone validation
+
+Keep `.signing/release.p12` and `.signing/release.json`, and maintain an encrypted backup of both. Do not replace the existing key. F-Droid must never receive the private keystore or its passwords.
+
+Sign the existing unsigned candidate and install it in place:
+
+```sh
+pnpm android:release
 ANDROID_SERIAL=YOUR_PHONE_SERIAL pnpm android:install
 ```
 
-The first command builds, signs, and verifies `dist/cloud-hoist-beta.apk`. The second verifies its signing key, installs it in place on the selected physical phone, and launches it without clearing app data. Follow the [phone validation procedure](development.md#phone-validation). Publish that tested APK.
+Signing produces `dist/cloud-hoist-<version>.apk` without rebuilding. Installation verifies the package, version, and existing certificate. Never uninstall the configured app or clear its data to bypass a signing mismatch. Follow [phone validation](development.md#phone-validation). For upload changes, verify downloaded hashes using test-owned files and folders.
 
-The private `git.domi.ninja` repository is the primary upstream; GitHub hosts public source and APKs. This checkout pushes `origin` to both. Check `git remote -v` in other checkouts and push both remotes explicitly if needed. Commit the tested code and version, then push `main` before creating the release.
+`pnpm android:signing` exists only for a genuinely new signing identity and refuses to overwrite an existing signing directory. It is not a fix for missing release credentials on an existing project.
 
-## Publish the tested APK
+## Checks and submission
 
-Set release identity from the checkout and package the existing APK:
+Run type checking, lint, unit tests, native unit tests, release identity tests, license checks, F-Droid metadata lint, and source/APK scanning. Test a second build before claiming reproducibility. The native build normalizes source, Gradle-cache, and SDK paths, including filenames embedded in assertions and debug information. See the root readiness report for the distinction between a successful local build and a validated F-Droid build.
 
-```sh
-RELEASE_REPO=$(node -p 'require("./release.config.json").githubRepository')
-RELEASE_VERSION=$(node -p 'require("./app.json").expo.version')
-RELEASE_SHA=$(git rev-parse HEAD)
-GITHUB_REPOSITORY="$RELEASE_REPO" GITHUB_SHA="$RELEASE_SHA" node scripts/android/github-release.mjs package
-```
+F-Droid can preserve our signing identity only through a verified developer-signed reproducible-build workflow. Its public reference-artifact requirement must be resolved before promising migration of existing installations. If F-Droid instead signs with a new key, that APK cannot update existing installations normally.
 
-Edit `dist/github/release-notes.md` to describe the changes and validation, then publish:
+Prepare listing metadata under `fastlane/metadata/android/en-US/`. Before submission, verify that screenshots show only test-owned content and that their license permits redistribution. Do not publish credentials, account identifiers, live backup paths, or signing files.
 
-```sh
-gh release create "v$RELEASE_VERSION" \
-  "dist/github/cloud-hoist-$RELEASE_VERSION.apk" \
-  dist/github/update.json dist/github/SHA256SUMS \
-  --repo "$RELEASE_REPO" --target "$RELEASE_SHA" \
-  --title "Cloud Hoist $RELEASE_VERSION" \
-  --notes-file dist/github/release-notes.md --latest
-git tag "v$RELEASE_VERSION" "$RELEASE_SHA"
-git push origin "v$RELEASE_VERSION"
-```
+The source tag must match the version in `app.json`. Once validation is complete, create that tag at the tested commit. F-Droid's recipe follows version tags and reads versionName and versionCode from `app.json`.
 
-Verify the public APK against `SHA256SUMS` and confirm `releases/latest/download/update.json` identifies the same version, package, and APK. If publication fails after upload, inspect the release before retrying. Do not assign a new version just to retry publication.
+Domi submits the prepared recipe to F-Droid. Agents must not contact maintainers, create inclusion issues, or file pull or merge requests without a later explicit instruction. Main-repository review, any maturity exception, and publication are external gates; do not label the app as listed before acceptance.
 
-## GitHub Actions
+## CI
 
-The [Android release workflow](../.github/workflows/android-release.yml) runs on `v20*-*` tags or manual dispatch. Ordinary `main` pushes do not release. An existing GitHub release causes the build job to be skipped, including when the locally tested APK was published before pushing its tag.
-
-For an unpublished version, the workflow checks the app and release logic, tests the native engine, builds with the private signing key, verifies the signature, and publishes the APK, checksum, and update manifest.
-
-Configure these repository secrets from the existing signing files:
-
-```sh
-base64 -w0 .signing/release.p12 | gh secret set ANDROID_RELEASE_KEYSTORE_BASE64 --repo "$RELEASE_REPO"
-gh secret set ANDROID_RELEASE_SIGNING_JSON --repo "$RELEASE_REPO" < .signing/release.json
-```
-
-## In-app updates
-
-`release.config.json` selects the GitHub repository and `appIsInStore`. Keep the flag false for APK distribution. When true, devices with Google Play open the configured Android package's store listing; other devices use the APK. The app accepts only newer version codes for its own package and APK URLs in the configured repository. Android controls installation approval.
-
-## Optional Nextcloud distribution
-
-`pnpm android:publish` builds a signed APK and uploads it to a dedicated Nextcloud beta folder. Configure `NEXTCLOUD_WEBDAV_URL`, `NEXTCLOUD_USERNAME`, `NEXTCLOUD_PASSWORD`, and `NEXTCLOUD_DIRECTORY` in ignored `.env`. The URL must be the account's DAV root; the target folder's parent must already exist. Use an app password and protect `.env` with `chmod 600 .env`.
-
-The publisher verifies the uploaded checksum and renames its temporary file without replacing existing betas. It does not increment versions. In-app update discovery still uses GitHub Releases.
-
-An interrupted build can leave `dist/.beta-build-lock`. Confirm no build is running before removing that empty directory with `rmdir`.
+The Android workflow runs checks and builds unsigned F-Droid candidates. It has no publishing credentials, does not create GitHub APK releases, and does not submit to other stores. Artifact retention supports validation rather than a separate distribution channel.

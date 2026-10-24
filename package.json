@@ -1,6 +1,6 @@
 {
   "name": "cloud-hoist",
-  "version": "2026.6.0",
+  "version": "2026.7.0",
   "license": "GPL-3.0-or-later",
   "main": "expo-router/entry",
   "dependencies": {
@@ -37,11 +37,7 @@
     "android:seed-account": "./scripts/android/seed-debug-account.sh",
     "android:seed-photos": "./scripts/android/seed-random-photos.sh",
     "android:signing": "sh scripts/android/release.sh init",
-    "android:install": "sh scripts/android/install-beta.sh",
-    "android:beta": "sh scripts/android/release.sh build",
-    "android:publish": "sh scripts/android/release.sh publish",
-    "test:publish": "node --test scripts/android/publish.test.mjs",
-    "test:release": "node --test scripts/android/github-release.test.mjs",
+    "android:install": "sh scripts/android/install-release.sh",
     "check": "./scripts/test/all.sh",
     "icons": "node scripts/assets/generate-icons.mjs",
     "icons:check": "node scripts/assets/generate-icons.mjs --check",
@@ -55,7 +51,13 @@
     "test:native": "./scripts/test/native-unit.sh",
     "test:privacy": "./scripts/test/privacy.sh",
     "test:stress": "./scripts/test/stress.sh",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "android:release": "sh scripts/android/release.sh sign",
+    "fdroid:prepare": "sh scripts/fdroid/prepare.sh",
+    "fdroid:build": "sh scripts/fdroid/build.sh",
+    "licenses:generate": "node scripts/fdroid/licenses.mjs",
+    "licenses:check": "node scripts/fdroid/licenses.mjs --check",
+    "test:release": "node --test scripts/android/release.test.mjs"
   },
   "private": true,
   "packageManager": "pnpm@11.3.0",
@@ -73,7 +75,11 @@
     "preset": "jest-expo",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "/android/"
+      "/android/",
+      "/test-results/"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/test-results/"
     ]
   },
   "devDependencies": {
@@ -90,5 +96,14 @@
     "jest-expo": "^57.0.5",
     "tailwindcss": "^3.4.19",
     "typescript": "^6.0.3"
+  },
+  "expo": {
+    "autolinking": {
+      "android": {
+        "buildFromSource": [
+          ".*"
+        ]
+      }
+    }
   }
 }

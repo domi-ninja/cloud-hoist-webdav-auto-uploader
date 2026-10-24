@@ -1,0 +1,1 @@
+Prepare F-Droid-only distribution. Remove the GitHub APK self-updater and Google Play integration. Add an unsigned build path, submission metadata, and bundled open-source license notices. Keep existing backup accounts, settings, queues, and history during signed in-place validation updates.

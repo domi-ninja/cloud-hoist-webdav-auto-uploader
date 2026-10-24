@@ -4,7 +4,7 @@
 
 ## Setup
 
-Use Linux x86-64 with Git and nvm installed. KVM is needed for the emulator.
+Use Linux x86-64 with Git, Python 3, and nvm installed. KVM is needed for the emulator.
 
 ```sh
 ./scripts/setup.sh
@@ -21,9 +21,9 @@ pnpm android emu
 
 `pnpm android` uses the single connected target, or starts the emulator when none is online. `pnpm android phone` selects a phone. Set `ANDROID_SERIAL` to select an exact device when several are connected.
 
-Development builds use a different signing key from distributed betas. Use an emulator or disposable installation for them. Replacing a beta with a development build requires uninstalling the beta, which removes its local account, settings, queue, and history.
+Development builds use a different signing key from existing release installations. Use an emulator or disposable installation for them. A signing mismatch prevents an in-place update. Never uninstall the configured app or clear its data to work around it.
 
-For the user's configured phone, build and install a signed update through [Publishing](publishing.md). `pnpm android:install` verifies the release key, installs in place, and launches the app without clearing data.
+For the user's configured phone, build an unsigned F-Droid candidate and sign it locally through [Publishing](publishing.md). `pnpm android:install` verifies the release key, installs in place, and launches the app without clearing data.
 
 ## Checks without a device
 
@@ -33,10 +33,10 @@ pnpm lint
 pnpm test
 pnpm test:native
 pnpm test:release
-pnpm test:publish
+pnpm licenses:check
 ```
 
-Native unit tests need the Android SDK and JDK. `pnpm test:privacy` builds and inspects an APK for prohibited permissions and known analytics or advertising dependencies. `pnpm icons:check` verifies generated icon assets against their source.
+Native unit tests need the Android SDK and JDK. `pnpm test:privacy [APK]` inspects the existing unsigned candidate (or the supplied APK) for prohibited permissions and known analytics or advertising dependencies. `pnpm icons:check` verifies generated icon assets against their source.
 
 ## Phone validation
 

@@ -20,9 +20,12 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 
 - Use `$year-$minorversion` for the public app version, starting with `2026-1`. Increment the minor number for each changed release bundle. Start at 1 in a new year.
 - Keep `app.json` as the release identity. Android versionCode is year × 10000 + minor. The package.json tooling version uses year.minor.0.
-- Build, test, install, and publish the same signed APK for a version. Do not publish another version of the same patch just because a CI run or push happened.
-- Rebuild a version only for a concrete reason such as a failed build or failed test. Fixes after publication get a new version. Retry failed uploads with the existing artifact.
-- Ordinary main pushes do not release. Release tags and manual Actions runs skip versions already published. When a local APK was tested on the phone, publish that artifact before pushing its version tag.
+- F-Droid is the only distribution target. Do not add Google Play, EAS OTA, GitHub APK publishing, or app-managed executable updates.
+- Build unsigned candidates without private signing credentials. Sign the same artifact with the existing key only for local physical-phone validation.
+- Preserve the existing package and signing identity. Do not uninstall or clear existing app data to bypass a signature mismatch.
+- Rebuild a version only for a concrete build or test failure. Once distributed, app fixes get a new version. Retry failed uploads with the existing artifact.
+- Ordinary source pushes run checks and retain unsigned validation artifacts. They do not publish APKs or contact F-Droid.
+- Do not contact people, create external issues, or file pull/merge requests on Domi's behalf. Prepare a local handoff and report external submission or approval gates.
 
 ## Documentation
 

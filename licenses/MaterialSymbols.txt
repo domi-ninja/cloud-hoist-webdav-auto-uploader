@@ -1,0 +1,4 @@
+Material Symbols font
+Copyright 2026 Google LLC.
+
+The bundled MaterialSymbols_400Regular.ttf is from @expo-google-fonts/material-symbols 0.4.45 and is licensed under Apache-2.0. The package LICENSE_FONT supplies the full license.

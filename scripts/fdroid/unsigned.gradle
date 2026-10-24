@@ -1,0 +1,23 @@
+// Build without private keys and keep machine paths out of native code and build IDs.
+gradle.beforeProject { project ->
+    project.afterEvaluate {
+        def application = project.plugins.hasPlugin('com.android.application')
+        def library = project.plugins.hasPlugin('com.android.library')
+        if (!application && !library) return
+        if (application) project.android.buildTypes.release.signingConfig = null
+
+        def sourceRoot = project.rootProject.projectDir.parentFile.absolutePath
+        def paths = [
+            (sourceRoot): '.',
+            (gradle.gradleUserHomeDir.absolutePath): '/gradle',
+            (System.getenv('ANDROID_HOME')): '/sdk',
+        ].findAll { path, replacement -> path }
+        def flags = paths.collect { path, replacement -> "-ffile-prefix-map=${path}=${replacement}" }
+        flags.add('-fdebug-compilation-dir=.')
+        // CMake arguments augment the libraries' existing target flags and optimization settings.
+        project.android.defaultConfig.externalNativeBuild.cmake.arguments.addAll([
+            "-DCMAKE_C_FLAGS=${flags.join(' ')}".toString(),
+            "-DCMAKE_CXX_FLAGS=${flags.join(' ')}".toString(),
+        ])
+    }
+}
