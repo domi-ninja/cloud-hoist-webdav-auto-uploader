@@ -3,6 +3,7 @@ name: F-Droid candidate checks
 on:
   push:
     branches: [main]
+    paths-ignore: ['**/*.md']
     tags: ['v20*-*']
   workflow_dispatch:
 
@@ -51,13 +52,12 @@ jobs:
           pnpm licenses:check
       - name: Test native engine
         run: pnpm test:native
-      - name: Build unsigned F-Droid candidate
-        run: pnpm fdroid:build
-      - name: Scan APK
+      - name: Validate F-Droid source, build, and APK
         run: |
           python3 -m venv /tmp/fdroid-check
           /tmp/fdroid-check/bin/pip install fdroidserver==2.4.5
-          /tmp/fdroid-check/bin/fdroid scanner --refresh --exit-code dist/*-unsigned.apk
+          GRADLE_BIN=$(find "$HOME/.gradle/wrapper/dists/gradle-9.3.1-bin" -type f -path '*/bin/gradle' -print -quit)
+          /tmp/fdroid-check/bin/python scripts/fdroid/validate.py --gradle "$GRADLE_BIN"
       - name: Retain validation artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:

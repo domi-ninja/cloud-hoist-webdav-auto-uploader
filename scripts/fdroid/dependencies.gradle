@@ -19,6 +19,12 @@ gradle.projectsEvaluated {
             def output = new File(gradle.rootProject.projectDir.parentFile, 'dist/fdroid-native-dependencies.json')
             output.parentFile.mkdirs()
             output.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(rows)) + '\n'
+            def reviewed = new groovy.json.JsonSlurper().parse(new File(output.parentFile.parentFile, 'licenses/native.json')).keySet()
+            def resolved = rows.collect { row -> "${row.group}:${row.name}:${row.version}".toString() }.toSet()
+            if (resolved != reviewed) {
+                throw new GradleException("Native license inventory changed. Missing: ${resolved - reviewed}; unused: ${reviewed - resolved}. Review and refresh licenses before release.")
+            }
+            println "Verified licenses for ${resolved.size()} native components."
         }
     }
 }

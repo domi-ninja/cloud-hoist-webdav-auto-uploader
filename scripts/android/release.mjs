@@ -42,9 +42,11 @@ async function main() {
   const apksigner = join(process.env.ANDROID_HOME, 'build-tools/36.0.0/apksigner');
   const apk = mode === 'verify' && process.argv[3] ? resolve(process.argv[3]) : resolve(identity.apk);
   if (mode === 'sign') {
-    run(apksigner, ['sign', '--ks', join(signingDir, credentials.storeFile), '--ks-key-alias', credentials.keyAlias,
+    run(join(process.env.ANDROID_HOME, 'build-tools/36.0.0/zipalign'), ['-c', '-P', '16', '4', resolve(identity.unsignedApk)]);
+    run(apksigner, ['sign', '--alignment-preserved', 'true', '--ks', join(signingDir, credentials.storeFile), '--ks-key-alias', credentials.keyAlias,
       '--ks-pass', 'env:LOCAL_SIGNING_PASSWORD', '--key-pass', 'env:LOCAL_KEY_PASSWORD', '--out', apk, resolve(identity.unsignedApk)], signingEnv);
   }
+  run(join(process.env.ANDROID_HOME, 'build-tools/36.0.0/zipalign'), ['-c', '-P', '16', '4', apk]);
   const verification = run(apksigner, ['verify', '--verbose', '--print-certs', apk]);
   const certificate = spawnSync(keytool, ['-exportcert', '-keystore', join(signingDir, credentials.storeFile),
     '-alias', credentials.keyAlias, '-storepass:env', 'LOCAL_SIGNING_PASSWORD'], { env: signingEnv });
