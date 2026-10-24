@@ -13,7 +13,7 @@ Use `year-minor`, Android versionCode = year × 10000 + minor, and package.json 
 - Credential-free unsigned builds, Expo Android source compilation, and preparation that removes unused prebuilts.
 - F-Droid candidate recipe, listing text, icon, screenshots, changelog, and version discovery from tagged `app.json` files.
 - Offline license notices and a build gate for changes to the reviewed Android dependency inventory.
-- F-Droid source/build/APK checks, independent byte-identical builds, and successful developer-signature reconstruction.
+- F-Droid source/build/APK checks, byte-identical local and independent CI builds, and successful developer-signature reconstruction.
 - Signed in-place installation of candidate `2026-7` on the physical phone, changed-control checks, isolated destination edge tests, and real Nextcloud hash checks. Existing app data is retained.
 - Read-only CI checks and unsigned artifacts, with no store submission or GitHub APK publishing.
 

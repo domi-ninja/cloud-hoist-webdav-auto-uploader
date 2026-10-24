@@ -34,7 +34,7 @@ The repository now contains the candidate recipe, version-tag discovery, listing
 | Prepared-source scan | Zero errors; one warning for the unused Fontisto font file |
 | F-Droid build and APK scan | Pass with fdroidserver 2.4.5; no known non-free classes or unexpected signing blocks reported |
 | Native dependency notice gate | All 188 coordinates match; deliberately removing one reviewed entry correctly rejects the build |
-| Independent build comparison | Byte-identical unsigned APKs from the working tree and a clean F-Droid checkout |
+| Independent build comparison | Byte-identical unsigned APKs from the working tree, a clean local F-Droid checkout, and an independent GitHub CI runner |
 | Developer-signature verification | F-Droid `verify_apks` passes; signature-copy reconstruction matches the signed APK byte-for-byte |
 | Physical installation and changed UI | Signed in-place update on Samsung SM-A166B, Android 16; version, license search/expansion, empty search, reopening, and Android Back verified |
 | Existing app state | Original account, three backup folders, two disabled/one enabled states, 19/14 pending-file counts, and 21 completed uploads retained |
@@ -52,7 +52,7 @@ Existing signing certificate SHA-256:
 111bd9eac655fbf8ba26cf2155a50b13f50d66c0241a75c0b29a93bcc571e6a3
 ```
 
-Reproducibility was tested on one host with separate source directories and shared dependency caches. This does not establish reproducibility on F-Droid's dedicated build infrastructure. Privileged build-server provisioning was not run on the workstation.
+The [final CI run](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/actions/runs/40106053725) passed and produced the same unsigned SHA-256. Local builds used Ubuntu OpenJDK 21; the independent Ubuntu CI runner used Temurin 21. Local checkouts shared dependency caches; CI built separately. F-Droid must still confirm its dedicated build environment. Privileged build-server provisioning was not run on the workstation.
 
 ## Remaining gates
 
