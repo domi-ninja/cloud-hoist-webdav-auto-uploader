@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run F-Droid's source/build/APK gates on a clean local Git checkout, without publishing."""
 import argparse
+import hashlib
 import json
 import os
 import shlex
@@ -54,3 +55,4 @@ output = root / 'dist' / f"cloud-hoist-{app['version']}-unsigned.apk"
 output.parent.mkdir(exist_ok=True)
 shutil.copy2(work / 'tmp' / f"{package}_{build['versionCode']}.apk", output)
 print(f'Verified unsigned candidate: {output}')
+print(f'SHA-256: {hashlib.sha256(output.read_bytes()).hexdigest()}')
