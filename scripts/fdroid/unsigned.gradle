@@ -14,6 +14,12 @@ gradle.beforeProject { project ->
         ].findAll { path, replacement -> path }
         def flags = paths.collect { path, replacement -> "-ffile-prefix-map=${path}=${replacement}" }
         flags.add('-fdebug-compilation-dir=.')
+        // ThinLTO's temporary symbol hashes change Reanimated's build ID across paths.
+        // Omit that metadata while keeping its existing compiler/link-time optimization.
+        if (project.name == 'react-native-reanimated') {
+            project.android.defaultConfig.externalNativeBuild.cmake.arguments.add(
+                '-DCMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO=-Wl,--build-id=none')
+        }
         // CMake arguments augment the libraries' existing target flags and optimization settings.
         project.android.defaultConfig.externalNativeBuild.cmake.arguments.addAll([
             "-DCMAKE_C_FLAGS=${flags.join(' ')}".toString(),
