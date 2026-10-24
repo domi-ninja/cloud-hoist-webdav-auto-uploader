@@ -6,7 +6,7 @@ F-Droid is the only distribution target. The app does not check GitHub for updat
 
 ## Version and source identity
 
-Keep `app.json` as the release identity. For `2026-7`, set `expo.version` to `2026-7`, Android versionCode to `20260007`, and package.json version to `2026.7.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
+Keep `app.json` as the release identity. For `2026-8`, set `expo.version` to `2026-8`, Android versionCode to `20260008`, and package.json version to `2026.8.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
 
 ## Build without signing credentials
 
@@ -45,7 +45,7 @@ GitHub Releases hosts the signed APK that F-Droid compares with its own build. T
 https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download/fdroid-reference-%v/cloud-hoist-%v.apk
 ```
 
-For `2026-7`, the [verification release](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/fdroid-reference-2026-7) contains the same signed APK tested on the phone and a `SHA256SUMS` file. Its tag points to tested source commit `ac3f9932397aad2e42316f51aa2cc79c232285fc`.
+For `2026-8`, the [verification release](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/fdroid-reference-2026-8) contains the same signed APK tested on the phone and a `SHA256SUMS` file. Its tag points to tested source commit `01ea9e2d87f9d6928a917071b2df2a806e2bf24b`.
 
 Publish reference APKs as prereleases with `--latest=false`, using tags named `fdroid-reference-<version>`. These tags sit outside F-Droid's normal `v<version>` discovery and the application CI's version-tag build trigger. Keep user setup and updates through F-Droid.
 
