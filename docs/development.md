@@ -36,7 +36,7 @@ pnpm test:release
 pnpm licenses:check
 ```
 
-Native unit tests need the Android SDK and JDK. `pnpm test:privacy [APK]` inspects the existing unsigned candidate (or the supplied APK) for prohibited permissions and known analytics or advertising dependencies. `pnpm icons:check` verifies generated icon assets against their source.
+Native unit tests need the Android SDK and JDK. `pnpm test:release` includes the attribution failure cases. The [attribution catalogue](../licenses/attribution-review.md) records notices and replacements; changing a dependency requires reviewing its entry before regenerating the offline notices. `pnpm test:privacy [APK]` inspects the existing unsigned candidate (or the supplied APK) for prohibited permissions and known analytics or advertising dependencies. `pnpm icons:check` verifies generated icon assets against their source.
 
 ## Phone validation
 

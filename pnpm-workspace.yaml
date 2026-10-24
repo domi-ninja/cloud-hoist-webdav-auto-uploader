@@ -8,6 +8,14 @@ minimumReleaseAgeExclude:
   - '@expo/ui@57.0.16'
   - expo-router@57.0.19
   - expo-build-properties@57.0.17
-# 4.4.4 omits its BSD notice; 4.4.6 supplies the upstream license and inherited credits.
+# These releases include full upstream license files. Use unbundled Jimp so its
+# dependencies remain visible to the license inventory.
 overrides:
   '@expo/cli@57.0.22>@expo/xcpretty': 4.4.6
+  '@expo/devcert': 1.2.2
+  '@expo/sdk-runtime-versions': 1.0.1
+  '@expo/ws-tunnel': 2.0.1
+  bser: 2.1.2
+  fb-watchman: 2.0.4
+  standard-navigation: 0.0.9
+  jimp-compact: npm:jimp@0.16.1

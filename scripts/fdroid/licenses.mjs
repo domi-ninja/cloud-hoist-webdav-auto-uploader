@@ -3,12 +3,14 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { sha256, validateAttribution, validateNativeLibraries } from './attribution.mjs';
 
 const check = process.argv.includes('--check');
 const inventory = JSON.parse(execFileSync('pnpm', ['licenses', 'list', '--prod', '--json'], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 }));
 const upstream = JSON.parse(await readFile('licenses/npm-upstream.json', 'utf8'));
 const native = JSON.parse(await readFile('licenses/native.json', 'utf8'));
 const declarations = JSON.parse(await readFile('licenses/declarations.json', 'utf8'));
+const embedded = JSON.parse(await readFile('licenses/embedded.json', 'utf8'));
 const texts = {};
 const packages = [];
 const addText = text => {
@@ -33,15 +35,19 @@ for (const entries of Object.values(inventory)) {
       }
       if (!licenseTexts.length && upstream[key]?.text) licenseTexts.push(addText(upstream[key].text));
       if (!licenseTexts.length) {
-        const reviewed = declarations[key];
-        if (!reviewed || reviewed.license !== manifest.license) throw new Error(`Review missing license evidence for ${key}.`);
-        licenseTexts.push(addText(reviewed.text));
-        if (/\bMIT\b/.test(manifest.license)) licenseTexts.push(mit);
-        if (/Apache-2\.0/.test(manifest.license)) licenseTexts.push(apache);
+        throw new Error(`Review missing complete license evidence for ${key}.`);
       }
       packages.push({ name: manifest.name, version: manifest.version, license: entry.license, source: `https://www.npmjs.com/package/${manifest.name}/v/${manifest.version}`, textIds: [...new Set(licenseTexts)] });
     }
   }
+}
+const knownPackages = new Set([...packages.map(entry => `${entry.name}@${entry.version}`), ...Object.keys(native), 'Cloud Hoist']);
+validateAttribution(embedded, knownPackages);
+for (const [path, expected] of Object.entries(embedded.sourceInputs)) {
+  if (sha256(await readFile(path)) !== expected) throw new Error(`Embedded attribution source changed: ${path}.`);
+}
+for (const entry of embedded.components) {
+  packages.push({ name: entry.name, version: entry.version, license: entry.license, source: entry.source, textIds: [...new Set(entry.notices.map(notice => addText(notice.text)))] });
 }
 for (const [coordinate, entry] of Object.entries(native)) {
   if (entry.error) throw new Error(`Native license evidence missing for ${coordinate}: ${entry.error}`);
@@ -71,3 +77,16 @@ if (check) {
   await writeFile(output, json);
 }
 console.log(`${check ? 'Verified' : 'Wrote'} ${uniquePackages.length + 1} app/package/font entries and ${Object.keys(texts).length} notice texts.`);
+
+const apkIndex = process.argv.indexOf('--apk');
+if (apkIndex !== -1) {
+  const apk = process.argv[apkIndex + 1];
+  if (!apk) throw new Error('Pass an APK path after --apk.');
+  const files = execFileSync('unzip', ['-Z1', apk], { encoding: 'utf8' }).trim().split('\n');
+  const abis = validateNativeLibraries(embedded, files);
+  for (const abi of abis) {
+    const runtime = execFileSync('unzip', ['-p', apk, `lib/${abi}/libc++_shared.so`], { maxBuffer: 20 * 1024 * 1024 });
+    if (sha256(runtime) !== embedded.ndkRuntimeSha256[abi]) throw new Error(`NDK runtime changed for ${abi}; review its notices.`);
+  }
+  console.log(`Verified attribution for ${Object.keys(embedded.nativeLibraries).length} native libraries across ${abis.length} ABIs.`);
+}

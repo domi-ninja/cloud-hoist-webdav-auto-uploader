@@ -12,7 +12,7 @@ Use `year-minor`, Android versionCode = year × 10000 + minor, and package.json 
 
 - Credential-free unsigned builds, Expo Android source compilation, and preparation that removes unused prebuilts.
 - F-Droid candidate recipe, listing text, icon, screenshots, changelog, and version discovery from tagged `app.json` files.
-- Offline license notices and a build gate for changes to the reviewed Android dependency inventory.
+- Offline notices, a [package-by-package attribution catalogue](../licenses/attribution-review.md), and release gates for reviewed dependency versions, embedded notices, and every APK native library.
 - F-Droid source/build/APK checks, byte-identical local and independent CI builds, and successful developer-signature reconstruction.
 - Signed in-place installation of candidate `2026-7` on the physical phone, changed-control checks, isolated destination edge tests, and real Nextcloud hash checks. Existing app data is retained.
 - Read-only CI checks and unsigned artifacts, with no store submission.
@@ -20,7 +20,7 @@ Use `year-minor`, Android versionCode = year × 10000 + minor, and package.json 
 
 ## Remaining sequence
 
-1. Resolve the remaining upstream notice-attribution review and confirm the recipe on F-Droid's build infrastructure.
+1. Complete `2026-8` build and physical-phone validation, then confirm the recipe on F-Droid's build infrastructure.
 2. Retain the configured GitHub `Binaries` URL and `AllowedAPKSigningKeys` for the existing certificate. Resolve the candidate disable flag after review. Never accept a new signing identity or clear existing app data silently.
 3. Publish normal version tags at the tested source revision when preparing accepted releases. Each new reference APK must match its phone-tested candidate; upload retries reuse the file.
 4. Domi submits the prepared work. The project began September 4, 2026; submission before December 4 needs an applicable maturity exception supported by accurate evidence of existing users.

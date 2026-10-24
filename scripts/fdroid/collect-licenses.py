@@ -2,6 +2,7 @@
 """Collect pinned upstream license evidence. Requires the resolved Gradle inventory."""
 import concurrent.futures
 import hashlib
+import io
 import json
 import re
 import subprocess
@@ -44,6 +45,28 @@ def npm_missing(item):
     return f'{name}@{version}', {'error': 'No root license found at the published git commit', 'repository': url, 'commit': commit}
 
 
+def artifact_notices(artifact):
+    """Retain notices in an artifact and in the JARs carried by an Android AAR."""
+    notices = []
+
+    def collect(archive, prefix=''):
+        for filename in archive.namelist():
+            if re.search(r'(?:^|/)(?:LICENSE|LICENCE|NOTICE|COPYING|COPYRIGHT)(?:[._-][^/]*)?$', filename, re.I) and not filename.endswith('/'):
+                data = archive.read(filename)
+                try:
+                    text = data.decode('utf8')
+                except UnicodeDecodeError:
+                    text = data.decode('latin1')
+                notices.append({'path': prefix + filename, 'text': text})
+            elif filename == 'classes.jar' or (filename.startswith('libs/') and filename.endswith('.jar')):
+                with zipfile.ZipFile(io.BytesIO(archive.read(filename))) as nested:
+                    collect(nested, prefix + filename + '!/')
+
+    with zipfile.ZipFile(artifact) as archive:
+        collect(archive)
+    return notices
+
+
 def native(item):
     group, name, version = item['group'], item['name'], item['version']
     coordinate = f'{group}:{name}:{version}'
@@ -61,14 +84,7 @@ def native(item):
     for element in pom.findall('./m:licenses/m:license', ns):
         declarations.append({'name': element.findtext('m:name', '', ns), 'url': element.findtext('m:url', '', ns)})
     artifact = Path(item['file']) if item['file'] else None
-    notices = []
-    if artifact:
-        with zipfile.ZipFile(artifact) as archive:
-            for filename in archive.namelist():
-                if re.search(r'(?:^|/)(?:LICENSE|LICENCE|NOTICE|COPYING)(?:[._-][^/]*)?$', filename, re.I) and not filename.endswith('/'):
-                    data = archive.read(filename)
-                    if len(data) < 200_000:
-                        notices.append({'path': filename, 'text': data.decode('utf8', errors='replace')})
+    notices = artifact_notices(artifact) if artifact else []
     return coordinate, {'source': base + path, 'licenseDeclarations': declarations, 'sha256': hashlib.sha256(artifact.read_bytes()).hexdigest() if artifact else None, 'notices': notices}
 
 

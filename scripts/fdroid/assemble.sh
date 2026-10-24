@@ -11,4 +11,5 @@ export CI=1 NODE_ENV=production EXPO_NO_TELEMETRY=1 EXPO_NO_DOTENV=1 TZ=UTC
 mkdir -p dist
 APP_VERSION=$(node -p 'JSON.parse(require("node:fs").readFileSync("app.json", "utf8")).expo.version')
 cp android/app/build/outputs/apk/release/app-release-unsigned.apk "dist/cloud-hoist-$APP_VERSION-unsigned.apk"
+node scripts/fdroid/licenses.mjs --check --apk "dist/cloud-hoist-$APP_VERSION-unsigned.apk"
 printf 'Unsigned F-Droid candidate: dist/cloud-hoist-%s-unsigned.apk\n' "$APP_VERSION"

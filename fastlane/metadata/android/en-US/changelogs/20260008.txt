@@ -1,0 +1,1 @@
+Expanded offline open-source notices for native libraries, image codecs, and other bundled components.

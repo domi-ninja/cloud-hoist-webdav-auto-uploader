@@ -20,7 +20,7 @@ pnpm fdroid:build
 
 This generates the Android project and builds `dist/cloud-hoist-<version>-unsigned.apk`. It requires the SDK and JDK described in [Development](development.md), but does not require private signing files, an Expo account, or Google Play access. Expo telemetry and dotenv loading are disabled for this build.
 
-The F-Droid recipe is `metadata/ninja.domi.cloudhoist.yml`. Its preparation must run from a clean checkout and provision only build tools, not an emulator or Play system image. Validate the fully prepared source, not just the tracked repository. The recipe keeps builds disabled and automatic build updates off until attribution and F-Droid build-server review are complete.
+The F-Droid recipe is `metadata/ninja.domi.cloudhoist.yml`. Its preparation must run from a clean checkout and provision only build tools, not an emulator or Play system image. Validate the fully prepared source, not just the tracked repository. The recipe keeps builds disabled and automatic build updates off until F-Droid build-server and maintainer review are complete.
 
 ## Local phone validation
 
@@ -55,7 +55,7 @@ Treat a published reference APK and its version as fixed. Retry failed uploads w
 
 ## Checks and submission
 
-Run type checking, lint, unit tests, native unit tests, release identity tests, license checks, F-Droid metadata lint, and source/APK scanning. The native build rejects runtime dependency coordinates that differ from the reviewed inventory, so new Android dependencies cannot silently bypass the notice review.
+Run type checking, lint, unit tests, native unit tests, release identity/attribution tests, license checks, F-Droid metadata lint, and source/APK scanning. The native build rejects runtime dependency coordinates that differ from the reviewed inventory. The APK gate also rejects unaccounted native libraries, stale embedded-code notices, and changed C++ runtime hashes. See the [attribution catalogue](../licenses/attribution-review.md) for each reviewed package and component.
 
 To run the same F-Droid gates as CI, install fdroidserver 2.4.5 in a Python virtual environment, activate it, load the Android build environment, and use a clean committed checkout:
 
@@ -66,13 +66,15 @@ python scripts/fdroid/validate.py --gradle /path/to/trusted/gradle-9.3.1/bin/gra
 
 `gradlew-fdroid` is also accepted as the Gradle executable. The runner makes a separate Git checkout under ignored `test-results/`, enables only its local recipe copy, and runs `fdroid build --test` with source and APK scanners. It does not run privileged build-server provisioning on the workstation or publish anything. Output is copied to the normal unsigned candidate path.
 
+The local validation runner builds an unsigned candidate and omits `Binaries` in its temporary recipe. A new candidate has no signed reference yet. The checked-in recipe retains `Binaries`; verify developer-signature reconstruction separately after local signing, then verify the public download.
+
 Dependency updates require refreshing `dist/fdroid-native-dependencies.json`, reviewing the collected evidence under `licenses/`, and regenerating notices with `pnpm licenses:generate`. The inventory task writes its report before rejecting an unreviewed change; `scripts/fdroid/collect-licenses.py` can then collect published POMs and available artifact notices for review. Test a second build before claiming reproducibility. The native build normalizes source, Gradle-cache, and SDK paths, including filenames embedded in assertions and debug information. It also pins React Native's unused release dev-server IP to loopback instead of embedding the build machine's LAN address. Reanimated retains optimization but omits its path-dependent ThinLTO build ID. See the [readiness report](fdroid-readiness-report.md) for the distinction between a successful local build and a validated F-Droid build.
 
 F-Droid can preserve our signing identity through its developer-signed reproducible-build workflow. The public reference URL is configured in `Binaries`, and local and independent CI builds match. F-Droid must still verify the recipe on its own infrastructure. If F-Droid instead signs with a new key, that APK cannot update existing installations normally.
 
 Prepare listing metadata under `fastlane/metadata/android/en-US/`. Before submission, verify that screenshots show only test-owned content and that their license permits redistribution. Do not publish credentials, account identifiers, live backup paths, or signing files.
 
-Pin each recipe build to the full tested source commit. Publish normal `v<version>` source tags when preparing accepted releases. Keep `AllowedAPKSigningKeys` bound to the existing public certificate and `Binaries` pointed at the matching verification release. Remove the candidate disable flag after attribution and F-Droid build-server review. Enable `AutoUpdateMode: Version v%v` after initial acceptance. Version discovery reads versionName and versionCode from tagged `app.json` files.
+Pin each recipe build to the full tested source commit. Publish normal `v<version>` source tags when preparing accepted releases. Keep `AllowedAPKSigningKeys` bound to the existing public certificate and `Binaries` pointed at the matching verification release. Remove the candidate disable flag after F-Droid build-server and maintainer review. Enable `AutoUpdateMode: Version v%v` after initial acceptance. Version discovery reads versionName and versionCode from tagged `app.json` files.
 
 Domi submits the prepared recipe to F-Droid. Agents must not contact maintainers, create inclusion issues, or file pull or merge requests without a later explicit instruction. Main-repository review, any maturity exception, and publication are external gates; do not label the app as listed before acceptance.
 

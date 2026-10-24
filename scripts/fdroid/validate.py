@@ -30,6 +30,9 @@ if (build['versionName'], build['versionCode']) != (app['version'], app['android
 java = os.environ['JAVA_HOME']
 sdk = os.environ['ANDROID_HOME']
 recipe['Repo'] = str(root)
+# A new unsigned candidate has no signed reference yet. The real recipe retains
+# Binaries; developer-signature reconstruction runs after local signing.
+recipe.pop('Binaries', None)
 build['commit'] = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
 build.pop('disable', None)  # Enable only this local test copy; never uses --force or skips scans.
 build['prebuild'] = [line.replace('/usr/lib/jvm/java-21-openjdk-amd64', shlex.quote(java)) for line in build['prebuild']]

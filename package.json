@@ -1,6 +1,6 @@
 {
   "name": "cloud-hoist",
-  "version": "2026.7.0",
+  "version": "2026.8.0",
   "license": "GPL-3.0-or-later",
   "main": "expo-router/entry",
   "dependencies": {
@@ -57,7 +57,7 @@
     "fdroid:build": "sh scripts/fdroid/build.sh",
     "licenses:generate": "node scripts/fdroid/licenses.mjs",
     "licenses:check": "node scripts/fdroid/licenses.mjs --check",
-    "test:release": "node --test scripts/android/release.test.mjs"
+    "test:release": "node --test scripts/android/release.test.mjs scripts/fdroid/attribution.test.mjs && python3 -m unittest discover -s scripts/fdroid -p '*_test.py'"
   },
   "private": true,
   "packageManager": "pnpm@11.3.0",
