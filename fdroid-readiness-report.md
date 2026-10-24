@@ -12,7 +12,7 @@ The candidate builds through F-Droid's own tools, reproduces locally, and update
 
 Expo's npm packages contained precompiled Android AARs and unused platform binaries. The build now compiles Expo Android modules from source and removes unused prebuilts and legacy npm-local Maven repositories. The only source-scanner exception is the exact pinned Linux Hermes compiler, explicitly permitted by F-Droid's policy. There is no blanket `node_modules` or Gradle-script exclusion.
 
-Initial independent builds differed in 32 native libraries. Compiler path normalization fixed source filenames and debug-derived build IDs. Reanimated's remaining ThinLTO build ID is omitted while retaining optimization. Android's signer also rewrote ZIP padding by default; local signing now preserves and checks alignment so F-Droid can reconstruct the signed APK.
+Initial independent builds differed in 32 native libraries. Compiler path normalization fixed source filenames and debug-derived build IDs. Reanimated's remaining ThinLTO build ID is omitted while retaining optimization. Cross-machine comparison then found one remaining resource difference: React Native embedded each build host's LAN address in release resources. Release builds now pin that unused dev-server address to loopback. Android's signer also rewrote ZIP padding by default; local signing now preserves and checks alignment so F-Droid can reconstruct the signed APK.
 
 The app has no external update checks, APK download controls, or Play Store integration. EAS OTA is explicitly disabled. Future JavaScript, UI, native, and asset updates all go through a complete APK managed by F-Droid.
 
@@ -43,10 +43,10 @@ The build uses Node 24.20.0, pnpm 11.3.0, JDK 21, Gradle 9.3.1, Android SDK/buil
 
 ```text
 Unsigned APK SHA-256:
-4e7662c1708719d56f57beb7a0e31ad31fa53423ba8f347c90e3b8302106b4a1
+278f82a1fa1ee747a6f9ed4ef5d0bc4bf0cbbc3974faaba748683d6fc10e38b3
 
 Signed, phone-tested APK SHA-256:
-db16696add7f8ae850f63aadb5769461b6605927307ebd5c6226732ecc33cbf7
+5914ac7e010358ea3fe3e6d9cae35c3d924202dece04f4cde070abc53c249e31
 
 Existing signing certificate SHA-256:
 111bd9eac655fbf8ba26cf2155a50b13f50d66c0241a75c0b29a93bcc571e6a3
@@ -57,7 +57,7 @@ Reproducibility was tested on one host with separate source directories and shar
 ## Remaining gates
 
 1. **Signed reference hosting.** Preserving upgrades for existing installations requires F-Droid's developer-signed workflow. Local rebuild/signature verification now passes, but no public reference-APK URL is configured. The recipe is disabled, with the existing certificate recorded. Set `Binaries` only after choosing a host for verification artifacts; do not introduce another app-managed update channel or share the private key.
-2. **Upstream attribution review.** The offline inventory contains 874 app/library/font entries. Sixteen npm packages omit standalone license files and rely on preserved published declarations, source headers, or README notices. These fallbacks remain explicit review items. The missing notice in `@expo/xcpretty` 4.4.4 was resolved by pinning 4.4.6, which supplies the full license and inherited credits. A successful scanner run is not an independent legal audit.
+2. **Upstream attribution review.** The offline inventory contains 874 app/library/font entries. Sixteen npm packages omit standalone license files and rely on preserved published declarations, source headers, or README notices. These fallbacks remain explicit review items. The missing notice in `@expo/xcpretty` 4.4.4 was resolved by pinning 4.4.6, which supplies the full license and inherited credits. The notice inventory is not an exhaustive attribution manifest for code embedded inside native binaries, including the NDK C++ runtime and React Native vendor libraries. Maven POM declarations alone do not establish that coverage. This remains part of the upstream attribution review; a successful scanner run is not an independent legal audit.
 3. **F-Droid build-server and maintainer review.** The local recipe passed, but F-Droid must validate it in its environment and review dependencies, assets, and any anti-feature decisions. Agents must not open that submission under the current instruction.
 4. **Project maturity.** History starts September 4, 2026. Before December 4, 2026, inclusion needs an applicable exception, such as accurate evidence of existing users. Otherwise, wait for the normal development period. Maintainers decide whether an exception applies.
 
