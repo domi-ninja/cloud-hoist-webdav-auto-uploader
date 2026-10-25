@@ -2,37 +2,43 @@
 
 An Android app that uploads selected phone folders to Nextcloud. Independent from Nextcloud GmbH. Requires Android 10 or newer and one Nextcloud account.
 
-## Get started
 
-Download [Cloud Hoist 2026-11 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download/beta-2026-11/cloud-hoist-2026-11.apk), or see [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases) for all versions. Install the signed APK over an existing installation to keep accounts, settings, and history. F-Droid packaging is in progress; the app is not listed there yet.
+This app is for people who want to back up some of the data on their android phones, without using google drive. It only does one-way backups. Files stay on the phone, and deleting a local file leaves its uploaded copy alone. 
 
-1. Download and install the latest beta APK. Android may ask you to allow installation from your browser.
-2. Enter your Nextcloud server address and sign in through the browser. You can also use a Nextcloud app password.
-3. Tap **Start backup** on a suggested folder or swipe it right. For another folder, tap **Choose other directory to back up** below the suggestions. Grant access, check the destination, and tap **Save backup folder**.
-4. Open **Status** to see backed-up folders, progress, and failed files. Network and power rules are in **Settings**.
+This app will never edit or delete files on your nextcloud. It might move them around, or make duplicates, but you should not loose any data. However, having good backups of all the digital things closest to your heart is essential. 
 
-All existing files in a selected folder are included. Start with a small folder if you want to try the app first.
+> Take a second to plug in a USB disk and do this right now, or regret it later, when enthropy or human fallability strikes :)
 
-## Backup behavior
 
-- New backups default to `/Phone Uploads`, followed by the local parent and folder names. Change the destination during setup or the upload root in Settings. The root contains a readme with the last completed upload timestamp.
-- Changing the upload root updates every backup destination while keeping custom subpaths. Destination changes offer moving existing files or uploading copies. Multiple backups can share the same remote folder.
-- Local edits upload again and replace destination files by default. Originals stay on the phone. Deleting a phone file keeps its uploaded copy; deleting a server copy does not automatically upload an unchanged local file again.
-- Uploads wait for an unmetered connection and sufficient battery by default. Charging is optional. Android can delay background work; Status reports the current reason.
-- Pause stops uploads globally. A folder switch controls that folder. Disabled folders are excluded from overall progress. Removing a backup folder removes its queue and history, without deleting phone or server files.
+## Installation
 
-This is one-way upload. Generic WebDAV servers and Nextcloud end-to-end encrypted folders are unsupported.
+Download [Cloud Hoist 2026-11 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download/beta-2026-11/cloud-hoist-2026-11.apk), or see [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases) for all versions. Install the signed APK over an existing installation to keep accounts, settings, and history.
 
-## Updates
+## Backups Screen
 
-Beta builds check GitHub Releases, including beta prereleases. Settings shows the installed version and offers **Download update** when a newer APK is available. The browser downloads the APK; Android handles installation and verifies the existing signing identity. Production builds will install and update through F-Droid after the app is accepted there. Each build checks only its own update source. Failed checks are shown as errors. Never uninstall or clear app data to resolve an update mismatch.
+Here, we can add folders on our phone we want to upload to the nextcloud automatically. Each phone folder gets its own destination. 
 
-## Developer docs
+If you use the WhatApp Messenger, for example, that app will have a local folder in which send or received images are cached. In this screen, such a folder will automatically show and and be suggested. This will look something like this:  
+<img style="max-height: 700px" src="/uploads/cloud-hoist/Screenshot_20261025-172711.png">
 
-- [Development and testing](docs/development.md)
-- [Architecture and engine behavior](docs/architecture.md)
-- [Beta and F-Droid releases](docs/publishing.md)
-- [Agent guidance](AGENTS.md)
+If you want to back up this suggested folder, click `Start backup`. This will lead you to a screen where you can choose where on your nextcloud you want to have these backups. By default, everything uploaded by this app will live in `/Phone Uploads` on your nextcloud. You can change this folder in the `Settings`.
+
+I would suggest backing up the camera pictures of your phone first, and then add all the folders you think are useful. You can also hide the top 3 suggestion with a swipe or the menu hidden behind the tripple dot icon, which will then cause you to get more suggestions for folders you could want to back up because they contain media files. 
+
+For folders that are not automatically found, use the `Choose other directory to back up` button and find the folder on your phone. You can use this to back up some messengers and authentication apps. Have them export their data into a specific folder, and then select that folder in this app.  
+
+## Status 
+
+This screen shows configured backups. You can turn them off temporarily, change or delete them. If you edit a backup and change the destination folder on nextcloud, the app will ask you if you want to move the existing files on the nextcloud. I hope this will help you deal with messy situations.
+
+## Settings 
+
+Uploads can wait for Wi-Fi, charging, or enough battery. 
+
+Beta testers of the app will be notified of updates and can download the APK manually.  
+
+---
+
 
 ## License
 

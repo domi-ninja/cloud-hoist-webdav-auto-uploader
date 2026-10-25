@@ -31,5 +31,6 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 ## Documentation
 
 - Keep user setup in README.md, development and testing in docs/development.md, engine behavior in docs/architecture.md, and releases in docs/publishing.md.
+- The README.md is not a scratchpad for what we are currently thinking about. 
 - Update those guides instead of adding plans, audit logs, completed-ticket archives, or per-fix reports. Git history retains previous decisions.
 - Documentation-only changes do not bump app versions or build APKs.
