@@ -4,6 +4,14 @@
 
 Beta users install signed APKs from GitHub Releases. F-Droid is the production target and is not listed yet. Google Play and EAS OTA are excluded. Builds default to beta unless `CLOUD_HOIST_CHANNEL=fdroid` is explicitly selected. Keep the existing package and signing identity in both channels.
 
+## Current beta
+
+[2026-11 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/beta-2026-11) contains the suggestion, remote-browser, active-upload display, and cancellation changes. Tested source is `7903af2`. APK SHA-256 is `536d07ae56758f06439a067a6c6f43a4cc9e860570aa941f67304698a85fce3a`.
+
+Signed in-place validation used Samsung SM-A166B, Android 16, serial `RZCY31RD70Z`. Phone checks cover hiding/backfilling/Undo, backup setup, breadcrumbs, path editing, root boundaries, folder creation, active-folder ordering, single-line filenames, folder disable and global pause during a 147 MB upload. Isolated real-server tests verify direct and chunk cancellation cleanup and matching downloaded SHA-256 hashes after resuming. The original accounts, settings, backup switches, and 21 completed uploads were preserved; test folders and the temporary test app were removed.
+
+Type checking, lint, 122 JavaScript tests, 117 native unit tests, release checks, and APK privacy/attribution checks pass. Evidence is under ignored `test-results/suggestions-2026-11/`. The anonymous public APK download matches the phone-tested file byte-for-byte, and the GitHub beta update feed exposes the uploaded asset. The F-Droid candidate remains separate; this beta does not claim new F-Droid reproducibility evidence.
+
 ## Default delivery flow
 
 A feature or app-fix request includes a beta release unless Domi explicitly says to hold it. Complete implementation, checks, signed in-place phone validation, and GitHub publication in the same task. Return the verified direct APK download link. A local APK path, source push, or successful phone install does not finish delivery.
@@ -17,7 +25,7 @@ The channel is embedded at build time. Beta never falls back to F-Droid; product
 
 ## Version and source identity
 
-Keep `app.json` as the release identity. For `2026-10`, set `expo.version` to `2026-10`, Android versionCode to `20260010`, and package.json version to `2026.10.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
+Keep `app.json` as the release identity. For `2026-11`, set `expo.version` to `2026-11`, Android versionCode to `20260011`, and package.json version to `2026.11.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
 
 ## Build without signing credentials
 
