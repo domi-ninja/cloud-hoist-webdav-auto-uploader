@@ -6,7 +6,7 @@ F-Droid is the only distribution target. Settings checks F-Droid for available v
 
 ## Version and source identity
 
-Keep `app.json` as the release identity. For `2026-8`, set `expo.version` to `2026-8`, Android versionCode to `20260008`, and package.json version to `2026.8.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
+Keep `app.json` as the release identity. For `2026-9`, set `expo.version` to `2026-9`, Android versionCode to `20260009`, and package.json version to `2026.9.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
 
 ## Build without signing credentials
 

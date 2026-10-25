@@ -50,7 +50,7 @@ Builds:
 
   - versionName: 2026-8
     versionCode: 20260008
-    disable: Candidate; F-Droid build-server and maintainer review are pending
+    disable: Superseded by 2026-9
     commit: 01ea9e2d87f9d6928a917071b2df2a806e2bf24b
     sudo:
       - apt-get update
@@ -79,7 +79,7 @@ Builds:
   - versionName: 2026-9
     versionCode: 20260009
     disable: Candidate; F-Droid build-server and maintainer review are pending
-    commit: HEAD
+    commit: a13d81ff4427d7af45674f0db97104e8b35248cd
     sudo:
       - apt-get update
       - apt-get install -y openjdk-21-jdk-headless npm python3 xz-utils

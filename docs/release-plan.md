@@ -14,7 +14,7 @@ Use `year-minor`, Android versionCode = year × 10000 + minor, and package.json 
 - F-Droid candidate recipe, listing text, icon, screenshots, changelog, and version discovery from tagged `app.json` files.
 - Offline notices, a [package-by-package attribution catalogue](../licenses/attribution-review.md), and release gates for reviewed dependency versions, embedded notices, and every APK native library.
 - F-Droid source/build/APK checks, byte-identical local and independent CI builds, and successful developer-signature reconstruction.
-- Signed in-place installation of candidate `2026-8` on Samsung SM-A166B / Android 16, with thirteen notice/navigation/state checks. The earlier `2026-7` upload validation includes isolated destination edge tests and real Nextcloud hash checks. Existing app data is retained.
+- Signed in-place installation of candidate `2026-9` on Samsung SM-A166B / Android 16, with eight screen/state checks, three isolated WebDAV transport tests, and real Nextcloud folder recovery with a downloaded preservation hash. Earlier releases cover attribution notices and upload/move/hash checks. Existing app data is retained.
 - Read-only CI checks and unsigned artifacts, with no store submission.
 - GitHub verification prereleases for signed reference APKs, with a versioned `Binaries` URL and the existing signing certificate pinned in the recipe.
 
@@ -25,6 +25,6 @@ Use `year-minor`, Android versionCode = year × 10000 + minor, and package.json 
 3. Publish normal version tags at tested source revisions when preparing accepted releases. Each reference APK must match its phone-tested candidate; upload retries reuse the file. Enable automatic version-tag builds after initial acceptance.
 4. Users install and update through F-Droid.
 
-Do not contact maintainers or file inclusion issues, PRs, or merge requests under the current instruction. The signed reference APK is hosted in GitHub Releases under `fdroid-reference-2026-8`; its public download and independent CI comparison pass. F-Droid review and publication remain external gates. The current recipe remains disabled and automatic build updates remain off.
+Do not contact maintainers or file inclusion issues, PRs, or merge requests under the current instruction. The signed reference APK is hosted in GitHub Releases under `fdroid-reference-2026-9`; its public download and independent CI comparison pass. F-Droid review and publication remain external gates. The current recipe remains disabled and automatic build updates remain off.
 
 Commands belong in [publishing.md](publishing.md). Evidence, limits, artifact hashes, and blockers are in [fdroid-readiness-report.md](fdroid-readiness-report.md).
