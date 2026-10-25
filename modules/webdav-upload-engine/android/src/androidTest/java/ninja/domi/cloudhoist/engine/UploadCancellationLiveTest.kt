@@ -72,6 +72,16 @@ class UploadCancellationLiveTest {
           assertNull(checkpoint)
           missing(NextcloudDavUrl.uploadFolder(credential.account, uploadId))
         }
+        // Starting again after cleanup must upload the original bytes, not a partial file.
+        val resumed = upload.copy(isCancelled = { false }, onProgress = {})
+        if (chunked) NextcloudChunkUploadClient(store, NextcloudChunkTransport(source), newUploadId = { uploadId })
+          .upload(credential, uploadId, resumed)
+        else NextcloudUploadClient(source).upload(credential, resumed)
+        http.newCall(request(NextcloudDavUrl.file(credential.account, root, fileName)).get().build()).execute().use {
+          assertTrue(it.isSuccessful)
+          assertArrayEquals(java.security.MessageDigest.getInstance("SHA-256").digest(bytes),
+            java.security.MessageDigest.getInstance("SHA-256").digest(it.body!!.bytes()))
+        }
       }
     } finally {
       http.newCall(request(rootUrl).delete().build()).execute().close()

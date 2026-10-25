@@ -155,6 +155,11 @@ it("promotes only the active worker source and preserves every other folder's or
   expect(activeUpload(state)?.fileName).toBe("long photo name.jpg");
   expect(activeSourceFirst(state).map((source) => source.id)).toEqual(["third", "first", "second"]);
   expect(state.sources.map((source) => source.id)).toEqual(["first", "second", "third"]);
+  state.engine = { state: "blocked", blockerCount: 1 };
+  expect(activeUpload(state)?.fileName).toBe("long photo name.jpg");
+  state.sources[2].enabled = false;
+  expect(activeUpload(state)).toBeUndefined();
+  state.sources[2].enabled = true;
   state.engine = { state: "paused", pausedAt: "2026-10-25T12:00:00.000Z" };
   expect(activeUpload(state)).toBeUndefined();
   expect(activeSourceFirst(state)).toBe(state.sources);

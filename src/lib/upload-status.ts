@@ -74,8 +74,9 @@ export function uploadRemainingTime(snapshot: EngineSnapshot) {
 // Worker identity is authoritative; stale recent jobs must not look active.
 export function activeUpload(snapshot: EngineSnapshot) {
   const worker = snapshot.worker;
-  if (snapshot.engine.state !== "running" || worker.state !== "uploading") return undefined;
-  return snapshot.recentJobs.find((job) => job.id === worker.jobId);
+  if (snapshot.engine.state === "paused" || worker.state !== "uploading") return undefined;
+  const job = snapshot.recentJobs.find((job) => job.id === worker.jobId);
+  return snapshot.sources.some((source) => source.id === job?.sourceId && source.enabled) ? job : undefined;
 }
 
 export function activeSourceFirst(snapshot: EngineSnapshot) {
