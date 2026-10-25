@@ -19,7 +19,8 @@ Download [Cloud Hoist 2026-11 beta](https://github.com/domi-ninja/cloud-hoist-we
 Here, we can add folders on our phone we want to upload to the nextcloud automatically. Each phone folder gets its own destination. 
 
 If you use the WhatApp Messenger, for example, that app will have a local folder in which send or received images are cached. In this screen, such a folder will automatically show and and be suggested. This will look something like this:  
-<img style="max-height: 700px" src="/uploads/cloud-hoist/Screenshot_20261025-172711.png">
+
+![](docs/images/Screenshot_20261025-172711.png)
 
 If you want to back up this suggested folder, click `Start backup`. This will lead you to a screen where you can choose where on your nextcloud you want to have these backups. By default, everything uploaded by this app will live in `/Phone Uploads` on your nextcloud. You can change this folder in the `Settings`.
 
