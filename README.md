@@ -4,7 +4,7 @@ An Android app that uploads selected phone folders to Nextcloud. Independent fro
 
 ## Get started
 
-Beta APKs are available from [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases). Install the signed APK over an existing installation to keep accounts, settings, and history. F-Droid packaging is in progress; the app is not listed there yet.
+Download [Cloud Hoist 2026-10 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download/beta-2026-10/cloud-hoist-2026-10.apk), or see [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases) for all versions. Install the signed APK over an existing installation to keep accounts, settings, and history. F-Droid packaging is in progress; the app is not listed there yet.
 
 1. Download and install the latest beta APK. Android may ask you to allow installation from your browser.
 2. Enter your Nextcloud server address and sign in through the browser. You can also use a Nextcloud app password.
