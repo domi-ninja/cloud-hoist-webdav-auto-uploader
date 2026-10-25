@@ -9,10 +9,10 @@ const source = (localUri: string, kind: SourceSummary["kind"] = "media_store"): 
   id: "configured", name: "Configured", localUri, kind, remotePath: "/Cloud Hoist", enabled: true,
   collisionPolicy: "replace", lastScanAt: null,
 });
-it("chooses the largest three from every discovered folder and backfills hidden suggestions", () => {
+it("chooses the largest two from every discovered folder and backfills hidden suggestions", () => {
   const folders = [folder("Pictures/Small", 1), folder("Pictures/Random", 40), folder("Telegram/Images", 30), folder("WhatsApp/Media", 20), folder("Threema/Media", 10)];
-  expect(mediaFolderSuggestions(folders, [], []).map((item) => item.totalBytes)).toEqual([40, 30, 20]);
-  expect(mediaFolderSuggestions(folders, [], [mediaFolderId(folders[1])]).map((item) => item.totalBytes)).toEqual([30, 20, 10]);
+  expect(mediaFolderSuggestions(folders, [], []).map((item) => item.totalBytes)).toEqual([40, 30]);
+  expect(mediaFolderSuggestions(folders, [], [mediaFolderId(folders[1])]).map((item) => item.totalBytes)).toEqual([30, 20]);
   folders[0].totalBytes = 100;
   expect(mediaFolderSuggestions(folders, [], [])[0]).toBe(folders[0]);
 });

@@ -37,5 +37,5 @@ export function mediaFolderSuggestions(folders: MediaFolder[], sources: SourceSu
   return folders
     .filter((folder) => !hiddenIds.has(mediaFolderId(folder)) && !sources.some((source) => sourceCoversMediaFolder(source, folder)))
     .sort((a, b) => b.totalBytes - a.totalBytes || mediaFolderId(a).localeCompare(mediaFolderId(b)))
-    .slice(0, 3);
+    .slice(0, 2);
 }
