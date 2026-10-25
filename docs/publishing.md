@@ -4,6 +4,17 @@
 
 Beta users install signed APKs from GitHub Releases. F-Droid is the production target and is not listed yet. Google Play and EAS OTA are excluded. Builds default to beta unless `CLOUD_HOIST_CHANNEL=fdroid` is explicitly selected. Keep the existing package and signing identity in both channels.
 
+## Default delivery flow
+
+A feature or app-fix request includes a beta release unless Domi explicitly says to hold it. Complete implementation, checks, signed in-place phone validation, and GitHub publication in the same task. Return the verified direct APK download link. A local APK path, source push, or successful phone install does not finish delivery.
+
+| Build | Distribution | In-app update source | Selection |
+| --- | --- | --- | --- |
+| Beta | Signed APK in a GitHub prerelease | GitHub beta releases | Default; `pnpm android:build` |
+| Production | F-Droid, after acceptance | F-Droid only | Explicit; `pnpm fdroid:build` |
+
+The channel is embedded at build time. Beta never falls back to F-Droid; production never offers GitHub betas. Publish production only as a separate release decision after its F-Droid checks and acceptance. F-Droid review does not block beta delivery. Documentation-only changes need a commit, not an APK.
+
 ## Version and source identity
 
 Keep `app.json` as the release identity. For `2026-10`, set `expo.version` to `2026-10`, Android versionCode to `20260010`, and package.json version to `2026.10.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
@@ -44,7 +55,15 @@ After checks and signed in-place phone validation, publish the existing beta APK
 
 Settings checks automatically when opened, reports failures, and offers **Download update** for a newer version. This opens the APK in the browser; Android completes the in-place installation. Existing `2026-9` installations contain the former F-Droid-only check and need one manual beta APK installation to gain this behavior.
 
-Do not publish until requested. Once a beta APK is public, its bytes and version are fixed. Build changes get the next version, and upload retries reuse the existing APK.
+Feature and app-fix requests authorize this publication unless Domi has put the release on hold. Use this sequence:
+
+1. Commit the tested source and push it. Tag that revision as `beta-<version>`.
+2. Verify the existing signed beta APK with `sh scripts/android/release.sh verify dist/cloud-hoist-<version>.apk`. Create `SHA256SUMS` for that exact file.
+3. Upload the APK and checksum to a GitHub prerelease with `--latest=false`. Do not upload the F-Droid binary to this release.
+4. Download the public APK without authentication and compare its SHA-256 with the tested file. Confirm the public releases API exposes the uploaded APK under the expected tag and URL.
+5. Return the direct link `https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download/beta-<version>/cloud-hoist-<version>.apk`. If a QR is requested, encode that URL and decode the generated QR to verify it.
+
+Once a beta APK is public, its bytes and version are fixed. Build changes get the next version, and upload retries reuse the existing APK. A failed check or upload is an unfinished release; report the specific blocker instead of calling a local build delivered.
 
 ## Signed APKs for F-Droid verification
 

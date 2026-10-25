@@ -25,6 +25,10 @@ Development builds use a different signing key from existing release installatio
 
 For the user's configured phone, build an unsigned beta candidate with `pnpm android:build` and sign it locally through [Publishing](publishing.md). `pnpm android:install` verifies the release key, installs in place, and launches the app without clearing data.
 
+## Delivering changes
+
+Feature and app-fix work ships to beta by default. After checks and phone validation, follow [beta publication](publishing.md#beta-publication), publish the signed APK to GitHub, verify its public download, and return the direct link. Stop before publication only when Domi explicitly holds the release or a concrete check fails. Production uses a separate F-Droid build and release process.
+
 ## Checks without a device
 
 ```sh

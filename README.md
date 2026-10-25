@@ -25,7 +25,7 @@ This is one-way upload. Generic WebDAV servers and Nextcloud end-to-end encrypte
 
 ## Updates
 
-Beta builds check GitHub Releases, including beta prereleases. Settings shows the installed version and offers **Download update** when a newer APK is available. The browser downloads the APK; Android handles installation and verifies the existing signing identity. F-Droid builds check and open F-Droid instead. Failed checks are shown as errors. Never uninstall or clear app data to resolve an update mismatch.
+Beta builds check GitHub Releases, including beta prereleases. Settings shows the installed version and offers **Download update** when a newer APK is available. The browser downloads the APK; Android handles installation and verifies the existing signing identity. Production builds will install and update through F-Droid after the app is accepted there. Each build checks only its own update source. Failed checks are shown as errors. Never uninstall or clear app data to resolve an update mismatch.
 
 ## Developer docs
 

@@ -2,6 +2,8 @@
 
 Beta users receive signed APKs through GitHub Releases. F-Droid is the production target. Builds default to beta; production builds explicitly select `CLOUD_HOIST_CHANNEL=fdroid`. Keep one package and signing identity. Google Play and EAS OTA are excluded.
 
+Feature and app-fix requests ship to beta after checks and physical-phone validation unless Domi explicitly holds the release. Each delivery includes a verified public APK link. Production publication remains a separate F-Droid process. The [publishing guide](publishing.md#default-delivery-flow) defines the delivery steps.
+
 ## One app, two build channels
 
 Keep `ninja.domi.cloudhoist` and the release identity in `app.json`. Every JavaScript, UI, native, permission, or asset change ships in a complete APK. Beta builds check published GitHub APKs, including prereleases, and open the download in the browser. F-Droid builds check its catalogue and open F-Droid. Build outputs remain separate; reference APKs must match the F-Droid build, not the beta build.

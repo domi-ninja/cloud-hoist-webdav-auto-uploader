@@ -20,6 +20,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 
 - Use `$year-$minorversion` for the public app version, starting with `2026-1`. Increment the minor number for each changed release bundle. Start at 1 in a new year.
 - Keep `app.json` as the release identity. Android versionCode is year × 10000 + minor. The package.json tooling version uses year.minor.0.
+- Feature and app-fix requests include shipping a tested GitHub beta and returning its direct APK download link, unless Domi explicitly says to hold the release. Do not stop at a commit, local build, or phone install, and do not ask for publication permission again. Documentation-only work does not create a release.
 - Builds default to beta. Beta users install signed APKs from GitHub Releases, and Settings checks GitHub including beta prereleases. Explicitly set `CLOUD_HOIST_CHANNEL=fdroid` for F-Droid builds, which check and link only to F-Droid. Do not add Google Play or EAS OTA. Preserve the package and signing identity across both channels.
 - Build unsigned candidates without private signing credentials. Sign the same artifact with the existing key for physical-phone validation and the matching F-Droid reference upload.
 - Preserve the existing package and signing identity. Do not uninstall or clear existing app data to bypass a signature mismatch.
