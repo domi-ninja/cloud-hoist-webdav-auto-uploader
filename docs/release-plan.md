@@ -4,7 +4,7 @@ F-Droid is Cloud Hoist's only distribution target. Google Play, hosted EAS updat
 
 ## One app and one update path
 
-Keep `ninja.domi.cloudhoist` and the release identity in `app.json`. Every JavaScript, UI, native, permission, or asset change ships in a complete APK through F-Droid. The app performs no external update checks or executable downloads.
+Keep `ninja.domi.cloudhoist` and the release identity in `app.json`. Every JavaScript, UI, native, permission, or asset change ships in a complete APK through F-Droid. Settings checks F-Droid's public catalogue for available versions. F-Droid handles installation; Cloud Hoist does not download executable code.
 
 Use `year-minor`, Android versionCode = year × 10000 + minor, and package.json `year.minor.0`. Documentation changes do not create app releases.
 

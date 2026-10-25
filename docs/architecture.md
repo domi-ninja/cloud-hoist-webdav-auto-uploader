@@ -62,3 +62,5 @@ Upload errors appear on the file row and its detail screen, including failures w
 ## Application distribution
 
 F-Droid is the only distribution target. The app has no GitHub update polling, APK download controls, Play Store integration, or EAS OTA delivery. Application code ships in complete reviewed APKs. GitHub Releases stores signed reference APKs for F-Droid verification; the recipe pins their source commit and signing certificate. Expo modules are configured to build from source. Open-source notices are bundled for offline viewing in Settings.
+
+Settings checks F-Droid's public per-package API on opening, caches successful results for one hour, and supports a manual refresh. It compares Android version codes against the published suggested version, falling back to the highest published code if the suggestion has not built yet. The API supplies display information only; F-Droid handles installation and package verification. Failed checks replace any previous success status, and requests time out after fifteen seconds. A missing listing is an explicit check failure. The installed version appears in this panel rather than About.

@@ -1,0 +1,3 @@
+Create missing remote folders automatically when browsing backup destinations.
+Show the installed version and explicit F-Droid update-check results in Settings.
+Replace the About disclaimer with a description of folder backups and transfer controls.

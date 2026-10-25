@@ -76,6 +76,34 @@ Builds:
     ndk: 27.1.12297006
     output: dist/cloud-hoist-$$VERSION$$-unsigned.apk
 
+  - versionName: 2026-9
+    versionCode: 20260009
+    disable: Candidate; F-Droid build-server and maintainer review are pending
+    commit: HEAD
+    sudo:
+      - apt-get update
+      - apt-get install -y openjdk-21-jdk-headless npm python3 xz-utils
+      - curl -Lo node.tar.xz https://nodejs.org/dist/v24.20.0/node-v24.20.0-linux-x64.tar.xz
+      - echo "2f2c0da162318f0de47665410c7c8c2ed3d36c8f3105de4bbc61176c70a7cbf2  node.tar.xz" | sha256sum -c -
+      - tar xf node.tar.xz --strip-components=1 -C /usr/local/
+      - rm node.tar.xz
+      - npm install -g pnpm@11.3.0
+    init:
+      - export CI=1 EXPO_NO_TELEMETRY=1 EXPO_NO_DOTENV=1
+      - pnpm install --frozen-lockfile --prod=false --ignore-scripts --no-runtime
+    prebuild:
+      - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ANDROID_HOME=$$SDK$$
+      - sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'cmake;3.22.1'
+      - pnpm fdroid:prepare
+    # Hermes is explicitly allowed by F-Droid policy. Every other finding is fixed or removed.
+    scanignore:
+      - node_modules/.pnpm/hermes-compiler@250829098.0.17/node_modules/hermes-compiler/hermesc/linux64-bin/hermesc
+    build:
+      - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ANDROID_HOME=$$SDK$$
+      - GRADLE=gradlew-fdroid sh scripts/fdroid/assemble.sh
+    ndk: 27.1.12297006
+    output: dist/cloud-hoist-$$VERSION$$-unsigned.apk
+
 MaintainerNotes: |-
   Candidate only; F-Droid build-server and maintainer review are still pending.
   Expo generates android/ during preparation, so there is no generated native subdir in git.
@@ -89,5 +117,5 @@ MaintainerNotes: |-
 AutoUpdateMode: None
 UpdateCheckMode: Tags ^v[0-9]{4}-[0-9]+$
 UpdateCheckData: 'app.json|"versionCode":\s*(\d+)|.|"version":\s*"([^"]+)"'
-CurrentVersion: 2026-8
-CurrentVersionCode: 20260008
+CurrentVersion: 2026-9
+CurrentVersionCode: 20260009

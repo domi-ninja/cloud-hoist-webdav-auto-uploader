@@ -2,7 +2,7 @@
 
 [README](../README.md) · [Development](development.md) · [Architecture](architecture.md)
 
-F-Droid is the only distribution target. The app does not check GitHub for updates or download executable code. Google Play and EAS are not part of this workflow. GitHub hosts source, issues, and signed reference APKs for F-Droid verification.
+F-Droid is the only distribution target. Settings checks F-Droid for available versions; the app does not check GitHub for updates or download executable code. Google Play and EAS are not part of this workflow. GitHub hosts source, issues, and signed reference APKs for F-Droid verification.
 
 ## Version and source identity
 

@@ -10,8 +10,8 @@ describe("project identity", () => {
       supportedServer: "Nextcloud",
       defaultRemoteFolder: "Phone Uploads",
       license: "GPL-3.0-or-later",
-      compatibilityNotice:
-        "Cloud Hoist uploads files to Nextcloud servers. Cloud Hoist is an independent project and is not affiliated with or endorsed by Nextcloud GmbH.",
+      description:
+        "Cloud Hoist automatically backs up selected folders from your phone to your own Nextcloud server, with a destination for each folder and controls for Wi-Fi, charging, and battery use.",
     });
   });
 });

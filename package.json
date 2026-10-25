@@ -1,6 +1,6 @@
 {
   "name": "cloud-hoist",
-  "version": "2026.8.0",
+  "version": "2026.9.0",
   "license": "GPL-3.0-or-later",
   "main": "expo-router/entry",
   "dependencies": {

@@ -27,7 +27,7 @@ This is one-way upload. Generic WebDAV servers and Nextcloud end-to-end encrypte
 
 ## Updates
 
-F-Droid manages app updates. Cloud Hoist does not check external release feeds or download code. Migration of existing GitHub installations depends on preserving the signing identity; do not uninstall or clear app data to resolve an update mismatch.
+F-Droid manages app updates. Settings shows the installed version and checks F-Droid for available updates. Failed checks are shown as errors. Cloud Hoist does not download code. Migration of existing GitHub installations depends on preserving the signing identity; do not uninstall or clear app data to resolve an update mismatch.
 
 ## Developer docs
 
