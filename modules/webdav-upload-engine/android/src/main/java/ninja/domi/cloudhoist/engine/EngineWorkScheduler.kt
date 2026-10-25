@@ -115,6 +115,7 @@ class EngineWorkScheduler(
 
   fun pause() {
     preferences.pause()
+    TransferCancellation.cancelAll()
     workManager.cancelUniqueWork(QUEUE_DRAIN_WORK)
   }
 

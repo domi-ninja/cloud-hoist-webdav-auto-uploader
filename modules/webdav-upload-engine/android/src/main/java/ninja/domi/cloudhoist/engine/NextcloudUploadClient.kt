@@ -35,7 +35,7 @@ class NextcloudUploadClient(
     val remotePath = DavPath.validate(request.remotePathSegments)
     val fileName = DavPath.validateName(request.fileName)
     if (request.byteCount < 0) throw LocalContentInvalidException()
-    createParentFolders(credential, remotePath)
+    createParentFolders(credential, remotePath, request.isCancelled)
     if (request.isCancelled()) throw TransferCancelledException()
 
     val stagingId = request.transferId?.let(DavPath::validateName) ?: uploadId()
@@ -53,7 +53,7 @@ class NextcloudUploadClient(
       )
       return uploadResponse.copy(remoteFileName = finalName)
     } catch (error: CodedException) {
-      if (error.isDefiniteFailure()) deleteBestEffort(credential, temporaryUrl.toString())
+      if (error is TransferCancelledException || error.isDefiniteFailure()) deleteBestEffort(credential, temporaryUrl.toString())
       throw error
     }
   }
@@ -61,13 +61,14 @@ class NextcloudUploadClient(
   private fun createParentFolders(
     credential: StoredAccountCredential,
     pathSegments: List<String>,
+    isCancelled: () -> Boolean,
   ) {
     pathSegments.indices.forEach { index ->
       val request = authenticatedRequest(
         credential,
         NextcloudDavUrl.folder(credential.account, pathSegments.take(index + 1)).toString(),
       ).method("MKCOL", null).build()
-      execute(request) { response ->
+      execute(request, isCancelled) { response ->
         if (response.code != 201 && response.code != 405) throwForStatus(response)
       }
     }
@@ -89,7 +90,7 @@ class NextcloudUploadClient(
         }
       }
       .build()
-    return execute(request) { response ->
+    return execute(request, upload.isCancelled) { response ->
       if (response.code != 201 && response.code != 204) throwForStatus(response)
       DavUploadResult(
         modificationTimeAccepted = response.header("X-OC-MTime") == "accepted",
@@ -133,7 +134,7 @@ class NextcloudUploadClient(
 
   private fun deleteBestEffort(credential: StoredAccountCredential, temporaryUrl: String) {
     try {
-      httpClient.newCall(
+      httpClient.newBuilder().callTimeout(5, java.util.concurrent.TimeUnit.SECONDS).build().newCall(
         authenticatedRequest(credential, temporaryUrl).delete().build(),
       ).execute().close()
     } catch (_: IOException) {
@@ -162,8 +163,8 @@ class NextcloudUploadClient(
     else -> throw AccountUnsupportedResponseException()
   }
 
-  private fun <T> execute(request: Request, read: (Response) -> T): T = try {
-    httpClient.newCall(request).execute().use(read)
+  private fun <T> execute(request: Request, isCancelled: () -> Boolean = { false }, read: (Response) -> T): T = try {
+    executeCancellable(httpClient, request, isCancelled, read)
   } catch (error: SSLHandshakeException) {
     if (generateSequence(error as Throwable?) { it.cause }.any { it is CertificateException }) {
       throw AccountCertificateException()

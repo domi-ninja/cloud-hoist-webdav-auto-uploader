@@ -37,6 +37,7 @@ class QueueDrainRunner(
   private val maxRunMillis: Long = DEFAULT_MAX_RUN_MILLIS,
   private val onProgress: (TransferProgress) -> Unit = {},
   private val onFailure: (UploadJobEntity, TransferFailure) -> Unit = { _, _ -> },
+  private val onCancelled: (String) -> Unit = {},
   private val onAttemptFinished: (String) -> Unit = {},
 ) {
   fun run(): QueueDrainResult = EngineOperations.lock.withLock {
@@ -67,6 +68,7 @@ class QueueDrainRunner(
         continue
       }
 
+      val attemptCancelled = TransferCancellation.forAttempt(job.sourceId)
       val attemptId = newId()
       try {
         val request = DavUploadRequest(
@@ -82,7 +84,7 @@ class QueueDrainRunner(
             dao.source(job.sourceId)?.collisionPolicy ?: CollisionPolicy.REPLACE.value,
           ),
           isCancelled = {
-            isPaused() || isStopped() || EngineOperations.held(dao) || elapsed() - startedAt >= maxRunMillis
+            attemptCancelled() || isPaused() || isStopped() || dao.source(job.sourceId)?.enabled != true || EngineOperations.held(dao) || elapsed() - startedAt >= maxRunMillis
           },
           onProgress = { uploadedBytes ->
             onProgress(
@@ -115,6 +117,7 @@ class QueueDrainRunner(
         if (error is TransferCancelledException) {
           // Pauses, worker stops, and normal time slices do not consume the retry budget.
           dao.releaseCancelledClaim(job.id, claimToken, finishedAt)
+          onCancelled(job.id)
           return QueueDrainResult(completed, retryWorker = !isPaused(),
             continueImmediately = !isPaused() && !isStopped())
         }
@@ -201,6 +204,7 @@ class QueueDrainRunner(
         onProgress = onProgress,
         onFailure = blockerNotification::show,
         onAttemptFinished = diagnosticLog::recordUploadResult,
+        onCancelled = { TransferCleanupWorker.enqueue(appContext, it) },
       )
     }
   }

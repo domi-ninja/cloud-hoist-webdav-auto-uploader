@@ -263,7 +263,7 @@ class NextcloudUploadClientTest {
     assertThrows(TransferCancelledException::class.java) {
       client.upload(CREDENTIAL, UPLOAD.copy(isCancelled = { cancelled }))
     }
-    assertEquals(listOf("MKCOL", "PUT"), methods)
+    assertEquals(listOf("MKCOL", "PUT", "DELETE"), methods)
   }
 
   private fun client(respond: (Request) -> Response) = NextcloudUploadClient(

@@ -161,6 +161,9 @@ interface EngineDao {
   @Query("SELECT * FROM sources WHERE id = :sourceId")
   fun source(sourceId: String): SourceEntity?
 
+  @Query("UPDATE sources SET enabled = :enabled WHERE id = :sourceId")
+  fun setSourceEnabled(sourceId: String, enabled: Boolean)
+
   @Query("SELECT * FROM sources ORDER BY createdAt ASC, id ASC")
   fun allSources(): List<SourceEntity>
 

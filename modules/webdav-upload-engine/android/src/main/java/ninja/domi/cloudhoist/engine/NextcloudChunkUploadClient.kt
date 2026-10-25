@@ -60,10 +60,9 @@ class NextcloudChunkUploadClient(
     return try {
       uploadChunked(credential, jobId, request, initialPlan, checkpoint)
     } catch (error: Exception) {
-      if (!classifyTransferFailure(error).retryable) {
+      if (error is TransferCancelledException || !classifyTransferFailure(error).retryable) {
         checkpoints.load(jobId)?.let {
-          transport.abortBestEffort(credential, it.uploadId, request)
-          checkpoints.delete(jobId)
+          if (transport.abortBestEffort(credential, it.uploadId, request)) checkpoints.delete(jobId)
         }
       }
       throw error
@@ -114,7 +113,6 @@ class NextcloudChunkUploadClient(
     if (checkpoint == null) {
       plan = initialPlan
       val uploadId = newUploadId()
-      transport.createSession(credential, uploadId, request)
       checkpoint = ChunkCheckpointEntity(
         uploadId = uploadId,
         jobId = jobId,
@@ -123,6 +121,7 @@ class NextcloudChunkUploadClient(
         updatedAt = now(),
       )
       checkpoints.save(checkNotNull(checkpoint))
+      transport.createSession(credential, uploadId, request)
     }
 
     val activeCheckpoint = checkNotNull(checkpoint)
@@ -150,7 +149,5 @@ class NextcloudChunkUploadClient(
     credential: StoredAccountCredential,
     uploadId: String,
     request: DavUploadRequest,
-  ) {
-    runCatching { abort(credential, uploadId, request) }
-  }
+  ): Boolean = runCatching { abort(credential, uploadId, request) }.isSuccess
 }

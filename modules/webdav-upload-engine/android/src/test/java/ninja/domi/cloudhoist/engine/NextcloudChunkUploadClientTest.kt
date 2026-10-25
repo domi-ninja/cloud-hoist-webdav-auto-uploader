@@ -75,6 +75,27 @@ class NextcloudChunkUploadClientTest {
     assertNull(store.current)
   }
 
+  @Test
+  fun cancellationAbortsTheSessionAndDropsItsCheckpoint() {
+    val store = FakeCheckpointStore()
+    val transport = FakeChunkTransport(failChunk = "00002", failure = TransferCancelledException())
+    val failure = runCatching { client(store, transport).upload(CREDENTIAL, JOB_ID, UPLOAD) }.exceptionOrNull()
+    assertTrue(failure is TransferCancelledException)
+    assertEquals(listOf("new-id"), transport.abortedUploadIds)
+    assertNull(store.current)
+    assertNull(transport.finalizedUploadId)
+  }
+
+  @Test
+  fun failedCancellationCleanupRetainsCheckpointForRetry() {
+    val store = FakeCheckpointStore()
+    val transport = FakeChunkTransport(failChunk = "00002", failure = TransferCancelledException(), failAbort = true)
+    val failure = runCatching { client(store, transport).upload(CREDENTIAL, JOB_ID, UPLOAD) }.exceptionOrNull()
+    assertTrue(failure is TransferCancelledException)
+    assertEquals("new-id", store.current?.uploadId)
+    assertNull(transport.finalizedUploadId)
+  }
+
   private fun client(
     store: FakeCheckpointStore,
     transport: FakeChunkTransport,
@@ -116,6 +137,7 @@ class NextcloudChunkUploadClientTest {
     private val remoteChunks: Set<String>? = emptySet(),
     private val failChunk: String? = null,
     private val failure: Exception = AccountTimeoutException(),
+    private val failAbort: Boolean = false,
   ) : ChunkTransport {
     val createdUploadIds = mutableListOf<String>()
     val uploadedChunks = mutableListOf<String>()
@@ -161,6 +183,7 @@ class NextcloudChunkUploadClientTest {
       request: DavUploadRequest,
     ) {
       abortedUploadIds += uploadId
+      if (failAbort) throw AccountNetworkException()
     }
   }
 

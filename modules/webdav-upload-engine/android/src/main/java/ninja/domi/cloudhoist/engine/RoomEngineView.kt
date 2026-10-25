@@ -107,7 +107,23 @@ class RoomEngineView(
       )
     }
 
-  fun addOrUpdateSource(input: SourceInputRecord, accountId: String) = EngineOperations.lock.withLock {
+  fun addOrUpdateSource(input: SourceInputRecord, accountId: String) {
+    val existing = input.id?.let(dao::source)
+    // A toggle changes only this column and must not wait for the transfer lock.
+    if (existing != null && existing.accountId == accountId && existing.name == input.name.trim() &&
+      existing.kind == input.kind && existing.localUri == input.localUri &&
+      existing.remotePathSegments == input.remotePath.split('/').filter(String::isNotBlank) &&
+      existing.collisionPolicy == input.collisionPolicy) {
+      EngineOperations.requireAvailable(dao)
+      dao.setSourceEnabled(existing.id, input.enabled)
+      if (!input.enabled) TransferCancellation.cancelSource(existing.id)
+      invalidate()
+      return
+    }
+    updateSource(input, accountId)
+  }
+
+  private fun updateSource(input: SourceInputRecord, accountId: String) = EngineOperations.lock.withLock {
     EngineOperations.requireAvailable(dao)
     if (input.name.isBlank()) throw EngineInvalidInputException("Source name is required.")
     if (input.kind !in setOf("media_store", "saf")) {

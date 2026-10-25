@@ -62,7 +62,7 @@ class NextcloudChunkTransport(
     uploadId: String,
     request: DavUploadRequest,
   ) {
-    createParentFolders(credential, request.remotePathSegments)
+    createParentFolders(credential, request.remotePathSegments, request.isCancelled)
     val destination = stagingUrl(credential.account, uploadId, request)
     val networkRequest = authenticatedRequest(
       credential,
@@ -70,7 +70,7 @@ class NextcloudChunkTransport(
     ).method("MKCOL", null)
       .header("Destination", destination.toString())
       .build()
-    execute(networkRequest) { response ->
+    execute(networkRequest, request.isCancelled) { response ->
       if (response.code != 201 && response.code != 405) throwForStatus(response)
     }
   }
@@ -89,7 +89,7 @@ class NextcloudChunkTransport(
       .header("Depth", "1")
       .header("Destination", destination.toString())
       .build()
-    return execute(networkRequest) { response ->
+    return execute(networkRequest, request.isCancelled) { response ->
       when (response.code) {
         404 -> null
         207 -> ChunkListing.decode(response.body?.string().orEmpty())
@@ -112,7 +112,7 @@ class NextcloudChunkTransport(
       .header("Destination", destination.toString())
       .header("OC-Total-Length", request.byteCount.toString())
       .build()
-    execute(networkRequest) { response ->
+    execute(networkRequest, request.isCancelled) { response ->
       if (response.code != 201 && response.code != 204) throwForStatus(response)
     }
   }
@@ -142,7 +142,7 @@ class NextcloudChunkTransport(
         }
       }
       .build()
-    val timestamps = execute(assemble) { response ->
+    val timestamps = execute(assemble, request.isCancelled) { response ->
       if (response.code != 201 && response.code != 204) throwForStatus(response)
       DavUploadResult(
         modificationTimeAccepted = response.header("X-OC-MTime") == "accepted",
@@ -201,6 +201,7 @@ class NextcloudChunkTransport(
   private fun createParentFolders(
     credential: StoredAccountCredential,
     pathSegments: List<String>,
+    isCancelled: () -> Boolean,
   ) {
     val path = DavPath.validate(pathSegments)
     path.indices.forEach { index ->
@@ -208,7 +209,7 @@ class NextcloudChunkTransport(
         credential,
         NextcloudDavUrl.folder(credential.account, path.take(index + 1)),
       ).method("MKCOL", null).build()
-      execute(request) { response ->
+      execute(request, isCancelled) { response ->
         if (response.code != 201 && response.code != 405) throwForStatus(response)
       }
     }
@@ -250,8 +251,8 @@ class NextcloudChunkTransport(
     else -> throw AccountUnsupportedResponseException()
   }
 
-  private fun <T> execute(request: Request, read: (Response) -> T): T = try {
-    httpClient.newCall(request).execute().use(read)
+  private fun <T> execute(request: Request, isCancelled: () -> Boolean = { false }, read: (Response) -> T): T = try {
+    executeCancellable(httpClient, request, isCancelled, read)
   } catch (error: SSLHandshakeException) {
     if (generateSequence(error as Throwable?) { it.cause }.any { it is CertificateException }) {
       throw AccountCertificateException()
