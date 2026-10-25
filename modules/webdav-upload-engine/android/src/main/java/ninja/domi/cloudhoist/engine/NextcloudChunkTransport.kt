@@ -55,7 +55,7 @@ interface ChunkTransport {
 
 class NextcloudChunkTransport(
   private val contentSource: LocalContentSource,
-  private val httpClient: OkHttpClient = OkHttpClient(),
+  private val httpClient: OkHttpClient = uploadHttpClient(),
 ) : ChunkTransport {
   override fun createSession(
     credential: StoredAccountCredential,
@@ -252,7 +252,7 @@ class NextcloudChunkTransport(
   }
 
   private fun <T> execute(request: Request, isCancelled: () -> Boolean = { false }, read: (Response) -> T): T = try {
-    executeCancellable(httpClient, request, isCancelled, read)
+    executeCancellable(if (request.method == "DELETE") httpClient.newBuilder().callTimeout(5, java.util.concurrent.TimeUnit.SECONDS).build() else httpClient, request, isCancelled, read)
   } catch (error: SSLHandshakeException) {
     if (generateSequence(error as Throwable?) { it.cause }.any { it is CertificateException }) {
       throw AccountCertificateException()

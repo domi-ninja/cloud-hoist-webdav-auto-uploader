@@ -36,3 +36,12 @@ internal fun <T> executeCancellable(
     watch.cancel(false)
   }
 }
+
+
+// Large DAV requests may spend longer than OkHttp's ten-second default waiting on server I/O.
+// Explicit cancellation still interrupts the socket immediately.
+internal fun uploadHttpClient() = OkHttpClient.Builder()
+  .connectTimeout(15, TimeUnit.SECONDS)
+  .readTimeout(60, TimeUnit.SECONDS)
+  .writeTimeout(60, TimeUnit.SECONDS)
+  .build()

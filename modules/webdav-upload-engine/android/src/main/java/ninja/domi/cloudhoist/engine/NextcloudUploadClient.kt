@@ -24,7 +24,7 @@ import okio.source
 
 class NextcloudUploadClient(
   private val contentSource: LocalContentSource,
-  private val httpClient: OkHttpClient = OkHttpClient(),
+  private val httpClient: OkHttpClient = uploadHttpClient(),
   private val uploadId: () -> String = { UUID.randomUUID().toString() },
 ) : DavClient {
   override fun upload(

@@ -34,13 +34,15 @@ class UploadCancellationLiveTest {
     val http = OkHttpClient()
     val id = UUID.randomUUID().toString()
     val root = listOf("CloudHoistCancelTest-$id")
+    java.io.File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "cancel-fixture-id.txt").writeText(id)
+
     fun request(url: okhttp3.HttpUrl) = Request.Builder().url(url)
       .header("Authorization", Credentials.basic(credential.account.loginName, credential.appPassword, Charsets.UTF_8))
     val rootUrl = NextcloudDavUrl.folder(credential.account, root)
     assertEquals(201, http.newCall(request(rootUrl).method("MKCOL", null).build()).execute().use { it.code })
-    val bytes = ByteArray(24 * 1024 * 1024) { (it % 251).toByte() }
     try {
       for (chunked in listOf(false, true)) {
+        val bytes = ByteArray((if (chunked) 24 else 2) * 1024 * 1024) { (it % 251).toByte() }
         val cancelled = AtomicBoolean(false)
         val uploadId = "$id-$chunked"
         val fileName = "cancel-$chunked.bin"
@@ -84,6 +86,10 @@ class UploadCancellationLiveTest {
         }
       }
     } finally {
+      for (chunked in listOf(false, true)) {
+        NextcloudChunkTransport(LocalContentSource { null }).abort(credential, "$id-$chunked",
+          DavUploadRequest("", root, "cancel-$chunked.bin", 0, null, null, null))
+      }
       http.newCall(request(rootUrl).delete().build()).execute().close()
     }
   }
