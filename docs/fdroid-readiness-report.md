@@ -1,6 +1,6 @@
 # F-Droid readiness
 
-Updated October 25, 2026. Candidate: `ninja.domi.cloudhoist`, `2026-9` / `20260009`.
+Updated October 25, 2026. Candidate: `ninja.domi.cloudhoist`, `2026-10` / `20260010`.
 
 F-Droid is the production target; beta builds default to GitHub APK updates. Explicit `CLOUD_HOIST_CHANNEL=fdroid` builds check and open F-Droid only. The app is **not listed or published in F-Droid**. The previously verified `2026-9` reference remains unchanged. Starting with `2026-10`, beta and F-Droid binaries are separate artifacts and require separate validation; a beta test does not establish F-Droid reproducibility.
 
@@ -11,6 +11,16 @@ The [per-package catalogue](../licenses/attribution-review.md) resolves all sixt
 The offline inventory contains 979 app/package/font entries and 395 deduplicated notice texts. Twenty-eight component groups account for imported C++ code, image codecs, runtime notices, JNI headers, and OkHttp's MPL-covered Public Suffix List. Full source URLs, notice texts, evidence hashes, and parent-version bindings are checked in under `licenses/`. The Public Suffix List's readable source is retained and round-trips to the rules and exceptions in the distributed data.
 
 The Gradle inventory now resolves actual release artifacts instead of guessing filenames. It accounts for 149 artifacts and 39 metadata/platform components across 188 Maven coordinates. Notice collection reads nested JARs inside AARs. Release checks reject missing evidence, changed parent versions, unaccounted APK libraries, and changed C++ runtime hashes. All 21 native libraries are accounted for on every ABI.
+
+## Current candidate, 2026-10
+
+Tested source is `bc417d274c9badeb6fdbde01e0011f7258c56d03`. Beta and F-Droid APKs built locally for all four ABIs and were signed with the existing certificate. Both were installed in place on Samsung SM-A166B / Android 16, serial `RZCY31RD70Z`. The phone is left on the beta build. Accounts, backup sources, upload root, transfer rules, and the existing 21 completed uploads were preserved.
+
+Validation covers whole-card movement, short-swipe cancellation, repeated right-swipe setup, left hide and Undo, thumbnail scrolling, hidden-folder persistence across restart, individual and bulk restoration, GitHub automatic/manual checks, the explicit F-Droid check, and the revised About link. Six temporary photos were backed up and downloaded with matching SHA-256 hashes. The image view shows local photos, reports a missing local/remote image, and succeeds on retry after restoring the remote original. Test-owned sources and local/remote folders were removed.
+
+Type checking, lint, icons, notices, privacy, 119 JavaScript tests, 111 native JVM tests, seven Node release/attribution tests, and the Python artifact test pass. Four isolated native tests on the phone cover original-image bytes and cache reuse, declared/chunked size limits, failed/empty-response recovery, and invalid paths. Metadata lint passes against the current categories. A prepared-source snapshot, with local Gradle outputs removed, scans with zero errors and the existing unused Fontisto warning. The F-Droid APK scanner reports no known non-free classes or unexpected signing blocks.
+
+The two signed APKs remain local. The beta APK is `dist/cloud-hoist-2026-10.apk`, SHA-256 `34fa4f47c054977569403786f30560e00ad92b4d537b75ad46d1e18d25aacfb5`. The F-Droid APK is `dist/fdroid/cloud-hoist-2026-10.apk`, SHA-256 `68339cd6aa1d58b6cfdf50eeec79b11141b157191c05f9b7b1804b9f606418c1`. Neither is published. A clean F-Droid build-runner pass, independent CI comparison, signature reconstruction, and public-reference verification have not been performed for this version. Earlier evidence below applies to 2026-9. The 2026-10 recipe stays disabled pending those checks and external review.
 
 ## Validation of 2026-9
 
@@ -72,6 +82,6 @@ Listing text, icon, changelog, and three reviewed screenshots are under `fastlan
 
 No messages, inclusion requests, issues, PRs, or merge requests were sent on Domi's behalf. Domi controls submission. A different signing key cannot normally update the existing installation; never uninstall or clear app data as an automatic migration. F-Droid does not require company registration, a D-U-N-S number, or Google's 12-testers-for-14-days process.
 
-Use the [publishing guide](publishing.md) for commands and signing/submission steps, and the [release plan](release-plan.md) for the remaining sequence. Current validation evidence and private phone captures are under ignored `test-results/polish-2026-9/`. Attribution evidence is under `test-results/attribution/`; earlier reproducibility and upload evidence remains under `test-results/fdroid-audit/`.
+Use the [publishing guide](publishing.md) for commands and signing/submission steps, and the [release plan](release-plan.md) for the remaining sequence. Current validation evidence and private phone captures are under ignored `test-results/swipe-2026-10/`; previous reference validation is under `test-results/polish-2026-9/`. Attribution evidence is under `test-results/attribution/`; earlier reproducibility and upload evidence remains under `test-results/fdroid-audit/`.
 
 References: [inclusion policy](https://f-droid.org/docs/Inclusion_Policy/), [submission guide](https://f-droid.org/docs/Submitting_to_F-Droid_Quick_Start_Guide/), [build metadata](https://f-droid.org/docs/Build_Metadata_Reference/), and [developer-signed reproducible builds](https://f-droid.org/docs/Reproducible_Builds/).

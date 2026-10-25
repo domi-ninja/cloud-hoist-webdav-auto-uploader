@@ -14,7 +14,7 @@ Use `year-minor`, Android versionCode = year × 10000 + minor, and package.json 
 - F-Droid candidate recipe, listing text, icon, screenshots, changelog, and version discovery from tagged `app.json` files.
 - Offline notices, a [package-by-package attribution catalogue](../licenses/attribution-review.md), and release gates for reviewed dependency versions, embedded notices, and every APK native library.
 - F-Droid source/build/APK checks, byte-identical local and independent CI builds, and successful developer-signature reconstruction.
-- Signed in-place installation of candidate `2026-9` on Samsung SM-A166B / Android 16, with eight screen/state checks, three isolated WebDAV transport tests, and real Nextcloud folder recovery with a downloaded preservation hash. Earlier releases cover attribution notices and upload/move/hash checks. Existing app data is retained.
+- Signed in-place beta and F-Droid `2026-10` validation on Samsung SM-A166B / Android 16, including swipes, hidden-folder recovery, image viewing and retry, channel-specific checks, preserved settings, and six real uploads with matching downloaded hashes. Earlier references retain their independent reproducibility evidence.
 - Read-only CI checks and unsigned artifacts, with no store submission.
 - GitHub verification prereleases for signed reference APKs, with a versioned `Binaries` URL and the existing signing certificate pinned in the recipe.
 
