@@ -1,5 +1,7 @@
 # Cloud Hoist
 
+![Cloud Hoist Backups, Status, and Settings screens](docs/images/cloud-hoist-triad.png)
+
 An Android app that uploads selected phone folders to Nextcloud. Independent from Nextcloud GmbH. Requires Android 10 or newer and one Nextcloud account.
 
 
@@ -14,19 +16,19 @@ This app will never edit or delete files on your nextcloud. It might move them a
 
 Download [Cloud Hoist 2026-11 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download/beta-2026-11/cloud-hoist-2026-11.apk), or see [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases) for all versions. Install the signed APK over an existing installation to keep accounts, settings, and history.
 
-## Backups Screen
+## Backups screen
 
 Here, we can add folders on our phone we want to upload to the nextcloud automatically. Each phone folder gets its own destination. 
 
-If you use the WhatApp Messenger, for example, that app will have a local folder in which send or received images are cached. In this screen, such a folder will automatically show and and be suggested. This will look something like this:  
-
-<img src="docs/images/backups.png" alt="Suggested folders on the Backups screen" width="300">
+Folders containing photos or videos appear as suggestions, like `Pictures/Travel` in the left-hand screenshot above. The screen shows two suggestions at a time, with previews of the files inside.
 
 If you want to back up this suggested folder, click `Start backup`. This will lead you to a screen where you can choose where on your nextcloud you want to have these backups. By default, everything uploaded by this app will live in `/Phone Uploads` on your nextcloud. You can change this folder in the `Settings`.
 
-I would suggest backing up the camera pictures of your phone first, and then add all the folders you think are useful. You can also hide the top 3 suggestion with a swipe or the menu hidden behind the tripple dot icon, which will then cause you to get more suggestions for folders you could want to back up because they contain media files. 
+Start with your camera photos, then add other folders you want to keep. Tap `Hide suggestion` to dismiss a folder and make room for another suggestion. You can restore dismissed suggestions from `Hidden folders` at the bottom of the screen.
 
 For folders that are not automatically found, use the `Choose other directory to back up` button and find the folder on your phone. You can use this to back up some messengers and authentication apps. Have them export their data into a specific folder, and then select that folder in this app.  
+
+Cloud Hoist can also back up WhatsApp images and videos saved in folders Android lets it access. This copies the media files; it does not create or restore WhatsApp chat backups. Files exported by other apps can be copied too, but those apps remain responsible for creating and restoring their backups.
 
 ## Status 
 
