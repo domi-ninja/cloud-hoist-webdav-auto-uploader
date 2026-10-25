@@ -54,7 +54,7 @@ subprocess.run(['git', 'clone', '--quiet', '--no-hardlinks', str(root), str(chec
 environment = {**os.environ, 'PATH': str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH']}
 print(f'F-Droid validation directory: {work}', flush=True)
 subprocess.run([sys.executable, '-m', 'fdroidserver', 'build', '--test', '--stop', '--scan-binary', '--no-tarball', f"{package}:{build['versionCode']}"], cwd=work, env=environment, check=True)
-output = root / 'dist' / f"cloud-hoist-{app['version']}-unsigned.apk"
+output = root / 'dist' / 'fdroid' / f"cloud-hoist-{app['version']}-unsigned.apk"
 output.parent.mkdir(exist_ok=True)
 shutil.copy2(work / 'tmp' / f"{package}_{build['versionCode']}.apk", output)
 print(f'Verified unsigned candidate: {output}')

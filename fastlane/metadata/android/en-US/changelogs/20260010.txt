@@ -1,0 +1,5 @@
+Swipe a suggested folder right to set up a backup or left to hide it. The entire card moves, with a distinct action behind it.
+Manage hidden folders at the bottom of Backups. Restore folders individually or all at once.
+Open uploaded images directly from Status, with labeled file details and original-image fallback from Nextcloud.
+Beta builds check GitHub, including prereleases. F-Droid builds explicitly select their own update channel.
+Settings links to the Cloud Hoist blog post.

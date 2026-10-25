@@ -5,6 +5,17 @@ export function mediaFolderId(folder: Pick<MediaFolder, "volumeName" | "relative
   return sourceSelectionUri({ type: "media_folder", ...folder });
 }
 
+export function hiddenMediaFolderLabel(id: string) {
+  try {
+    const [volume, path] = id.replace(/^mediastore:\/\/folder\//, "").split("/").map(decodeURIComponent);
+    if (!path) return id;
+    const label = path.replace(/\/$/, "");
+    return volume === "external_primary" ? label : `${label} (${volume})`;
+  } catch {
+    return id;
+  }
+}
+
 export function sourceCoversMediaFolder(source: SourceSummary, folder: MediaFolder) {
   if (source.localUri === mediaFolderId(folder)) return true;
   const path = folder.relativePath.replace(/\/$/, "");

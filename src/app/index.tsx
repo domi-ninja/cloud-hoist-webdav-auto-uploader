@@ -7,6 +7,7 @@ import { Snackbar } from "react-native-paper";
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { AccountConnection } from "@/features/account/AccountConnection";
 import { MediaFolderSuggestion } from "@/features/sources/MediaFolderSuggestion";
+import { HiddenMediaFolders } from "@/features/sources/HiddenMediaFolders";
 import { mediaFolderId, mediaFolderSuggestions } from "@/features/sources/media-folder-suggestions";
 import { useAppPreferences } from "@/lib/app-preferences";
 import type { MediaFolder, SourceSelection } from "../../modules/webdav-upload-engine";
@@ -19,7 +20,6 @@ import { useNow } from "@/lib/use-now";
 import {
   ActionButton,
   ErrorNotice,
-  IconAction,
   LoadingState,
 } from "@/components/ui";
 import { UploadControls } from "@/components/UploadControls";
@@ -143,14 +143,7 @@ export default function HomeScreen() {
             ) : null}
             {connected ? (
               <View className="mt-2 gap-2">
-                <View className="flex-row flex-wrap items-center justify-between gap-2">
-                  <Text accessibilityRole="header" className="text-base font-semibold text-ink-light dark:text-ink-dark">Start backing up folder</Text>
-                  {hiddenMediaFolders.length ? (
-                    <IconAction icon="eye-outline" label="Show hidden suggestions" onPress={() => {
-                      void setHiddenMediaFolders([]).catch(() => setErrorMessage("Could not restore hidden suggestions."));
-                    }} />
-                  ) : null}
-                </View>
+                <Text accessibilityRole="header" className="text-base font-semibold text-ink-light dark:text-ink-dark">Start backing up folder</Text>
                 {media.data?.permission.access === "denied" || media.data?.permission.access === "partial" ? (
                   <ActionButton icon="image-search-outline" label={media.data.permission.access === "denied" ? "Find media folders" : "Allow all media folders"}
                     onPress={() => void requestMediaAccess()} />
@@ -165,9 +158,17 @@ export default function HomeScreen() {
           </View>
         }
         ListFooterComponent={connected ? (
-          <View className="mt-2">
+          <View className="mt-2 gap-2">
             <ActionButton icon="folder-outline" label="Choose other directory to back up" disabled={selectingFolder}
               loading={selectingFolder} onPress={() => void chooseFolder()} />
+            <HiddenMediaFolders folders={hiddenMediaFolders}
+              onRestore={(id) => {
+                void setHiddenMediaFolders(hiddenMediaFolders.filter((hidden) => hidden !== id))
+                  .catch(() => setErrorMessage("Could not restore this suggestion."));
+              }}
+              onRestoreAll={() => {
+                void setHiddenMediaFolders([]).catch(() => setErrorMessage("Could not restore hidden suggestions."));
+              }} />
           </View>
         ) : null}
         refreshControl={

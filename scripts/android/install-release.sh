@@ -15,6 +15,9 @@ case "$TARGET_SERIAL" in
   emulator-*) printf '%s\n' 'This command installs on a physical phone only.' >&2; exit 1 ;;
 esac
 APK_PATH=$(node -p '"dist/cloud-hoist-" + require("./app.json").expo.version + ".apk"')
+if [ "${CLOUD_HOIST_CHANNEL:-beta}" = fdroid ]; then
+  APK_PATH="dist/fdroid/$(basename "$APK_PATH")"
+fi
 if [ ! -f "$APK_PATH" ]; then
   printf '%s\n' 'Build with pnpm fdroid:build, then sign with pnpm android:release.' >&2
   exit 1

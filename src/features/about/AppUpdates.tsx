@@ -5,31 +5,33 @@ import { useState } from "react";
 
 import { expo } from "../../../app.json";
 import { ActionButton, Panel } from "@/components/ui";
-import { project } from "@/config/project";
-import { checkAppUpdates } from "./app-updates";
+import { checkAppUpdates, updateChannel } from "./app-updates";
 
 export function AppUpdates() {
   const version = Constants.expoConfig?.version ?? expo.version;
   const versionCode = Constants.expoConfig?.android?.versionCode ?? expo.android.versionCode;
+  const channel = updateChannel(Constants.expoConfig?.extra?.updateChannel);
+  const provider = channel === "beta" ? "GitHub" : "F-Droid";
   const [openError, setOpenError] = useState<string>();
   const update = useQuery({
-    queryKey: ["app-updates", versionCode],
-    queryFn: () => checkAppUpdates(versionCode),
+    queryKey: ["app-updates", channel, versionCode],
+    queryFn: () => checkAppUpdates(versionCode, channel),
     retry: false,
     staleTime: 60 * 60 * 1000,
   });
   const status = update.isFetching ? `Version ${version}, checking for updates…`
     : update.isError ? `Version ${version}. ${update.error.message}`
-    : update.data?.status === "available" ? `Version ${version}. Version ${update.data.version} available on F-Droid.`
+    : update.data?.status === "available" ? `Version ${version}. Version ${update.data.version} available on ${provider}.`
     : update.data?.status === "up-to-date" ? `Version ${version}, up to date.`
     : `Version ${version}. Updates have not been checked.`;
 
-  const openFdroid = async () => {
+  const openUpdate = async () => {
+    if (update.data?.status !== "available") return;
     setOpenError(undefined);
     try {
-      await Linking.openURL(`https://f-droid.org/packages/${project.androidPackage}/`);
+      await Linking.openURL(update.data.url);
     } catch {
-      setOpenError("F-Droid could not be opened.");
+      setOpenError(`${provider} could not be opened.`);
     }
   };
 
@@ -48,7 +50,7 @@ export function AppUpdates() {
         <ActionButton icon="refresh" label="Check for updates" loading={update.isFetching}
           disabled={update.isFetching} onPress={() => void update.refetch()} />
         {update.data?.status === "available" && !update.isError && !update.isFetching ? (
-          <ActionButton label="Open F-Droid" onPress={() => void openFdroid()} />
+          <ActionButton icon="download" label={channel === "beta" ? "Download update" : "Open F-Droid"} onPress={() => void openUpdate()} />
         ) : null}
       </View>
       {openError ? <Text accessibilityLiveRegion="polite" className="text-base text-red-700 dark:text-red-300">{openError}</Text> : null}

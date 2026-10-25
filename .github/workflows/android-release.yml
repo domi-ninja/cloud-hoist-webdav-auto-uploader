@@ -62,5 +62,5 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: fdroid-unsigned-${{ github.sha }}
-          path: dist/*-unsigned.apk
+          path: dist/**/*-unsigned.apk
           retention-days: 14

@@ -75,6 +75,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
     version: string | null,
   ): Promise<unknown>;
   getUnresolvedFailuresAsync(): Promise<unknown>;
+  getRemoteImageAsync(sourceId: string, relativePath: string, version: string | null): Promise<unknown>;
   getDiagnosticReportAsync(): Promise<unknown>;
   pauseAsync(): Promise<void>;
   resumeAsync(): Promise<void>;
@@ -232,6 +233,12 @@ export const webDavUploadEngine = {
     runValueCommand(
       () => nativeModule.getRemoteThumbnailAsync(sourceId, relativePath, version),
       (value): string | null => z.string().startsWith("file:").nullable().parse(value),
+    ),
+
+  getRemoteImage: (sourceId: string, relativePath: string, version: string | null) =>
+    runValueCommand(
+      () => nativeModule.getRemoteImageAsync(sourceId, relativePath, version),
+      (value) => z.string().startsWith("file:").parse(value),
     ),
 
   async getUnresolvedFailures(): Promise<UnresolvedFailure[]> {

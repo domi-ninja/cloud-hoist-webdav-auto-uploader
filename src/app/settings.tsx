@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ScrollView, Text, View } from "react-native";
+import { Linking, ScrollView, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { Switch } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -209,6 +209,9 @@ export default function SettingsScreen() {
           <Text className="text-base text-muted-light dark:text-muted-dark">
             {project.description}
           </Text>
+          <ActionButton icon="open-in-new" label="Read about Cloud Hoist" onPress={() => {
+            void Linking.openURL(project.blogUrl).catch(() => setErrorMessage("The blog post could not be opened."));
+          }} />
           <OpenSourceLicenses />
         </Panel>
       </ScrollView>

@@ -4,13 +4,11 @@ An Android app that uploads selected phone folders to Nextcloud. Independent fro
 
 ## Get started
 
-F-Droid packaging is in progress. Cloud Hoist is not yet listed in the main F-Droid repository. Existing installations can continue using their configured backups; keep them installed to preserve local settings and history. Developers can build a local validation APK using the [development guide](docs/development.md).
+Beta APKs are available from [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases). Install the signed APK over an existing installation to keep accounts, settings, and history. F-Droid packaging is in progress; the app is not listed there yet.
 
-Once the F-Droid listing is available:
-
-1. Install Cloud Hoist through F-Droid.
+1. Download and install the latest beta APK. Android may ask you to allow installation from your browser.
 2. Enter your Nextcloud server address and sign in through the browser. You can also use a Nextcloud app password.
-3. Tap **Start backup** on a suggested folder, or **Choose other directory to back up** below the suggestions. Grant access, check the destination, and tap **Save backup folder**.
+3. Tap **Start backup** on a suggested folder or swipe it right. For another folder, tap **Choose other directory to back up** below the suggestions. Grant access, check the destination, and tap **Save backup folder**.
 4. Open **Status** to see backed-up folders, progress, and failed files. Network and power rules are in **Settings**.
 
 All existing files in a selected folder are included. Start with a small folder if you want to try the app first.
@@ -27,13 +25,13 @@ This is one-way upload. Generic WebDAV servers and Nextcloud end-to-end encrypte
 
 ## Updates
 
-F-Droid manages app updates. Settings shows the installed version and checks F-Droid for available updates. Failed checks are shown as errors. Cloud Hoist does not download code. Migration of existing GitHub installations depends on preserving the signing identity; do not uninstall or clear app data to resolve an update mismatch.
+Beta builds check GitHub Releases, including beta prereleases. Settings shows the installed version and offers **Download update** when a newer APK is available. The browser downloads the APK; Android handles installation and verifies the existing signing identity. F-Droid builds check and open F-Droid instead. Failed checks are shown as errors. Never uninstall or clear app data to resolve an update mismatch.
 
 ## Developer docs
 
 - [Development and testing](docs/development.md)
 - [Architecture and engine behavior](docs/architecture.md)
-- [F-Droid releases](docs/publishing.md)
+- [Beta and F-Droid releases](docs/publishing.md)
 - [Agent guidance](AGENTS.md)
 
 ## License

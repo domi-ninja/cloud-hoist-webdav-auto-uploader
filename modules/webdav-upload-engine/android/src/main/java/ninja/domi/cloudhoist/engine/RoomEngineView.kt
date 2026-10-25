@@ -152,10 +152,17 @@ class RoomEngineView(
     val job = dao.job(jobId) ?: return null
     val revision = dao.revision(job.revisionId)
     val source = dao.source(job.sourceId)
+    val remoteSegments = job.remotePathSegments + job.remoteFileName
     return mapOf(
       "jobId" to job.id, "sourceId" to job.sourceId,
       "fileName" to job.remoteFileName, "sourceName" to source?.name,
       "localUri" to revision?.localUri, "byteCount" to (revision?.byteCount ?: 0),
+      "mimeType" to revision?.mimeType,
+      "relativePath" to source?.let {
+        if (remoteSegments.take(it.remotePathSegments.size) == it.remotePathSegments)
+          remoteSegments.drop(it.remotePathSegments.size).joinToString("/") else null
+      },
+      "uploadedAt" to job.completedAt?.let { java.time.Instant.ofEpochMilli(it).toString() },
       "remotePath" to (job.remotePathSegments + job.remoteFileName).joinToString("/", prefix = "/"),
       "state" to job.state, "attemptCount" to job.attemptCount,
       "errorCode" to job.lastErrorCode,

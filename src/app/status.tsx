@@ -108,8 +108,14 @@ const FileRow = memo(function FileRow({
   const router = useRouter();
   return (
     <Pressable
-      onPress={entry.jobId ? () => router.push({ pathname: "/upload-failure", params: { jobId: entry.jobId! } }) : undefined}
-      accessibilityRole={entry.jobId ? "button" : undefined}
+      onPress={() => router.push({ pathname: "/upload-failure", params: {
+        jobId: entry.jobId ?? undefined, sourceId: entry.sourceId, fileName: entry.fileName,
+        sourceName: entry.sourceName, relativePath: entry.relativePath, remotePath: entry.remotePath,
+        localUri: entry.localUri ?? undefined, mimeType: entry.mimeType ?? undefined,
+        modifiedAt: entry.modifiedAt ?? undefined, presence: entry.presence,
+        byteCount: entry.byteCount?.toString(),
+      } })}
+      accessibilityRole="button"
       accessible
       accessibilityLabel={`${entry.fileName}. ${presenceText[entry.presence]}. ${entry.sourceName}. ${transfer ?? ""}`}
       className="flex-row gap-2 rounded-lg bg-panel-light p-2 dark:bg-panel-dark"

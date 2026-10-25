@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Gesture } from "react-native-gesture-handler";
-import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
-import { Icon, Menu } from "react-native-paper";
+import Swipeable, { SwipeDirection, type SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
+import { Icon, Menu, useTheme } from "react-native-paper";
 import { useQuery } from "@tanstack/react-query";
 
 import webDavUploadEngine, { type MediaFolder, type SourceSelection } from "../../../modules/webdav-upload-engine";
@@ -17,6 +17,8 @@ export function MediaFolderSuggestion({ folder, onStart, onHide }: {
   onHide: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const swipeable = useRef<SwipeableMethods>(null);
+  const theme = useTheme();
   const now = useNow();
   const previewGesture = useMemo(() => Gesture.Native().disallowInterruption(true), []);
   const path = folder.relativePath.replace(/\/$/, "");
@@ -33,11 +35,35 @@ export function MediaFolderSuggestion({ folder, onStart, onHide }: {
     staleTime: 30_000,
   });
 
-  const hideAction = () => <View className="w-24 items-center justify-center rounded-lg bg-panel-light dark:bg-panel-dark"><Icon source="eye-off-outline" size={24} /></View>;
+  const startBackup = () => {
+    swipeable.current?.reset();
+    onStart();
+  };
+  const hide = () => {
+    // Close before saving so a failed hide leaves the card usable for another swipe.
+    swipeable.current?.reset();
+    onHide();
+  };
+  const backupAction = () => (
+    <View className="w-28 items-center justify-center gap-2 rounded-lg" style={{ backgroundColor: theme.colors.primaryContainer }}>
+      <Icon source="cloud-upload-outline" color={theme.colors.onPrimaryContainer} size={24} />
+      <Text className="text-center text-base" style={{ color: theme.colors.onPrimaryContainer }}>Start backup</Text>
+    </View>
+  );
+  const hideAction = () => (
+    <View className="w-28 items-center justify-center gap-2 rounded-lg" style={{ backgroundColor: theme.colors.secondaryContainer }}>
+      <Icon source="eye-off-outline" color={theme.colors.onSecondaryContainer} size={24} />
+      <Text className="text-center text-base" style={{ color: theme.colors.onSecondaryContainer }}>Hide folder</Text>
+    </View>
+  );
   return (
-    <Swipeable renderLeftActions={hideAction} renderRightActions={hideAction}
+    <Swipeable ref={swipeable} renderLeftActions={backupAction} renderRightActions={hideAction}
       leftThreshold={80} rightThreshold={80} overshootLeft={false} overshootRight={false}
-      requireExternalGestureToFail={previewGesture} onSwipeableOpen={onHide}>
+      containerStyle={{ borderRadius: 8 }}
+      requireExternalGestureToFail={previewGesture} onSwipeableOpen={(direction) => {
+        if (direction === SwipeDirection.RIGHT) startBackup();
+        else hide();
+      }}>
       <Pressable onLongPress={() => setMenuOpen(true)} delayLongPress={400} accessible={false}>
         <Panel>
           <View className="flex-row items-center gap-2">
@@ -45,9 +71,9 @@ export function MediaFolderSuggestion({ folder, onStart, onHide }: {
             <Menu visible={menuOpen} onDismiss={() => setMenuOpen(false)} anchor={
               <IconAction icon="dots-vertical" label={`Suggestion actions for ${path}`} onPress={() => setMenuOpen(true)} />
             }>
-              <Menu.Item title="Hide suggestion" leadingIcon="eye-off-outline" onPress={() => { setMenuOpen(false); onHide(); }} />
+              <Menu.Item title="Hide suggestion" leadingIcon="eye-off-outline" onPress={() => { setMenuOpen(false); hide(); }} />
             </Menu>
-            <ActionButton label="Start backup" icon="cloud-upload-outline" onPress={onStart} />
+            <ActionButton label="Start backup" icon="cloud-upload-outline" onPress={startBackup} />
           </View>
           {preview.data ? (
             <SourcePreviewThumbnails key={`${folder.fileCount}:${folder.totalBytes}:${folder.latestFileAt}`} preview={preview.data} selection={selection} rows={1} scrollGesture={previewGesture} onLongPress={() => setMenuOpen(true)} />

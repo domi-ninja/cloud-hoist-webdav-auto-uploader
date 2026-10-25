@@ -1,12 +1,12 @@
-# F-Droid releases
+# Beta and F-Droid releases
 
 [README](../README.md) · [Development](development.md) · [Architecture](architecture.md)
 
-F-Droid is the only distribution target. Settings checks F-Droid for available versions; the app does not check GitHub for updates or download executable code. Google Play and EAS are not part of this workflow. GitHub hosts source, issues, and signed reference APKs for F-Droid verification.
+Beta users install signed APKs from GitHub Releases. F-Droid is the production target and is not listed yet. Google Play and EAS OTA are excluded. Builds default to beta unless `CLOUD_HOIST_CHANNEL=fdroid` is explicitly selected. Keep the existing package and signing identity in both channels.
 
 ## Version and source identity
 
-Keep `app.json` as the release identity. For `2026-9`, set `expo.version` to `2026-9`, Android versionCode to `20260009`, and package.json version to `2026.9.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
+Keep `app.json` as the release identity. For `2026-10`, set `expo.version` to `2026-10`, Android versionCode to `20260010`, and package.json version to `2026.10.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
 
 ## Build without signing credentials
 
@@ -15,10 +15,11 @@ Install dependencies with the pinned Node and pnpm versions, then:
 ```sh
 nvm use
 pnpm install --frozen-lockfile
-pnpm fdroid:build
+pnpm android:build       # beta, the default app channel
+pnpm fdroid:build        # explicitly selects fdroid
 ```
 
-This generates the Android project and builds `dist/cloud-hoist-<version>-unsigned.apk`. It requires the SDK and JDK described in [Development](development.md), but does not require private signing files, an Expo account, or Google Play access. Expo telemetry and dotenv loading are disabled for this build.
+Both commands generate the Android project. Beta output is `dist/cloud-hoist-<version>-unsigned.apk`; F-Droid output is `dist/fdroid/cloud-hoist-<version>-unsigned.apk`. It requires the SDK and JDK described in [Development](development.md), but does not require private signing files, an Expo account, or Google Play access. Expo telemetry and dotenv loading are disabled for this build.
 
 The F-Droid recipe is `metadata/ninja.domi.cloudhoist.yml`. Its preparation must run from a clean checkout and provision only build tools, not an emulator or Play system image. Validate the fully prepared source, not just the tracked repository. The recipe keeps builds disabled and automatic build updates off until F-Droid build-server and maintainer review are complete.
 
@@ -33,9 +34,17 @@ pnpm android:release
 ANDROID_SERIAL=YOUR_PHONE_SERIAL pnpm android:install
 ```
 
-Signing produces `dist/cloud-hoist-<version>.apk` without rebuilding. It checks 16 KB native-library alignment and preserves ZIP alignment so F-Droid can copy and verify the signature. Installation verifies the package, version, and existing certificate. Never uninstall the configured app or clear its data to bypass a signing mismatch. Follow [phone validation](development.md#phone-validation). For upload changes, verify downloaded hashes using test-owned files and folders.
+Signing produces `dist/cloud-hoist-<version>.apk` without rebuilding. To sign a F-Droid reference candidate instead, run `CLOUD_HOIST_CHANNEL=fdroid pnpm android:release`; its signed APK stays in `dist/fdroid/`. It checks 16 KB native-library alignment and preserves ZIP alignment so F-Droid can copy and verify the signature. Installation verifies the package, version, and existing certificate. Never uninstall the configured app or clear its data to bypass a signing mismatch. Follow [phone validation](development.md#phone-validation). For upload changes, verify downloaded hashes using test-owned files and folders.
 
 `pnpm android:signing` exists only for a genuinely new signing identity and refuses to overwrite an existing signing directory. It is not a fix for missing release credentials on an existing project.
+
+## Beta publication
+
+After checks and signed in-place phone validation, publish the existing beta APK and `SHA256SUMS` in a GitHub prerelease tagged `beta-<version>`, with `--latest=false`. The asset must be named `cloud-hoist-<version>.apk` and finish uploading before it can be offered. The app reads published releases, including prereleases, rather than GitHub's stable-only latest endpoint. It ignores F-Droid reference releases and compares numeric year-minor versions. No token or custom update feed is needed.
+
+Settings checks automatically when opened, reports failures, and offers **Download update** for a newer version. This opens the APK in the browser; Android completes the in-place installation. Existing `2026-9` installations contain the former F-Droid-only check and need one manual beta APK installation to gain this behavior.
+
+Do not publish until requested. Once a beta APK is public, its bytes and version are fixed. Build changes get the next version, and upload retries reuse the existing APK.
 
 ## Signed APKs for F-Droid verification
 
@@ -47,9 +56,9 @@ https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download
 
 For `2026-8`, the [verification release](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/fdroid-reference-2026-8) contains the same signed APK tested on the phone and a `SHA256SUMS` file. Its tag points to tested source commit `01ea9e2d87f9d6928a917071b2df2a806e2bf24b`.
 
-Publish reference APKs as prereleases with `--latest=false`, using tags named `fdroid-reference-<version>`. These tags sit outside F-Droid's normal `v<version>` discovery and the application CI's version-tag build trigger. Keep user setup and updates through F-Droid.
+Publish reference APKs as prereleases with `--latest=false`, using tags named `fdroid-reference-<version>`. These tags sit outside F-Droid's normal `v<version>` discovery and the application CI's version-tag build trigger. Only F-Droid-channel APKs belong in these reference releases. Beta users receive the separately built beta APK.
 
-Before upload, verify the existing APK with `sh scripts/android/release.sh verify dist/cloud-hoist-<version>.apk`. Upload that file and its checksum. Do not rebuild, sign again, upload private signing files, or create an `update.json` feed. After publishing, download the APK without authentication, compare its SHA-256, and verify its signature against the independently rebuilt unsigned APK.
+Before upload, verify the existing APK with `CLOUD_HOIST_CHANNEL=fdroid sh scripts/android/release.sh verify dist/fdroid/cloud-hoist-<version>.apk`. Upload that file and its checksum. Do not rebuild, sign again, upload private signing files, or create an `update.json` feed. After publishing, download the APK without authentication, compare its SHA-256, and verify its signature against the independently rebuilt unsigned APK.
 
 Treat a published reference APK and its version as fixed. Retry failed uploads with the existing file. App changes after publication get a new version.
 
@@ -64,7 +73,7 @@ To run the same F-Droid gates as CI, install fdroidserver 2.4.5 in a Python virt
 python scripts/fdroid/validate.py --gradle /path/to/trusted/gradle-9.3.1/bin/gradle
 ```
 
-`gradlew-fdroid` is also accepted as the Gradle executable. The runner makes a separate Git checkout under ignored `test-results/`, enables only its local recipe copy, and runs `fdroid build --test` with source and APK scanners. It does not run privileged build-server provisioning on the workstation or publish anything. Output is copied to the normal unsigned candidate path.
+`gradlew-fdroid` is also accepted as the Gradle executable. The runner makes a separate Git checkout under ignored `test-results/`, enables only its local recipe copy, and runs `fdroid build --test` with source and APK scanners. It does not run privileged build-server provisioning on the workstation or publish anything. Output is copied to `dist/fdroid/cloud-hoist-<version>-unsigned.apk`.
 
 The local validation runner builds an unsigned candidate and omits `Binaries` in its temporary recipe. A new candidate has no signed reference yet. The checked-in recipe retains `Binaries`; verify developer-signature reconstruction separately after local signing, then verify the public download.
 

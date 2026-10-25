@@ -54,6 +54,10 @@ class WebDavUploadEngineModule : Module() {
     val context = appContext.reactContext ?: throw AccountStorageException()
     RemoteThumbnailManager(context, engineDatabase.engineDao(), accountRepository)
   }
+  private val remoteImageManager by lazy {
+    val context = appContext.reactContext ?: throw AccountStorageException()
+    RemoteImageManager(java.io.File(context.cacheDir, "remote-images"), engineDatabase.engineDao(), accountRepository)
+  }
   private val documentTreeGateway by lazy {
     val context = appContext.reactContext ?: throw AccountStorageException()
     AndroidDocumentTreeGateway(context)
@@ -213,6 +217,13 @@ class WebDavUploadEngineModule : Module() {
         sourceId: String, relativePath: String, version: String? ->
       withContext(Dispatchers.IO) {
         remoteThumbnailManager.thumbnail(sourceId, relativePath, version)
+      }
+    }
+
+    AsyncFunction("getRemoteImageAsync") Coroutine {
+        sourceId: String, relativePath: String, version: String? ->
+      withContext(Dispatchers.IO) {
+        remoteImageManager.image(sourceId, relativePath, version)
       }
     }
 

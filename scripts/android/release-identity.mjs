@@ -5,10 +5,12 @@ export function releaseVersionCode(version) {
   return Number(match[1]) * 10000 + Number(match[2]);
 }
 
-export function validateReleaseIdentity(app, toolingVersion) {
+export function validateReleaseIdentity(app, toolingVersion, channel = 'beta') {
+  if (!['beta', 'fdroid'].includes(channel)) throw new Error('CLOUD_HOIST_CHANNEL must be beta or fdroid.');
   const versionCode = releaseVersionCode(app.version);
   if (app.android.versionCode !== versionCode) throw new Error('app.json versionCode must match the year-minor version.');
   if (toolingVersion !== `${app.version.replace('-', '.')}.0`) throw new Error('package.json version must match app.json.');
   if (app.android.package !== 'ninja.domi.cloudhoist') throw new Error('Keep the existing Android package identity.');
-  return { version: app.version, versionCode, unsignedApk: `dist/cloud-hoist-${app.version}-unsigned.apk`, apk: `dist/cloud-hoist-${app.version}.apk` };
+  const directory = channel === 'fdroid' ? 'dist/fdroid' : 'dist';
+  return { version: app.version, versionCode, unsignedApk: `${directory}/cloud-hoist-${app.version}-unsigned.apk`, apk: `${directory}/cloud-hoist-${app.version}.apk` };
 }

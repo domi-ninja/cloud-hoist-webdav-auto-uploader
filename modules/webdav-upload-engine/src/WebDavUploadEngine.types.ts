@@ -198,6 +198,7 @@ export const fileInventoryPageSchema = z.object({
 export const uploadDetailSchema = z.object({
   jobId: z.string(), sourceId: z.string(), fileName: z.string(), sourceName: z.string().nullable(),
   localUri: z.string().nullable(), byteCount: z.number().nonnegative(), remotePath: z.string(),
+  mimeType: z.string().nullable(), relativePath: z.string().nullable(), uploadedAt: z.string().datetime().nullable(),
   state: z.enum(["queued", "running", "retry_wait", "blocked", "completed", "cancelled"]),
   attemptCount: z.number().int().nonnegative(), errorCode: z.string().nullable(), errorMessage: z.string().nullable(),
 });

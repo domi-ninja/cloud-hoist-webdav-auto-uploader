@@ -1,6 +1,6 @@
 import { expect, it } from "@jest/globals";
 import type { MediaFolder, SourceSummary } from "../../../modules/webdav-upload-engine";
-import { mediaFolderId, mediaFolderSuggestions } from "./media-folder-suggestions";
+import { hiddenMediaFolderLabel, mediaFolderId, mediaFolderSuggestions } from "./media-folder-suggestions";
 import { selectionForSource, sourceInputFromEditor } from "./source-editor-state";
 const folder = (path: string, bytes: number, volume = "external_primary"): MediaFolder => ({
   relativePath: `${path}/`, volumeName: volume, totalBytes: bytes, fileCount: 3,
@@ -29,4 +29,10 @@ it("round-trips arbitrary nested folders without turning them into Screenshots",
   expect(selection).toEqual({ type: "media_folder", volumeName: "external_primary", relativePath: candidate.relativePath });
   const input = sourceInputFromEditor("configured", { selection, name: "My Images", remotePathSegments: ["Cloud Hoist"], enabled: true, collisionPolicy: "replace" });
   expect(input.localUri).toBe(mediaFolderId(candidate));
+});
+
+it("labels saved hidden folders even when they are no longer discovered", () => {
+  expect(hiddenMediaFolderLabel(mediaFolderId(folder("Pictures/Holidays #1 % 家", 1)))).toBe("Pictures/Holidays #1 % 家");
+  expect(hiddenMediaFolderLabel(mediaFolderId(folder("Pictures/Holidays", 1, "1234-5678")))).toBe("Pictures/Holidays (1234-5678)");
+  expect(hiddenMediaFolderLabel("mediastore://folder/broken/%ZZ")).toBe("mediastore://folder/broken/%ZZ");
 });

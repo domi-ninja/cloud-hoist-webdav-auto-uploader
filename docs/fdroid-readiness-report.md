@@ -2,7 +2,7 @@
 
 Updated October 25, 2026. Candidate: `ninja.domi.cloudhoist`, `2026-9` / `20260009`.
 
-F-Droid is the only distribution target. The app has no GitHub update checks, APK download controls, Play Store integration, or EAS OTA delivery. GitHub hosts source, issues, and signed reference APKs for F-Droid verification. The app is **not listed or published in F-Droid**. Settings checks its public package API for version availability and reports the missing listing as a failed check; it never downloads executable code.
+F-Droid is the production target; beta builds default to GitHub APK updates. Explicit `CLOUD_HOIST_CHANNEL=fdroid` builds check and open F-Droid only. The app is **not listed or published in F-Droid**. The previously verified `2026-9` reference remains unchanged. Starting with `2026-10`, beta and F-Droid binaries are separate artifacts and require separate validation; a beta test does not establish F-Droid reproducibility.
 
 ## Attribution
 

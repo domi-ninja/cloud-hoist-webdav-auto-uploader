@@ -10,7 +10,8 @@ const signingDir = resolve('.signing');
 const credentialsPath = join(signingDir, 'release.json');
 const app = JSON.parse(await readFile('app.json', 'utf8')).expo;
 const tooling = JSON.parse(await readFile('package.json', 'utf8'));
-const identity = validateReleaseIdentity(app, tooling.version);
+const identity = validateReleaseIdentity(app, tooling.version, process.env.CLOUD_HOIST_CHANNEL ?? 'beta');
+const channel = process.env.CLOUD_HOIST_CHANNEL ?? 'beta';
 
 function run(command, args, env = process.env) {
   const result = spawnSync(command, args, { env, encoding: 'utf8' });
@@ -41,6 +42,8 @@ async function main() {
   const signingEnv = { ...process.env, LOCAL_SIGNING_PASSWORD: credentials.storePassword, LOCAL_KEY_PASSWORD: credentials.keyPassword };
   const apksigner = join(process.env.ANDROID_HOME, 'build-tools/36.0.0/apksigner');
   const apk = mode === 'verify' && process.argv[3] ? resolve(process.argv[3]) : resolve(identity.apk);
+  const runtime = JSON.parse(run('unzip', ['-p', mode === 'sign' ? resolve(identity.unsignedApk) : apk, 'assets/app.config']));
+  if (runtime.extra?.updateChannel !== channel) throw new Error(`Expected a ${channel} APK; the embedded update channel does not match.`);
   if (mode === 'sign') {
     run(join(process.env.ANDROID_HOME, 'build-tools/36.0.0/zipalign'), ['-c', '-P', '16', '4', resolve(identity.unsignedApk)]);
     run(apksigner, ['sign', '--alignment-preserved', 'true', '--ks', join(signingDir, credentials.storeFile), '--ks-key-alias', credentials.keyAlias,

@@ -23,7 +23,7 @@ pnpm android emu
 
 Development builds use a different signing key from existing release installations. Use an emulator or disposable installation for them. A signing mismatch prevents an in-place update. Never uninstall the configured app or clear its data to work around it.
 
-For the user's configured phone, build an unsigned F-Droid candidate and sign it locally through [Publishing](publishing.md). `pnpm android:install` verifies the release key, installs in place, and launches the app without clearing data.
+For the user's configured phone, build an unsigned beta candidate with `pnpm android:build` and sign it locally through [Publishing](publishing.md). `pnpm android:install` verifies the release key, installs in place, and launches the app without clearing data.
 
 ## Checks without a device
 

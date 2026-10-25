@@ -1,6 +1,6 @@
 {
   "name": "cloud-hoist",
-  "version": "2026.9.0",
+  "version": "2026.10.0",
   "license": "GPL-3.0-or-later",
   "main": "expo-router/entry",
   "dependencies": {
@@ -53,6 +53,7 @@
     "test:stress": "./scripts/test/stress.sh",
     "test:watch": "jest --watch",
     "android:release": "sh scripts/android/release.sh sign",
+    "android:build": "CLOUD_HOIST_CHANNEL=beta sh scripts/fdroid/build.sh",
     "fdroid:prepare": "sh scripts/fdroid/prepare.sh",
     "fdroid:build": "sh scripts/fdroid/build.sh",
     "licenses:generate": "node scripts/fdroid/licenses.mjs",
