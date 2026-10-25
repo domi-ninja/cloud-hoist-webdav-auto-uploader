@@ -15,8 +15,19 @@ class RemoteFolderManager(
 ) {
   fun list(pathSegments: List<String>): List<RemoteFolder> {
     val normalizedPath = DavPath.validate(pathSegments)
-    return networkClient.listFolders(credential(), normalizedPath)
-      .sortedBy { it.name.lowercase() }
+    val account = credential()
+    val folders = try {
+      networkClient.listFolders(account, normalizedPath)
+    } catch (error: DavNotFoundException) {
+      // The account root belongs to the server; only recreate paths below it.
+      if (normalizedPath.isEmpty()) throw error
+      normalizedPath.forEachIndexed { index, name ->
+        networkClient.createFolder(account, normalizedPath.take(index), name)
+      }
+      // Retry once so deletion races and failed creation cannot loop indefinitely.
+      networkClient.listFolders(account, normalizedPath)
+    }
+    return folders.sortedBy { it.name.lowercase() }
   }
 
   fun create(parentPathSegments: List<String>, name: String): RemoteFolder {

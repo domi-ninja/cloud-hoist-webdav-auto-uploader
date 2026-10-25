@@ -16,6 +16,7 @@ class RemoteFolderManagerTest {
     )
 
     assertEquals(listOf("Camera", "zeta", "Älbum"), manager.list(emptyList()).map { it.name })
+    assertEquals(emptyList<List<String>>(), network.created)
     assertThrows(DavInvalidPathException::class.java) { manager.list(listOf("..")) }
     assertThrows(DavInvalidPathException::class.java) { manager.create(emptyList(), "a/b") }
   }
@@ -24,6 +25,89 @@ class RemoteFolderManagerTest {
   fun requiresAnAccount() {
     val manager = RemoteFolderManager(FakeAccountRepository(null), FakeFolderClient())
     assertThrows(AccountNotConfiguredException::class.java) { manager.list(emptyList()) }
+  }
+
+  @Test
+  fun createsMissingParentsThenReloadsTheListing() {
+    val path = listOf("Phone Uploads", "Documents", "Grüezi # %")
+    val network = FakeFolderClient().apply {
+      listFailures.add(DavNotFoundException())
+      folders = listOf(RemoteFolder("Child", path + "Child"))
+    }
+
+    assertEquals(network.folders, RemoteFolderManager(FakeAccountRepository(), network).list(path))
+    assertEquals(listOf(path.take(1), path.take(2), path), network.created)
+    assertEquals(listOf(path, path), network.listed)
+  }
+
+  @Test
+  fun reloadsAnExistingFolderWithoutTryingToCreateIt() {
+    val network = FakeFolderClient()
+    RemoteFolderManager(FakeAccountRepository(), network).list(listOf("Existing"))
+    assertEquals(emptyList<List<String>>(), network.created)
+  }
+
+  @Test
+  fun doesNotCreateAnythingForOtherListingFailures() {
+    for (failure in listOf(
+      DavPermissionException(), AccountInvalidCredentialsException(), AccountNetworkException(),
+      AccountTimeoutException(), AccountServerException(),
+    )) {
+      val network = FakeFolderClient().apply { listFailures.add(failure) }
+      val manager = RemoteFolderManager(FakeAccountRepository(), network)
+      assertEquals(failure, assertThrows(failure.javaClass) { manager.list(listOf("Folder")) })
+      assertEquals(emptyList<List<String>>(), network.created)
+    }
+  }
+
+  @Test
+  fun doesNotTryToCreateTheAccountRoot() {
+    val network = FakeFolderClient().apply { listFailures.add(DavNotFoundException()) }
+    assertThrows(DavNotFoundException::class.java) {
+      RemoteFolderManager(FakeAccountRepository(), network).list(emptyList())
+    }
+    assertEquals(emptyList<List<String>>(), network.created)
+    assertEquals(1, network.listed.size)
+  }
+
+  @Test
+  fun stopsWhenCreationFailsAndCanRetryLater() {
+    val network = FakeFolderClient().apply {
+      listFailures.add(DavNotFoundException())
+      creationFailure = DavQuotaException()
+    }
+    val manager = RemoteFolderManager(FakeAccountRepository(), network)
+    val path = listOf("Parent", "Child")
+    assertThrows(DavQuotaException::class.java) { manager.list(path) }
+    assertEquals(listOf(path.take(1)), network.created)
+    assertEquals(1, network.listed.size)
+
+    network.creationFailure = null
+    network.listFailures.add(DavNotFoundException())
+    assertEquals(emptyList<RemoteFolder>(), manager.list(path))
+    assertEquals(listOf(path.take(1), path.take(1), path), network.created)
+  }
+
+  @Test
+  fun doesNotLoopWhenTheFolderIsStillMissingAfterCreation() {
+    val network = FakeFolderClient().apply {
+      listFailures.addAll(listOf(DavNotFoundException(), DavNotFoundException()))
+    }
+    val path = listOf("Folder")
+    assertThrows(DavNotFoundException::class.java) {
+      RemoteFolderManager(FakeAccountRepository(), network).list(path)
+    }
+    assertEquals(listOf(path), network.created)
+    assertEquals(listOf(path, path), network.listed)
+  }
+
+  @Test
+  fun validatesTheWholePathBeforeNetworkAccess() {
+    val network = FakeFolderClient()
+    val manager = RemoteFolderManager(FakeAccountRepository(), network)
+    assertThrows(DavInvalidPathException::class.java) { manager.list(listOf("Parent", "..")) }
+    assertEquals(emptyList<List<String>>(), network.listed)
+    assertEquals(emptyList<List<String>>(), network.created)
   }
 
   private class FakeAccountRepository(
@@ -37,16 +121,28 @@ class RemoteFolderManagerTest {
 
   private class FakeFolderClient : RemoteFolderNetworkClient {
     var folders = emptyList<RemoteFolder>()
+    val listed = mutableListOf<List<String>>()
+    val created = mutableListOf<List<String>>()
+    val listFailures = mutableListOf<Exception>()
+    var creationFailure: Exception? = null
     override fun listFolders(
       credential: StoredAccountCredential,
       pathSegments: List<String>,
-    ) = folders
+    ): List<RemoteFolder> {
+      listed.add(pathSegments)
+      if (listFailures.isNotEmpty()) throw listFailures.removeAt(0)
+      return folders
+    }
 
     override fun createFolder(
       credential: StoredAccountCredential,
       parentPathSegments: List<String>,
       name: String,
-    ) = RemoteFolder(name, parentPathSegments + name)
+    ): RemoteFolder {
+      created.add(parentPathSegments + name)
+      creationFailure?.let { throw it }
+      return RemoteFolder(name, parentPathSegments + name)
+    }
   }
 
   private companion object {

@@ -1,4 +1,3 @@
-import { ensureRemoteDestination } from "./default-destination";
 import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
@@ -49,7 +48,6 @@ export function RemoteFolderPicker({
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
-  const [missing, setMissing] = useState(false);
   const [reload, setReload] = useState(0);
   const request = useRef(0);
   useEffect(function reportFolderError() {
@@ -65,7 +63,6 @@ export function RemoteFolderPicker({
         if (result.ok) setFolders(result.value);
         else {
           setError(result.error.message);
-          setMissing(result.error.code === "dav_not_found");
         }
       })
       .catch(() => {
@@ -85,7 +82,6 @@ export function RemoteFolderPicker({
   const refresh = () => {
     setLoading(true);
     setError(undefined);
-    setMissing(false);
     setReload((value) => value + 1);
   };
   const openPath = (path: string[]) => {
@@ -93,7 +89,6 @@ export function RemoteFolderPicker({
     setLoading(true);
     setError(undefined);
     setFolders([]);
-    setMissing(false);
     setPathSegments(path);
   };
   const createFolder = async () => {
@@ -122,16 +117,6 @@ export function RemoteFolderPicker({
     } finally {
       setCreating(false);
     }
-  };
-
-  const createCurrentFolder = async () => {
-    setCreating(true);
-    try {
-      const result = await ensureRemoteDestination(pathSegments, webDavUploadEngine.createRemoteFolder);
-      if (!result.ok) { setError(result.error.message); return; }
-      refresh();
-    } catch { setError("The destination folder could not be created."); }
-    finally { setCreating(false); }
   };
 
   return (
@@ -206,7 +191,6 @@ export function RemoteFolderPicker({
               </View>
             ) : null}
             {error ? <ErrorNotice message={error} onRetry={refresh} /> : null}
-            {missing ? <ActionButton label="Create this folder" disabled={creating} loading={creating} onPress={() => void createCurrentFolder()} /> : null}
             <ActionButton
               icon="check"
               label="Use this folder"
