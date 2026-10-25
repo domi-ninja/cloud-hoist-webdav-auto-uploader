@@ -4,6 +4,8 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  Pressable,
+  Keyboard,
   Text,
   View,
 } from "react-native";
@@ -22,6 +24,8 @@ import {
   LoadingState,
   Separator,
 } from "@/components/ui";
+
+import { parseRemoteFolderPath } from "./remote-folder-path";
 
 type RemoteFolderPickerProps = {
   initialPathSegments?: string[];
@@ -42,6 +46,8 @@ export function RemoteFolderPicker({
 }: RemoteFolderPickerProps) {
   const withinRoot = (path: string[]) => rootPathSegments.every((segment, index) => path[index] === segment);
   const [pathSegments, setPathSegments] = useState(withinRoot(initialPathSegments) ? initialPathSegments : rootPathSegments);
+  const [pathDraft, setPathDraft] = useState<string>();
+  const [pathError, setPathError] = useState<string>();
   const [folders, setFolders] = useState<RemoteFolder[]>([]);
   const [newFolderName, setNewFolderName] = useState("");
   const [addingFolder, setAddingFolder] = useState(false);
@@ -54,7 +60,7 @@ export function RemoteFolderPicker({
     if (error) onError?.(error);
   }, [error, onError]);
 
-  useEffect(() => {
+  useEffect(function loadRemoteFolders() {
     const id = ++request.current;
     void webDavUploadEngine
       .listRemoteFolders(pathSegments)
@@ -86,10 +92,20 @@ export function RemoteFolderPicker({
   };
   const openPath = (path: string[]) => {
     if (!withinRoot(path)) { setError("Choose a folder inside the backup root."); return; }
+    setPathDraft(undefined);
+    setPathError(undefined);
+    setAddingFolder(false);
+    Keyboard.dismiss();
     setLoading(true);
     setError(undefined);
     setFolders([]);
     setPathSegments(path);
+  };
+  const goToPath = () => {
+    if (pathDraft === undefined) return;
+    const parsed = parseRemoteFolderPath(pathDraft, rootPathSegments);
+    if (parsed.error) { setPathError(parsed.error); return; }
+    openPath(parsed.segments);
   };
   const createFolder = async () => {
     const name = newFolderName.trim();
@@ -145,29 +161,45 @@ export function RemoteFolderPicker({
             >
               {title}
             </Text>
-            <IconAction
-              icon="folder-plus-outline"
-              label="New folder"
-              accessibilityState={{ expanded: addingFolder }}
-              disabled={loading || creating}
-              onPress={() => setAddingFolder(!addingFolder)}
-            />
           </View>
           <View className="gap-2 px-2 pb-2">
-            <View className="flex-row items-center gap-2">
-              <IconAction
-                icon="arrow-up"
-                label="Up one folder"
-                disabled={pathSegments.length <= rootPathSegments.length || creating}
-                onPress={() => openPath(pathSegments.slice(0, -1))}
-              />
-              <Text
-                selectable
-                className="flex-1 text-base text-ink-light dark:text-ink-dark"
-              >
-                /{pathSegments.join("/")}
-              </Text>
-            </View>
+            {pathDraft !== undefined ? (
+              <View className="gap-2">
+                <FormField label="Folder path" value={pathDraft} onChangeText={(value) => { setPathDraft(value); setPathError(undefined); }}
+                  autoFocus autoCapitalize="none" autoCorrect={false} editable={!creating}
+                  onSubmitEditing={goToPath} returnKeyType="go" />
+                <View className="flex-row flex-wrap gap-2">
+                  <ActionButton label="Go to folder" icon="arrow-right" onPress={goToPath} />
+                  <ActionButton label="Cancel" onPress={() => { setPathDraft(undefined); setPathError(undefined); Keyboard.dismiss(); }} />
+                </View>
+                {pathError ? <ErrorNotice message={pathError} /> : null}
+              </View>
+            ) : (
+              <>
+                <View className="flex-row flex-wrap items-center">
+                  <Pressable accessibilityRole="button" accessibilityLabel="Go to server root"
+                    disabled={creating || rootPathSegments.length > 0} onPress={() => openPath([])}
+                    style={{ minHeight: 44, minWidth: 44, justifyContent: "center" }}>
+                    <Text className="text-base text-ink-light dark:text-ink-dark">/</Text>
+                  </Pressable>
+                  {pathSegments.map((segment, index) => (
+                    <Pressable key={index} accessibilityRole="button" accessibilityLabel={`Go to /${pathSegments.slice(0, index + 1).join("/")}`}
+                      disabled={creating || index + 1 < rootPathSegments.length}
+                      onPress={() => openPath(pathSegments.slice(0, index + 1))}
+                      style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%", paddingHorizontal: 4 }}>
+                      <Text className="text-base text-ink-light dark:text-ink-dark">{segment}{index < pathSegments.length - 1 ? " /" : ""}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <View className="flex-row flex-wrap items-center justify-between gap-2">
+                  <ActionButton icon="folder-upload-outline" label="Up one folder"
+                    disabled={pathSegments.length <= rootPathSegments.length || creating}
+                    onPress={() => openPath(pathSegments.slice(0, -1))} />
+                  <ActionButton icon="pencil-outline" label="Edit path" disabled={creating}
+                    onPress={() => { setAddingFolder(false); setPathDraft("/" + pathSegments.join("/")); }} />
+                </View>
+              </>
+            )}
             {addingFolder ? (
               <View className="flex-row items-center gap-2">
                 <FormField
@@ -191,14 +223,15 @@ export function RemoteFolderPicker({
               </View>
             ) : null}
             {error ? <ErrorNotice message={error} onRetry={refresh} /> : null}
-            <ActionButton
-              icon="check"
-              label="Use this folder"
-              accessibilityLabel="Use current remote folder"
-              tone="primary"
-              disabled={creating || loading || Boolean(error)}
-              onPress={() => onSelect(pathSegments)}
-            />
+            <View className="flex-row flex-wrap items-center gap-2">
+              <ActionButton icon="check" label="Use this folder" accessibilityLabel="Use current remote folder"
+                tone="primary" disabled={creating || loading || Boolean(error) || pathDraft !== undefined}
+                onPress={() => onSelect(pathSegments)} />
+              <ActionButton icon="folder-plus-outline" label="New folder"
+                accessibilityState={{ expanded: addingFolder }}
+                disabled={loading || creating || pathDraft !== undefined}
+                onPress={() => setAddingFolder(!addingFolder)} />
+            </View>
           </View>
           <Separator />
           {loading ? (
