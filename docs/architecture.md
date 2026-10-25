@@ -70,3 +70,5 @@ Backups shows up to two suggested folders, ranked by total size after excluding 
 Status opens images in an image-first file view. It reads local media first and falls back to an authenticated download of the original Nextcloud image if the local copy is unavailable. Credentials remain native. Remote images use a private cache capped at sixteen files and 64 MiB, with a 50 MiB per-image download limit and a thirty-second timeout. Failed, empty, or oversized downloads leave no partial files. Non-image files and upload failures retain labeled file details and retry controls.
 
 The remote folder browser provides clickable path segments, a labeled parent-folder action, and a full-path editor. Path edits are validated before navigation and cannot leave the configured backup root. New folder sits beside Use this folder.
+
+Status moves the active upload folder to the top with a layout transition that respects reduced-motion settings. Both the folder card and overall progress show a spinner and the current filename on one line. Other folders retain their relative order.

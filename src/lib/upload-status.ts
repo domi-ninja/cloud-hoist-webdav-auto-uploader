@@ -69,3 +69,18 @@ export function uploadRemainingTime(snapshot: EngineSnapshot) {
   const remainder = minutes % 60;
   return `~${hours} hr${remainder ? ` ${remainder} min` : ""} left`;
 }
+
+
+// Worker identity is authoritative; stale recent jobs must not look active.
+export function activeUpload(snapshot: EngineSnapshot) {
+  const worker = snapshot.worker;
+  if (snapshot.engine.state !== "running" || worker.state !== "uploading") return undefined;
+  return snapshot.recentJobs.find((job) => job.id === worker.jobId);
+}
+
+export function activeSourceFirst(snapshot: EngineSnapshot) {
+  const sourceId = activeUpload(snapshot)?.sourceId;
+  return sourceId
+    ? [...snapshot.sources].sort((a, b) => Number(b.id === sourceId) - Number(a.id === sourceId))
+    : snapshot.sources;
+}

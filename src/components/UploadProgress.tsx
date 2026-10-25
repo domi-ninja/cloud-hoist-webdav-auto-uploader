@@ -4,7 +4,8 @@ import { useTheme } from "react-native-paper";
 
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
 import { IconAction } from "./ui";
-import { engineStatus, uploadProgress, uploadRemainingTime } from "@/lib/upload-status";
+import { ActiveUpload } from "./ActiveUpload";
+import { activeUpload, engineStatus, uploadProgress, uploadRemainingTime } from "@/lib/upload-status";
 
 export function UploadProgress({
   snapshot,
@@ -22,6 +23,7 @@ export function UploadProgress({
   const { uploaded, total, fraction } = uploadProgress(snapshot);
   const theme = useTheme();
   const label = `${uploaded}/${total} files uploaded`;
+  const uploading = activeUpload(snapshot);
   const remainingTime = uploadRemainingTime(snapshot);
 
   return (
@@ -48,12 +50,12 @@ export function UploadProgress({
         {remainingTime ? <Text className="text-base text-muted-light dark:text-muted-dark">{remainingTime}</Text> : null}
         {onRescan ? <IconAction style={{ margin: 0, width: 40, height: 32 }} hitSlop={8} icon="refresh" label={scanning ? "Scanning…" : "Scan now"} loading={scanning} disabled={scanning} onPress={onRescan} /> : null}
       </View>
-      <Text
+      {uploading ? <ActiveUpload fileName={uploading.fileName} /> : <Text
         accessibilityLiveRegion="polite"
         className="text-base text-muted-light dark:text-muted-dark"
       >
         {engineStatus(snapshot, now)}
-      </Text>
+      </Text>}
     </View>
   );
 }

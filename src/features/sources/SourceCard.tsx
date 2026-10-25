@@ -8,6 +8,8 @@ import webDavUploadEngine, {
   type SourceSummary,
 } from "../../../modules/webdav-upload-engine";
 import { IconAction, Panel } from "@/components/ui";
+import { ActiveUpload } from "@/components/ActiveUpload";
+import { activeUpload } from "@/lib/upload-status";
 import { RestoreSourcePermission } from "./RestoreSourcePermission";
 
 type SourceCardProps = {
@@ -27,10 +29,6 @@ function sourceStatus(
       blocker.kind === "permission" && blocker.sourceId === source.id,
   );
   const worker = snapshot.worker;
-  const activeJob =
-    worker.state === "uploading"
-      ? snapshot.recentJobs.find((job) => job.id === worker.jobId)
-      : undefined;
 
   if (!source.enabled) return null;
   if (snapshot.engine.state === "paused") return "Uploads paused by you";
@@ -44,7 +42,6 @@ function sourceStatus(
   ) {
     return "Scanning";
   }
-  if (activeJob?.sourceId === source.id) return "Uploading";
   if (snapshot.blockers.some((blocker) => blocker.kind === "network")) {
     return "Waiting for network";
   }
@@ -64,6 +61,8 @@ export function SourceCard({ snapshot, source, onEdit, inventoryError }: SourceC
       { kind: "permission" }
     > => blocker.kind === "permission" && blocker.sourceId === source.id,
   );
+  const uploading = activeUpload(snapshot);
+  const currentFile = uploading?.sourceId === source.id ? uploading.fileName : undefined;
   const complete = source.queue !== undefined && source.queue.pending === 0 && source.queue.failed === 0;
   const count = complete ? source.queue?.uploaded ?? 0 : source.queue?.pending ?? 0;
   const status = [
@@ -168,6 +167,7 @@ export function SourceCard({ snapshot, source, onEdit, inventoryError }: SourceC
           />
         </View>
       </View>
+      {currentFile ? <ActiveUpload fileName={currentFile} /> : null}
       {status ? (
         <Text className="text-base text-muted-light dark:text-muted-dark">
           {status}

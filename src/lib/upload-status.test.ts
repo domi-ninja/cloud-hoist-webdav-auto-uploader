@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 
 import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
-import { attentionBlockers, engineStatus, uploadProgress, uploadRemainingTime } from "./upload-status";
+import { activeUpload, activeSourceFirst, attentionBlockers, engineStatus, uploadProgress, uploadRemainingTime } from "./upload-status";
 
 function snapshot(worker: EngineSnapshot["worker"]): EngineSnapshot {
   return {
@@ -144,4 +144,21 @@ describe("upload remaining time", () => {
     state.worker = { state: "waiting", reason: "Waiting for Wi-Fi" };
     expect(uploadRemainingTime(state)).toBeNull();
   });
+});
+
+
+it("promotes only the active worker source and preserves every other folder's order", () => {
+  const state = snapshot({ state: "uploading", jobId: "active", bytesSent: 0, totalBytes: 10 });
+  const base = state.sources[0];
+  state.sources = ["first", "second", "third"].map((id) => ({ ...base, id }));
+  state.recentJobs = [{ id: "active", sourceId: "third", fileName: "long photo name.jpg", byteCount: 10, state: { status: "queued" } }];
+  expect(activeUpload(state)?.fileName).toBe("long photo name.jpg");
+  expect(activeSourceFirst(state).map((source) => source.id)).toEqual(["third", "first", "second"]);
+  expect(state.sources.map((source) => source.id)).toEqual(["first", "second", "third"]);
+  state.engine = { state: "paused", pausedAt: "2026-10-25T12:00:00.000Z" };
+  expect(activeUpload(state)).toBeUndefined();
+  expect(activeSourceFirst(state)).toBe(state.sources);
+  state.engine = { state: "running" };
+  state.worker = { state: "idle" };
+  expect(activeUpload(state)).toBeUndefined();
 });

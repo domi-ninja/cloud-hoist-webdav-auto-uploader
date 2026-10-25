@@ -1,3 +1,4 @@
+import Animated, { LinearTransition, ReduceMotion } from "react-native-reanimated";
 import { Fragment, memo, useMemo, useState } from "react";
 import { usePathname, useRouter } from "expo-router";
 import { FlatList, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
@@ -26,7 +27,7 @@ import {
 import { MediaThumbnail } from "@/components/MediaThumbnail";
 import { SourceCard } from "@/features/sources/SourceCard";
 import { SourceEditor } from "@/features/sources/SourceEditor";
-import { attentionBlockers } from "@/lib/upload-status";
+import { activeSourceFirst, attentionBlockers } from "@/lib/upload-status";
 import { UploadControls } from "@/components/UploadControls";
 import { ScreenHeader } from "@/components/ScreenHeader";
 
@@ -240,10 +241,12 @@ export default function StatusScreen() {
           <View className="gap-2">
             <ScreenHeader title="Status" account={snapshot.data?.account} />
             {snapshot.data ? <UploadControls snapshot={snapshot.data} now={now} onError={setErrorMessage} onScanned={() => inventory.refetch()} /> : null}
-            {snapshot.data?.sources.map((source) => (
-              <SourceCard key={source.id} source={source} snapshot={snapshot.data!}
+            {snapshot.data && activeSourceFirst(snapshot.data).map((source) => (
+              <Animated.View key={source.id} layout={LinearTransition.duration(250).reduceMotion(ReduceMotion.System)}>
+              <SourceCard source={source} snapshot={snapshot.data!}
                 now={now} inventoryError={inventoryErrors.find((error) => error.sourceId === source.id)?.message}
                 onEdit={() => setEditingSourceId(source.id)} />
+              </Animated.View>
             ))}
             {snapshot.isLoading || inventory.isLoading ? (
               <Text
