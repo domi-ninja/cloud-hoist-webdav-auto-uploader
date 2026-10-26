@@ -25,7 +25,7 @@ The channel is embedded at build time. Beta never falls back to F-Droid; product
 
 ## Version and source identity
 
-Keep `app.json` as the release identity. For `2026-11`, set `expo.version` to `2026-11`, Android versionCode to `20260011`, and package.json version to `2026.11.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
+Keep `app.json` as the release identity. Choose a version newer than the current beta. For example, the next version after `2026-12` is `2026-13`: set `expo.version` to `2026-13`, Android versionCode to `20260013`, and package.json version to `2026.13.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
 
 ## Build without signing credentials
 
