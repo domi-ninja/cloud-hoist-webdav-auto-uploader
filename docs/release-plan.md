@@ -15,7 +15,7 @@ Use `year-minor`, Android versionCode = year × 10000 + minor, and package.json 
 - Credential-free unsigned builds, Expo Android source compilation, and preparation that removes unused prebuilts.
 - F-Droid candidate recipe, listing text, icon, screenshots, changelog, and version discovery from tagged `app.json` files.
 - Offline notices, a [package-by-package attribution catalogue](../licenses/attribution-review.md), and release gates for reviewed dependency versions, embedded notices, and every APK native library.
-- F-Droid source/build/APK checks, byte-identical local and independent CI builds, and successful developer-signature reconstruction.
+- F-Droid source/build/APK checks, byte-identical local and independent CI builds, and successful developer-signature reconstruction for `2026-9`. The `2026-10` F-Droid independent CI comparison and signature reconstruction remain pending.
 - Signed in-place beta and F-Droid `2026-10` validation on Samsung SM-A166B / Android 16, including swipes, hidden-folder recovery, image viewing and retry, channel-specific checks, preserved settings, and six real uploads with matching downloaded hashes. Earlier references retain their independent reproducibility evidence.
 - Read-only CI checks and unsigned artifacts, with no store submission.
 - GitHub verification prereleases for signed reference APKs, with a versioned `Binaries` URL and the existing signing certificate pinned in the recipe.
