@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
+import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Image, ScrollView, Text, View } from "react-native";
 import { Icon } from "react-native-paper";
@@ -19,7 +19,7 @@ export default function UploadFailureScreen() {
   const params = useLocalSearchParams<FileParams>();
   const { jobId } = params;
   const router = useRouter();
-  const focused = usePathname() === "/upload-failure";
+  const focused = useIsFocused();
   const [error, setError] = useState<string>();
   const [retrying, setRetrying] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
