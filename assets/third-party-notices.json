@@ -2,7 +2,7 @@
   "packages": [
     {
       "name": "Cloud Hoist",
-      "version": "2026-11",
+      "version": "2026-12",
       "license": "GPL-3.0-or-later",
       "source": "https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader",
       "textIds": [

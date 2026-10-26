@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -176,19 +176,22 @@ export function RemoteFolderPicker({
               </View>
             ) : (
               <>
-                <View className="flex-row flex-wrap items-center">
+                <View className="flex-row flex-wrap items-center gap-x-1 px-2">
                   <Pressable accessibilityRole="button" accessibilityLabel="Go to server root"
                     disabled={creating || rootPathSegments.length > 0} onPress={() => openPath([])}
-                    style={{ minHeight: 44, minWidth: 44, justifyContent: "center" }}>
+                    style={{ minHeight: 44, justifyContent: "center" }}>
                     <Text className="text-base text-ink-light dark:text-ink-dark">/</Text>
                   </Pressable>
                   {pathSegments.map((segment, index) => (
-                    <Pressable key={index} accessibilityRole="button" accessibilityLabel={`Go to /${pathSegments.slice(0, index + 1).join("/")}`}
-                      disabled={creating || index + 1 < rootPathSegments.length}
-                      onPress={() => openPath(pathSegments.slice(0, index + 1))}
-                      style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%", paddingHorizontal: 4 }}>
-                      <Text className="text-base text-ink-light dark:text-ink-dark">{segment}{index < pathSegments.length - 1 ? " /" : ""}</Text>
-                    </Pressable>
+                    <Fragment key={index}>
+                      {index > 0 ? <Text accessibilityElementsHidden importantForAccessibility="no" className="text-base text-ink-light dark:text-ink-dark">/</Text> : null}
+                      <Pressable accessibilityRole="button" accessibilityLabel={`Go to /${pathSegments.slice(0, index + 1).join("/")}`}
+                        disabled={creating || index + 1 < rootPathSegments.length}
+                        onPress={() => openPath(pathSegments.slice(0, index + 1))}
+                        style={{ minHeight: 44, justifyContent: "center", maxWidth: "100%" }}>
+                        <Text className="text-base text-ink-light dark:text-ink-dark">{segment}</Text>
+                      </Pressable>
+                    </Fragment>
                   ))}
                 </View>
                 <View className="flex-row flex-wrap items-center justify-between gap-2">

@@ -6,11 +6,11 @@ Beta users install signed APKs from GitHub Releases. F-Droid is the production t
 
 ## Current beta
 
-[2026-11 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/beta-2026-11) contains the suggestion, remote-browser, active-upload display, and cancellation changes. Tested source is `7903af2`. APK SHA-256 is `536d07ae56758f06439a067a6c6f43a4cc9e860570aa941f67304698a85fce3a`.
+[2026-12 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/beta-2026-12) fixes breadcrumb spacing in the remote folder browser. The path is inset from the screen edge, and every slash and folder label has the same compact gap. APK SHA-256 is `a8de8040951e76e4c12f10195bb0569e914eb44307aa94ec2cb8c8a004b26f18`.
 
-Signed in-place validation used Samsung SM-A166B, Android 16, serial `RZCY31RD70Z`. Phone checks cover hiding/backfilling/Undo, backup setup, breadcrumbs, path editing, root boundaries, folder creation, active-folder ordering, single-line filenames, folder disable and global pause during a 147 MB upload. Isolated real-server tests verify direct and chunk cancellation cleanup and matching downloaded SHA-256 hashes after resuming. The original accounts, settings, backup switches, and 21 completed uploads were preserved; test folders and the temporary test app were removed.
+Validation uses a signed in-place update on the Pixel 9-sized Android 16 emulator, as requested for this fix. Checks cover nested paths, short folder names, wrapped names, ancestor navigation, the parent button, and the server root. No physical-phone validation was performed for this release. Evidence is under ignored `test-results/breadcrumbs-2026-12/`.
 
-Type checking, lint, 122 JavaScript tests, 117 native unit tests, release checks, and APK privacy/attribution checks pass. Evidence is under ignored `test-results/suggestions-2026-11/`. The anonymous public APK download matches the phone-tested file byte-for-byte, and the GitHub beta update feed exposes the uploaded asset. The F-Droid candidate remains separate; this beta does not claim new F-Droid reproducibility evidence.
+Type checking, lint, 122 JavaScript tests, release checks, and APK privacy/attribution checks pass. This release changes breadcrumb layout only; it does not claim new upload-engine or F-Droid reproducibility validation.
 
 ## Default delivery flow
 

@@ -14,7 +14,7 @@ This app will never edit or delete files on your nextcloud. It might move them a
 
 ## Installation
 
-Download [Cloud Hoist 2026-11 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download/beta-2026-11/cloud-hoist-2026-11.apk), or see [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases) for all versions. Install the signed APK over an existing installation to keep accounts, settings, and history.
+Download [Cloud Hoist 2026-12 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/download/beta-2026-12/cloud-hoist-2026-12.apk), or see [GitHub Releases](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases) for all versions. Install the signed APK over an existing installation to keep accounts, settings, and history.
 
 ## Backups screen
 
