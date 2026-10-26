@@ -21,11 +21,13 @@ export function enginePollInterval(
     : ACTIVE_ENGINE_POLL_INTERVAL_MS;
 }
 
-/** Only active transfers need repeated detail queries while their screen is visible. */
+/** Recheck invalidated details until a fresh result confirms whether the upload is terminal. */
 export function uploadDetailPollInterval(
   state: z.infer<typeof uploadDetailSchema>["state"] | undefined,
   focused: boolean,
+  invalidated = false,
 ): number | false {
-  if (!focused || state === "completed" || state === "cancelled" || state === "blocked") return false;
+  if (!focused) return false;
+  if (!invalidated && (state === "completed" || state === "cancelled" || state === "blocked")) return false;
   return ACTIVE_ENGINE_POLL_INTERVAL_MS;
 }

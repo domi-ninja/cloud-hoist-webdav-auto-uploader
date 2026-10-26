@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image, ScrollView, Text, View } from "react-native";
 import { Icon } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,6 +19,7 @@ export default function UploadFailureScreen() {
   const params = useLocalSearchParams<FileParams>();
   const { jobId } = params;
   const router = useRouter();
+  const queryClient = useQueryClient();
   const focused = useIsFocused();
   const [error, setError] = useState<string>();
   const [retrying, setRetrying] = useState(false);
@@ -33,7 +34,7 @@ export default function UploadFailureScreen() {
       return result.value;
     },
     enabled: Boolean(jobId) && focused,
-    refetchInterval: (query) => uploadDetailPollInterval(query.state.data?.state, focused),
+    refetchInterval: (query) => uploadDetailPollInterval(query.state.data?.state, focused, query.state.isInvalidated),
   });
   const job = detail.data;
   const fileName = params.fileName ?? job?.fileName;
@@ -69,6 +70,7 @@ export default function UploadFailureScreen() {
     try {
       const result = await webDavUploadEngine.retryUpload(jobId);
       if (!result.ok) setError(result.error.message);
+      else await queryClient.invalidateQueries({ queryKey: ["engine", "upload-detail", jobId], exact: true, refetchType: "none" });
       await detail.refetch();
     } catch { setError("Could not retry this upload."); }
     finally { setRetrying(false); }

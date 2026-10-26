@@ -1,4 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
+import { QueryClient } from "@tanstack/react-query";
 
 import {
   ACTIVE_ENGINE_POLL_INTERVAL_MS,
@@ -48,5 +49,29 @@ describe("uploadDetailPollInterval", () => {
 
   it.each([undefined, "queued", "running", "retry_wait"] as const)("polls for %s while visible", (state) => {
     expect(uploadDetailPollInterval(state, true)).toBe(ACTIVE_ENGINE_POLL_INTERVAL_MS);
+  });
+
+  it("keeps polling after a retry refresh fails, until a fresh terminal result arrives", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+    const queryKey = ["engine", "upload-detail", "job"];
+    const blocked = { state: "blocked" as const };
+    client.setQueryData(queryKey, blocked);
+    const interval = (focused = true) => {
+      const query = client.getQueryState<typeof blocked>(queryKey);
+      return uploadDetailPollInterval(query?.data?.state, focused, query?.isInvalidated);
+    };
+
+    try {
+      expect(interval()).toBe(false);
+      await client.invalidateQueries({ queryKey, exact: true, refetchType: "none" });
+      await expect(client.fetchQuery({ queryKey, queryFn: async () => { throw new Error("Bridge unavailable"); } })).rejects.toThrow("Bridge unavailable");
+      expect(interval()).toBe(ACTIVE_ENGINE_POLL_INTERVAL_MS);
+      expect(interval(false)).toBe(false);
+
+      await client.fetchQuery({ queryKey, queryFn: async () => blocked });
+      expect(interval()).toBe(false);
+    } finally {
+      client.clear();
+    }
   });
 });
