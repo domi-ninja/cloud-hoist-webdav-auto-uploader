@@ -3,6 +3,7 @@ import { describe, expect, it } from "@jest/globals";
 import {
   ACTIVE_ENGINE_POLL_INTERVAL_MS,
   enginePollInterval,
+  uploadDetailPollInterval,
   IDLE_ENGINE_POLL_INTERVAL_MS,
 } from "./engine-polling";
 
@@ -33,5 +34,19 @@ describe("enginePollInterval", () => {
         worker: { state: "scanning" },
       }),
     ).toBe(ACTIVE_ENGINE_POLL_INTERVAL_MS);
+  });
+});
+
+describe("uploadDetailPollInterval", () => {
+  it("stops while the detail screen is hidden", () => {
+    expect(uploadDetailPollInterval("running", false)).toBe(false);
+  });
+
+  it.each(["completed", "blocked", "cancelled"] as const)("stops for a %s upload", (state) => {
+    expect(uploadDetailPollInterval(state, true)).toBe(false);
+  });
+
+  it.each([undefined, "queued", "running", "retry_wait"] as const)("polls for %s while visible", (state) => {
+    expect(uploadDetailPollInterval(state, true)).toBe(ACTIVE_ENGINE_POLL_INTERVAL_MS);
   });
 });

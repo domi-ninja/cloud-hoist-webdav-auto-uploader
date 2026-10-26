@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, usePathname, useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Image, ScrollView, Text, View } from "react-native";
 import { Icon } from "react-native-paper";
@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import webDavUploadEngine from "../../modules/webdav-upload-engine";
 import { ActionButton, ErrorNotice, IconAction, LoadingState, Panel } from "@/components/ui";
 import { formatBytes } from "@/lib/format";
+import { uploadDetailPollInterval } from "@/lib/engine-polling";
 
 type FileParams = {
   jobId?: string; sourceId?: string; fileName?: string; sourceName?: string;
@@ -18,6 +19,7 @@ export default function UploadFailureScreen() {
   const params = useLocalSearchParams<FileParams>();
   const { jobId } = params;
   const router = useRouter();
+  const focused = usePathname() === "/upload-failure";
   const [error, setError] = useState<string>();
   const [retrying, setRetrying] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -30,8 +32,8 @@ export default function UploadFailureScreen() {
       if (!result.ok) throw new Error(result.error.message);
       return result.value;
     },
-    enabled: Boolean(jobId),
-    refetchInterval: (query) => query.state.data?.state === "completed" ? false : 1_000,
+    enabled: Boolean(jobId) && focused,
+    refetchInterval: (query) => uploadDetailPollInterval(query.state.data?.state, focused),
   });
   const job = detail.data;
   const fileName = params.fileName ?? job?.fileName;

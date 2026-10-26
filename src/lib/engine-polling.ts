@@ -1,4 +1,6 @@
-import type { EngineSnapshot } from "../../modules/webdav-upload-engine";
+import type { EngineSnapshot, uploadDetailSchema } from "../../modules/webdav-upload-engine";
+
+import type { z } from "zod";
 
 type PollingSnapshot = {
   account: { status: EngineSnapshot["account"]["status"] };
@@ -17,4 +19,13 @@ export function enginePollInterval(
   return snapshot.worker.state === "idle"
     ? IDLE_ENGINE_POLL_INTERVAL_MS
     : ACTIVE_ENGINE_POLL_INTERVAL_MS;
+}
+
+/** Only active transfers need repeated detail queries while their screen is visible. */
+export function uploadDetailPollInterval(
+  state: z.infer<typeof uploadDetailSchema>["state"] | undefined,
+  focused: boolean,
+): number | false {
+  if (!focused || state === "completed" || state === "cancelled" || state === "blocked") return false;
+  return ACTIVE_ENGINE_POLL_INTERVAL_MS;
 }
