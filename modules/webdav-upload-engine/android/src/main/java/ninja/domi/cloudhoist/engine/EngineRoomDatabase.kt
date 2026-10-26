@@ -530,6 +530,10 @@ interface EngineDao {
     writes: List<PendingDiscoveryWrite>,
   ): DiscoveryWriteCounts {
     upsertSource(source)
+    return recordDiscoveryWrites(writes)
+  }
+
+  private fun recordDiscoveryWrites(writes: List<PendingDiscoveryWrite>): DiscoveryWriteCounts {
     var revisionsAdded = 0
     var jobsAdded = 0
     for (write in writes) {
@@ -554,13 +558,18 @@ interface EngineDao {
     return DiscoveryWriteCounts(revisionsAdded, jobsAdded)
   }
 
+  @Query("UPDATE sources SET lastScanAt = :scanAt, blockerCode = NULL WHERE id = :sourceId")
+  fun markSourceScanned(sourceId: String, scanAt: Long): Int
+
   @Transaction
   fun recordExistingDiscovery(
-    source: SourceEntity,
-    writes: List<PendingDiscoveryWrite>,
+    sourceId: String,
+    scanAt: Long,
+    buildWrites: (SourceEntity) -> List<PendingDiscoveryWrite>,
   ): DiscoveryWriteCounts? {
-    if (source(source.id) == null) return null
-    return recordDiscovery(source, writes)
+    if (markSourceScanned(sourceId, scanAt) != 1) return null
+    val current = source(sourceId) ?: return null
+    return recordDiscoveryWrites(buildWrites(current))
   }
 }
 

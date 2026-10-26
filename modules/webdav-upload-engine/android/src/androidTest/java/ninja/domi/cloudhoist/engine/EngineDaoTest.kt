@@ -656,6 +656,36 @@ class EngineDaoTest {
   }
 
   @Test
+  fun scanPreservesSourceEditsMadeDuringDiscovery() {
+    val original = source().copy(localUri = "mediastore://camera")
+    dao.upsertSource(original)
+    val edited = original.copy(
+      name = "Renamed",
+      enabled = false,
+      remotePathSegments = listOf("New destination"),
+      collisionPolicy = CollisionPolicy.KEEP_BOTH.value,
+    )
+    val manager = SourceDiscoveryManager(
+      accountRepository = storedAccountRepository(),
+      recorder = SourceRevisionRecorder(dao, now = { 30_000 }),
+      mediaDiscovery = MediaPresetDiscovery {
+        dao.upsertSource(edited)
+        MediaDiscovery(
+          listOf(discoveredFile("provider", "photo.jpg", 50, 100)),
+          MediaPermissionAccess.FULL,
+        )
+      },
+      documentTreeDiscovery = DocumentTreeSourceDiscovery { emptyList() },
+    )
+
+    manager.scan("source-1")
+
+    assertEquals(edited.copy(lastScanAt = 30_000, blockerCode = null), dao.source("source-1"))
+    assertEquals(listOf("New destination"), dao.sourceJobs("source-1").single().remotePathSegments)
+    assertNull(dao.claimNext(30_001, "worker"))
+  }
+
+  @Test
   fun scanCannotResurrectSourceRemovedDuringDiscovery() {
     dao.upsertSource(source().copy(localUri = "mediastore://camera"))
     val manager = SourceDiscoveryManager(
