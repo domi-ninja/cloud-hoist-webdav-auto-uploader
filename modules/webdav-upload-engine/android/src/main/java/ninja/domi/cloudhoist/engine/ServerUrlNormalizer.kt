@@ -39,15 +39,8 @@ object ServerUrlNormalizer {
       .trimEnd('/')
 
     return try {
-      URI(
-        "https",
-        null,
-        uri.host.lowercase(),
-        uri.port,
-        normalizedPath,
-        null,
-        null,
-      ).toASCIIString()
+      val authority = URI("https", null, uri.host.lowercase(), uri.port, null, null, null)
+      URI(authority.toASCIIString() + normalizedPath).toASCIIString()
     } catch (_: URISyntaxException) {
       throw AccountInvalidServerUrlException()
     }

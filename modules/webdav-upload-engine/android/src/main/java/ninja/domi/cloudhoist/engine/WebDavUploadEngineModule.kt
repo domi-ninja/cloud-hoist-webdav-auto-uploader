@@ -350,7 +350,9 @@ class WebDavUploadEngineModule : Module() {
       withContext(Dispatchers.IO) {
         remoteFolderManager.create(parentPathSegments, name).also { folder ->
           if (folder.pathSegments == destinationChanges.root()) {
-            accountRepository.credential()?.let { PhoneUploadReadme().write(it, null, onlyIfMissing = true, root = folder.pathSegments) }
+            accountRepository.credential()?.let {
+              runCatching { PhoneUploadReadme().write(it, null, onlyIfMissing = true, root = folder.pathSegments) }
+            }
           }
         }.toMap()
       }

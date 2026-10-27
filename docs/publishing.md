@@ -25,7 +25,7 @@ The channel is embedded at build time. Beta never falls back to F-Droid; product
 
 ## Version and source identity
 
-Keep `app.json` as the release identity. For `2026-11`, set `expo.version` to `2026-11`, Android versionCode to `20260011`, and package.json version to `2026.11.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
+Keep `app.json` as the release identity. Choose a version newer than the current beta. For example, the next version after `2026-12` is `2026-13`: set `expo.version` to `2026-13`, Android versionCode to `20260013`, and package.json version to `2026.13.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
 
 ## Build without signing credentials
 
@@ -106,7 +106,7 @@ The local validation runner builds an unsigned candidate and omits `Binaries` in
 
 Dependency updates require refreshing `dist/fdroid-native-dependencies.json`, reviewing the collected evidence under `licenses/`, and regenerating notices with `pnpm licenses:generate`. The inventory task writes its report before rejecting an unreviewed change; `scripts/fdroid/collect-licenses.py` can then collect published POMs and available artifact notices for review. Test a second build before claiming reproducibility. The native build normalizes source, Gradle-cache, and SDK paths, including filenames embedded in assertions and debug information. It also pins React Native's unused release dev-server IP to loopback instead of embedding the build machine's LAN address. Reanimated retains optimization but omits its path-dependent ThinLTO build ID. See the [readiness report](fdroid-readiness-report.md) for the distinction between a successful local build and a validated F-Droid build.
 
-F-Droid can preserve our signing identity through its developer-signed reproducible-build workflow. The public reference URL is configured in `Binaries`, and local and independent CI builds match. F-Droid must still verify the recipe on its own infrastructure. If F-Droid instead signs with a new key, that APK cannot update existing installations normally.
+F-Droid can preserve our signing identity through its developer-signed reproducible-build workflow. The public reference URL is configured in `Binaries`. Local and independent CI builds matched for `2026-7` and `2026-9`; the `2026-10` F-Droid independent CI comparison and developer-signature reconstruction remain pending. F-Droid must still verify the recipe on its own infrastructure. If F-Droid instead signs with a new key, that APK cannot update existing installations normally.
 
 Prepare listing metadata under `fastlane/metadata/android/en-US/`. Before submission, verify that screenshots show only test-owned content and that their license permits redistribution. Do not publish credentials, account identifiers, live backup paths, or signing files.
 

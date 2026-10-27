@@ -29,15 +29,16 @@ class SourceRevisionRecorder(
     requireExisting: Boolean = false,
   ): DiscoveryRecordResult {
     val discoveredAt = now()
-    val writes = files
+    val orderedFiles = files
       .sortedWith(compareBy(DiscoveredFile::modifiedAtEpochSeconds, DiscoveredFile::providerId))
-      .map { file -> pendingWrite(source, file, queueNewRevisions, discoveredAt) }
-    val updatedSource = source.copy(lastScanAt = discoveredAt, blockerCode = null)
+    val buildWrites = { current: SourceEntity ->
+      orderedFiles.map { file -> pendingWrite(current, file, queueNewRevisions, discoveredAt) }
+    }
     val counts = if (requireExisting) {
-      dao.recordExistingDiscovery(updatedSource, writes)
+      dao.recordExistingDiscovery(source.id, discoveredAt, buildWrites)
         ?: throw EngineSourceNotFoundException(source.id)
     } else {
-      dao.recordDiscovery(updatedSource, writes)
+      dao.recordDiscovery(source.copy(lastScanAt = discoveredAt, blockerCode = null), buildWrites(source))
     }
     return DiscoveryRecordResult(
       preview = files.toSourcePreview(permissionAccess),

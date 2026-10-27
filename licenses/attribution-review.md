@@ -115,3 +115,9 @@ Run `pnpm licenses:generate` after reviewing a dependency change, then `pnpm lic
 Candidate `2026-8` passes 97 JavaScript tests, 104 native tests, five Node release tests and one Python artifact-notice test, metadata lint, icon/notice checks, the privacy check, and a clean F-Droid source/build/APK scan. PNG and JPEG output from the Jimp replacement matches the original decoded pixels. Thirteen checks passed after a signed in-place update on Samsung SM-A166B / Android 16, including large-notice scrolling, required credits, search, closing/reopening, navigation, and preserved account/settings/upload state. F-Droid developer-signature reconstruction passes. The independently built [CI APK](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/actions/runs/40119400305) is byte-identical. The [public verification APK](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/fdroid-reference-2026-8) matches the phone-tested signed file and passes F-Droid reconstruction against that CI build.
 
 The F-Droid build-server and maintainer review remain external gates; no licensing question in this catalogue requires contacting a maintainer on Domi's behalf.
+
+## BSD notice corrections
+
+`@react-native/debugger-frontend@0.86.3` uses the BSD notice from its devtools source revision `571dc30a5de05c09d6734fd38f6a6c279d5d7ec2`, recorded in the published package's `BUILD_INFO`. Its notice includes Meta and Chromium credits; the React Native root MIT license does not cover this entry.
+
+`com.parse.bolts:bolts-tasks:1.4.0` uses the BSD notice from [Bolts Android 1.4.0](https://github.com/BoltsFramework/Bolts-Android/blob/1.4.0/LICENSE), matching its published Maven declaration. Later upstream MIT licensing is not used for this older artifact.

@@ -21,6 +21,22 @@ class ServerUrlNormalizerTest {
   }
 
   @Test
+  fun preservesEscapedServerSubpathsWithoutDoubleEncoding() {
+    assertEquals(
+      "https://cloud.example.test/next%20cloud",
+      ServerUrlNormalizer.normalize("https://cloud.example.test/next%20cloud/"),
+    )
+    assertEquals(
+      "https://cloud.example.test/next%2Fcloud",
+      ServerUrlNormalizer.normalize("https://cloud.example.test/next%2Fcloud"),
+    )
+    assertEquals(
+      "https://cloud.example.test/100%25",
+      ServerUrlNormalizer.normalize("https://cloud.example.test/100%25"),
+    )
+  }
+
+  @Test
   fun rejectsInsecureAndAmbiguousServerUrls() {
     assertThrows(AccountInsecureServerUrlException::class.java) {
       ServerUrlNormalizer.normalize("http://cloud.example.test")
