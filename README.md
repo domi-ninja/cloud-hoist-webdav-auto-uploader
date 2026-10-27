@@ -1,4 +1,5 @@
 # Cloud Hoist
+## Sync Android files to Nextcloud
 
 ![Cloud Hoist Backups, Status, and Settings screens](docs/images/cloud-hoist-triad.png)
 
@@ -26,9 +27,8 @@ If you want to back up this suggested folder, click `Start backup`. This will le
 
 Start with your camera photos, then add other folders you want to keep. Tap `Hide suggestion` to dismiss a folder and make room for another suggestion. You can restore dismissed suggestions from `Hidden folders` at the bottom of the screen.
 
-For folders that are not automatically found, use the `Choose other directory to back up` button and find the folder on your phone. You can use this to back up some messengers and authentication apps. Have them export their data into a specific folder, and then select that folder in this app.  
+For folders that are not automatically found, use the `Choose other directory to back up` button and find the folder on your phone. For example, if you use Signal messenger, you can configure on-device backups and have it put your message history backups into a folder. You can then select this folder and sync it to your nextcloud.
 
-Cloud Hoist can also back up WhatsApp images and videos saved in folders Android lets it access. This copies the media files; it does not create or restore WhatsApp chat backups. Files exported by other apps can be copied too, but those apps remain responsible for creating and restoring their backups.
 
 ## Status 
 
