@@ -93,7 +93,7 @@ Treat a published reference APK and its version as fixed. Retry failed uploads w
 
 Run type checking, lint, unit tests, native unit tests, release identity/attribution tests, license checks, F-Droid metadata lint, and source/APK scanning. The native build rejects runtime dependency coordinates that differ from the reviewed inventory. The APK gate also rejects unaccounted native libraries, stale embedded-code notices, and changed C++ runtime hashes. See the [attribution catalogue](../licenses/attribution-review.md) for each reviewed package and component.
 
-To run the same F-Droid gates as CI, install fdroidserver 2.4.5 in a Python virtual environment, activate it, load the Android build environment, and use a clean committed checkout:
+To run the optional F-Droid checks locally, install fdroidserver 2.4.5 in a Python virtual environment, activate it, load the Android build environment, and use a clean committed checkout:
 
 ```sh
 . scripts/android/env.sh
@@ -116,4 +116,6 @@ Domi submits the prepared recipe to F-Droid. Agents must not contact maintainers
 
 ## CI
 
-The Android workflow runs checks and builds unsigned F-Droid candidates through the F-Droid validator. Markdown-only main pushes skip APK builds. It has no publishing credentials, does not create GitHub APK releases, and does not submit to other stores. Artifact retention supports validation rather than a separate distribution channel.
+The **Android checks** workflow runs tests and builds an unsigned beta APK on main pushes and version tags. Markdown-only main pushes skip the workflow. It retains the APK for 14 days, has no publishing credentials, and does not create releases or submit to stores.
+
+F-Droid validation is manual for now. In GitHub Actions, select **Android checks**, choose **Run workflow**, and enable `fdroid` to run the F-Droid validator instead of the beta build. First update the candidate recipe to match `app.json`; the validator rejects mismatched versions. The pinned F-Droid recipe does not block ordinary beta CI.

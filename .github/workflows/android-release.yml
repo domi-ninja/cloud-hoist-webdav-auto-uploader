@@ -1,4 +1,4 @@
-name: F-Droid candidate checks
+name: Android checks
 
 on:
   push:
@@ -6,12 +6,17 @@ on:
     paths-ignore: ['**/*.md']
     tags: ['v20*-*']
   workflow_dispatch:
+    inputs:
+      fdroid:
+        description: Validate the F-Droid candidate recipe instead of building a beta APK
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: fdroid-${{ github.ref }}
+  group: android-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -52,7 +57,11 @@ jobs:
           pnpm licenses:check
       - name: Test native engine
         run: pnpm test:native
+      - name: Build unsigned beta APK
+        if: ${{ !inputs.fdroid }}
+        run: pnpm android:build
       - name: Validate F-Droid source, build, and APK
+        if: ${{ inputs.fdroid }}
         run: |
           python3 -m venv /tmp/fdroid-check
           /tmp/fdroid-check/bin/pip install fdroidserver==2.4.5
@@ -61,6 +70,7 @@ jobs:
       - name: Retain validation artifacts
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: fdroid-unsigned-${{ github.sha }}
+          name: android-unsigned-${{ github.sha }}
           path: dist/**/*-unsigned.apk
+          if-no-files-found: error
           retention-days: 14
