@@ -31,6 +31,8 @@ class AndroidChunkUploadTest {
     server.enqueue(MockResponse().setResponseCode(201))
     server.enqueue(MockResponse().setResponseCode(201))
     server.enqueue(MockResponse().setResponseCode(201))
+    // A temporary failure preserves the first confirmed chunk for the next attempt.
+    server.enqueue(MockResponse().setResponseCode(503))
     server.enqueue(
       MockResponse().setResponseCode(207)
         .setHeader("Content-Type", "application/xml")
@@ -70,19 +72,15 @@ class AndroidChunkUploadTest {
     val transport = NextcloudChunkTransport(
       AndroidLocalContentSource(context.contentResolver),
     )
-    var stopAfterFirstChunk = true
-    val interruptedRequest = request(localUri, bytes.size.toLong()) {
-      stopAfterFirstChunk && store.current?.confirmedChunks == listOf("00001")
-    }
+    val interruptedRequest = request(localUri, bytes.size.toLong())
 
     val interrupted = runCatching {
       client(store, transport).upload(credential(), "job", interruptedRequest)
     }.exceptionOrNull()
 
-    assertTrue(interrupted is TransferCancelledException)
+    assertTrue(interrupted is AccountServerException)
     assertEquals(listOf("00001"), store.current?.confirmedChunks)
 
-    stopAfterFirstChunk = false
     val result = checkNotNull(
       client(store, transport).upload(
         credential(),
@@ -91,22 +89,23 @@ class AndroidChunkUploadTest {
       ),
     )
 
-    val requests = List(8) { server.takeRequest() }
+    val requests = List(9) { server.takeRequest() }
     assertEquals(
-      listOf("MKCOL", "MKCOL", "PUT", "PROPFIND", "PUT", "PUT", "MOVE", "MOVE"),
+      listOf("MKCOL", "MKCOL", "PUT", "PUT", "PROPFIND", "PUT", "PUT", "MOVE", "MOVE"),
       requests.map { it.method },
     )
     val uploaded = ByteArrayOutputStream().apply {
-      requests.filter { it.method == "PUT" }.forEach { write(it.body.readByteArray()) }
+      // Only successful PUTs contribute to the assembled file; request 3 received 503.
+      listOf(requests[2], requests[5], requests[6]).forEach { write(it.body.readByteArray()) }
     }.toByteArray()
     assertArrayEquals(hash(bytes), hash(uploaded))
-    assertTrue(requests[6].path.orEmpty().endsWith("/upload-id/.file"))
+    assertTrue(requests[7].path.orEmpty().endsWith("/upload-id/.file"))
     assertTrue(
-      requests[6].getHeader("Destination").orEmpty()
+      requests[7].getHeader("Destination").orEmpty()
         .endsWith(".cloud-hoist-upload-id"),
     )
-    assertTrue(requests[7].getHeader("Destination").orEmpty().endsWith("/large.bin"))
-    assertEquals("T", requests[7].getHeader("Overwrite"))
+    assertTrue(requests[8].getHeader("Destination").orEmpty().endsWith("/large.bin"))
+    assertEquals("T", requests[8].getHeader("Overwrite"))
     assertTrue(result.modificationTimeAccepted)
     assertTrue(result.creationTimeAccepted)
     assertNull(store.current)
@@ -123,7 +122,6 @@ class AndroidChunkUploadTest {
   private fun request(
     localUri: Uri,
     byteCount: Long,
-    isCancelled: () -> Boolean = { false },
   ) = DavUploadRequest(
     localUri = localUri.toString(),
     remotePathSegments = listOf("Auto Upload"),
@@ -132,7 +130,6 @@ class AndroidChunkUploadTest {
     mimeType = "application/octet-stream",
     modifiedAtEpochSeconds = 1_700_000_000,
     createdAtEpochSeconds = 1_600_000_000,
-    isCancelled = isCancelled,
   )
 
   private fun insertFixture(name: String, bytes: ByteArray): Uri {

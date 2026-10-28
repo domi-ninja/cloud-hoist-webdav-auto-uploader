@@ -64,8 +64,11 @@ class LiveAccountAcceptanceTest {
     val device = UiDevice.getInstance(instrumentation)
     dismissDeveloperMenuOnboarding(device)
 
+    val status = device.wait(Until.findObject(By.desc("Status")), UI_TIMEOUT)
+    assertTrue("The Status tab is missing.", status != null)
+    status.click()
     assertTrue(device.wait(Until.hasObject(By.text("Acceptance camera")), UI_TIMEOUT))
-    assertTrue(device.wait(Until.hasObject(By.textContains("2 uploaded")), UI_TIMEOUT))
+    assertTrue(device.wait(Until.hasObject(By.text("2 files done")), UI_TIMEOUT))
   }
 
   private fun decodedArgument(value: String?): String {
