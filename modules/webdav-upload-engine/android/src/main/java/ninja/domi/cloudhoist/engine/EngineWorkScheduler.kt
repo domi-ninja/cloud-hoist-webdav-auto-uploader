@@ -87,6 +87,7 @@ class EngineWorkScheduler(
       FULL_SCAN_WORK,
       ExistingWorkPolicy.KEEP,
       OneTimeWorkRequestBuilder<ReconciliationWorker>()
+        .addTag(FULL_SCAN_WORK)
         .addTag(ENGINE_WORK_TAG)
         .build(),
     )

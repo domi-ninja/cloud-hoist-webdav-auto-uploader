@@ -19,6 +19,7 @@ import { RemoteFolderPicker } from "@/features/sources/RemoteFolderPicker";
 import { formatRemoteRoot, useAppPreferences } from "@/lib/app-preferences";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { OpenSourceLicenses } from "@/features/about/OpenSourceLicenses";
+import { BackgroundAccess } from "@/features/about/BackgroundAccess";
 import { AppUpdates } from "@/features/about/AppUpdates";
 
 type ConstraintKey = keyof TransferConstraints;
@@ -198,6 +199,7 @@ export default function SettingsScreen() {
             ) : null}
           </Panel>
         ) : null}
+        <BackgroundAccess />
         <AppUpdates />
         <Panel>
           <Text className="text-base font-semibold text-ink-light dark:text-ink-dark">

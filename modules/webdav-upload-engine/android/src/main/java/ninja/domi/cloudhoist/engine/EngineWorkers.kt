@@ -8,6 +8,7 @@ import androidx.work.ListenableWorker
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.thread
 
 private val scanLock = ReentrantLock()
 
@@ -28,6 +29,7 @@ class MediaObserverWorker(
 ) : Worker(context, parameters) {
   override fun doWork(): Result {
     return runOneScan {
+      val diagnostics = BackgroundDiagnostics(applicationContext)
       val preferences = EnginePreferences(applicationContext)
       preferences.scanStarted("media")
       try {
@@ -37,9 +39,11 @@ class MediaObserverWorker(
           Result.retry()
         } else {
           preferences.scanCompleted()
+          diagnostics.automaticScanCompleted()
           Result.success()
         }
-      } catch (_: Exception) {
+      } catch (error: Exception) {
+        diagnostics.report(BackgroundDiagnostics.Reason.SCAN_FAILED, error)
         preferences.workerIdle()
         Result.retry()
       }
@@ -52,6 +56,7 @@ class ReconciliationWorker(
   parameters: WorkerParameters,
 ) : Worker(context, parameters) {
   override fun doWork(): Result = runOneScan {
+    val diagnostics = BackgroundDiagnostics(applicationContext)
     val preferences = EnginePreferences(applicationContext)
     preferences.scanStarted("all")
     try {
@@ -61,9 +66,11 @@ class ReconciliationWorker(
         Result.retry()
       } else {
         preferences.scanCompleted()
+        if (EngineWorkScheduler.FULL_SCAN_WORK !in tags) diagnostics.automaticScanCompleted()
         Result.success()
       }
-    } catch (_: Exception) {
+    } catch (error: Exception) {
+      diagnostics.report(BackgroundDiagnostics.Reason.SCAN_FAILED, error)
       preferences.workerIdle()
       Result.retry()
     }
@@ -74,7 +81,20 @@ class QueueDrainWorker(
   context: Context,
   parameters: WorkerParameters,
 ) : Worker(context, parameters) {
-  override fun doWork(): Result {
+  override fun onStopped() {
+    thread(name = "upload-stop-report", isDaemon = true) {
+      BackgroundDiagnostics(applicationContext).report(BackgroundDiagnostics.Reason.WORKER_STOPPED, stopReason = stopReason)
+    }
+  }
+
+  override fun doWork(): Result = try {
+    drainQueue()
+  } catch (error: Exception) {
+    BackgroundDiagnostics(applicationContext).report(BackgroundDiagnostics.Reason.DRAIN_FAILED, error)
+    throw error
+  }
+
+  private fun drainQueue(): Result {
     val dao = EngineRoomDatabase.open(applicationContext).engineDao()
     val queueCount = dao.pendingWorkCount()
     val process = ActivityManager.RunningAppProcessInfo().also(ActivityManager::getMyMemoryState)
@@ -105,6 +125,13 @@ class QueueDrainWorker(
     notification?.update(dao.queueCounts())
     val credential = AndroidAccountRepository(applicationContext, dao).credential()
     val readmeUpdated = credential == null || PhoneUploadReadme().updateAfterSync(applicationContext, dao, credential)
+    BackgroundDiagnostics(applicationContext).report(
+      when {
+        drain.retryWorker -> BackgroundDiagnostics.Reason.DRAIN_FAILED
+        !readmeUpdated -> BackgroundDiagnostics.Reason.METADATA_RETRY
+        else -> BackgroundDiagnostics.Reason.DRAIN_COMPLETED
+      },
+    )
     return when {
       drain.continueImmediately -> {
         EngineWorkScheduler(applicationContext).continueQueueDrain()

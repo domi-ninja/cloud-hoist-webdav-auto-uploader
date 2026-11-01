@@ -7,11 +7,21 @@ plugins {
 group = 'ninja.domi.cloudhoist.engine'
 version = '0.1.0'
 
+def repositoryRoot = file('../../..')
+def releaseIdentity = new groovy.json.JsonSlurper().parse(new File(repositoryRoot, 'app.json')).expo
+def monitoring = new groovy.json.JsonSlurper().parse(new File(repositoryRoot, 'monitoring.json'))
+def monitoringDsn = System.getenv('SENTRY_DSN') ?: monitoring.dsn
+def channel = System.getenv('CLOUD_HOIST_CHANNEL') ?: 'beta'
+
 android {
+  buildFeatures { buildConfig true }
   namespace "ninja.domi.cloudhoist.engine"
   defaultConfig {
     versionCode 1
     versionName "0.1.0"
+    buildConfigField 'String', 'SENTRY_DSN', groovy.json.JsonOutput.toJson(monitoringDsn)
+    buildConfigField 'String', 'APP_RELEASE', groovy.json.JsonOutput.toJson("cloud-hoist@${releaseIdentity.version}")
+    buildConfigField 'String', 'APP_CHANNEL', groovy.json.JsonOutput.toJson(channel)
     testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
   }
   lintOptions {
@@ -33,6 +43,7 @@ tasks.configureEach { task ->
 }
 
 dependencies {
+  implementation 'io.sentry:sentry-android-core:8.62.0'
   implementation 'androidx.room:room-runtime:2.8.4'
   implementation 'androidx.work:work-runtime:2.11.2'
   implementation 'com.squareup.okhttp3:okhttp:4.12.0'

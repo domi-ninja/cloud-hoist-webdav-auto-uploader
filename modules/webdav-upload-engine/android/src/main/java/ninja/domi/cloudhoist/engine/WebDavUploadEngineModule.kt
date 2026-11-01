@@ -10,8 +10,10 @@ import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.Exceptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.thread
 
 class WebDavUploadEngineModule : Module() {
+  private val backgroundHealthLock = Any()
   private lateinit var documentTreePicker:
     AppContextActivityResultLauncher<DocumentTreePickerInput, DocumentTreePickerResult>
   private val accountRepository by lazy {
@@ -148,11 +150,34 @@ class WebDavUploadEngineModule : Module() {
     OnCreate {
       signOutCleanup.finishInterruptedSignOut()
       sourceRemovalCleanup.finishInterruptedRemoval()
-      if (accountRepository.currentAccount() != null) workScheduler.ensureScheduled()
+      val context = appContext.reactContext ?: throw AccountStorageException()
+      thread(name = "background-startup-check", isDaemon = true) {
+        synchronized(backgroundHealthLock) {
+          BackgroundDiagnostics(context).report(BackgroundDiagnostics.Reason.APP_OPENED)
+          if (accountRepository.currentAccount() != null) workScheduler.ensureScheduled()
+        }
+      }
+    }
+
+    OnActivityEntersForeground {
+      val context = appContext.reactContext ?: return@OnActivityEntersForeground
+      thread(name = "background-resume-check", isDaemon = true) {
+        synchronized(backgroundHealthLock) {
+          BackgroundDiagnostics(context).report(BackgroundDiagnostics.Reason.APP_OPENED)
+        }
+      }
     }
 
     RegisterActivityContracts {
       documentTreePicker = registerForActivityResult(DocumentTreePickerContract())
+    }
+
+    AsyncFunction("isBackgroundUnrestrictedAsync") {
+      BackgroundAccess(appContext.reactContext ?: throw AccountStorageException()).isUnrestricted()
+    }
+
+    AsyncFunction("openBackgroundSettingsAsync") {
+      BackgroundAccess(appContext.reactContext ?: throw AccountStorageException()).openSettings()
     }
 
     AsyncFunction("getSnapshotAsync") {

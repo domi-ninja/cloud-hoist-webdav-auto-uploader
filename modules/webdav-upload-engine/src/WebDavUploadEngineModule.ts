@@ -65,6 +65,8 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   getDestinationChangeAsync(): Promise<unknown>;
   runDestinationChangeAsync(id: string, uploadCopies: boolean): Promise<unknown>;
   acknowledgeDestinationChangeAsync(id: string): Promise<void>;
+  isBackgroundUnrestrictedAsync(): Promise<unknown>;
+  openBackgroundSettingsAsync(): Promise<void>;
   getSnapshotAsync(): Promise<unknown>;
   getSourcesAsync(): Promise<unknown>;
   getActivityPageAsync(offset: number): Promise<unknown>;
@@ -181,6 +183,8 @@ async function runValueCommand<T>(
 }
 
 export const webDavUploadEngine = {
+  isBackgroundUnrestricted: async () => z.boolean().parse(await nativeModule.isBackgroundUnrestrictedAsync()),
+  openBackgroundSettings: () => runCommand(() => nativeModule.openBackgroundSettingsAsync()),
   getBackupRoot: (fallback: string[]) => runValueCommand(
     () => nativeModule.getBackupRootAsync(remotePathSegmentsSchema.parse(fallback)),
     (value) => remotePathSegmentsSchema.parse(value),

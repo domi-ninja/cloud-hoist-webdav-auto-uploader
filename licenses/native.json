@@ -1616,6 +1616,22 @@
       }
     ]
   },
+  "com.abovevacant:epitaph:0.1.1": {
+    "source": "https://repo.maven.apache.org/maven2/com/abovevacant/epitaph/0.1.1/epitaph-0.1.1.pom",
+    "licenseDeclarations": [
+      {
+        "name": "MIT License",
+        "url": "https://opensource.org/licenses/MIT"
+      }
+    ],
+    "sha256": "13a329149ac36efc2bc4f5529f2d857887c3e60eacf93f2bf3dce5cb2ebea148",
+    "notices": [
+      {
+        "path": "https://raw.githubusercontent.com/abovevacant/epitaph/v0.1.1/LICENSE",
+        "text": "MIT License\n\nCopyright (c) 2026 Above Vacant\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+      }
+    ]
+  },
   "com.facebook.fbjni:fbjni:0.7.0": {
     "source": "https://repo.maven.apache.org/maven2/com/facebook/fbjni/fbjni/0.7.0/fbjni-0.7.0.pom",
     "licenseDeclarations": [
@@ -2157,6 +2173,38 @@
     ],
     "sha256": "60d7fb7d2231daf6ce48c6616c07ec9f0fcd10ae9954ef16ddbb27f99cf9da6e",
     "notices": []
+  },
+  "io.sentry:sentry-android-core:8.62.0": {
+    "source": "https://repo.maven.apache.org/maven2/io/sentry/sentry-android-core/8.62.0/sentry-android-core-8.62.0.pom",
+    "licenseDeclarations": [
+      {
+        "name": "MIT",
+        "url": "http://www.opensource.org/licenses/mit-license.php"
+      }
+    ],
+    "sha256": "bbb04979d54fad7f6bf605c3a1e1645658ba50e49ed8ba5804e4e64013100f21",
+    "notices": [
+      {
+        "path": "https://raw.githubusercontent.com/getsentry/sentry-java/8.62.0/LICENSE",
+        "text": "MIT License\n\nCopyright (c) 2019 Sentry\nCopyright (c) 2015 Salomon BRYS for Android ANRWatchDog\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+      }
+    ]
+  },
+  "io.sentry:sentry:8.62.0": {
+    "source": "https://repo.maven.apache.org/maven2/io/sentry/sentry/8.62.0/sentry-8.62.0.pom",
+    "licenseDeclarations": [
+      {
+        "name": "MIT",
+        "url": "http://www.opensource.org/licenses/mit-license.php"
+      }
+    ],
+    "sha256": "5e7f398cf3115f10bce52fe0fa411e32ac6e84e0ac6d50673e5701739af3f319",
+    "notices": [
+      {
+        "path": "https://raw.githubusercontent.com/getsentry/sentry-java/8.62.0/LICENSE",
+        "text": "MIT License\n\nCopyright (c) 2019 Sentry\nCopyright (c) 2015 Salomon BRYS for Android ANRWatchDog\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+      }
+    ]
   },
   "javax.inject:javax.inject:1": {
     "source": "https://repo.maven.apache.org/maven2/javax/inject/javax.inject/1/javax.inject-1.pom",

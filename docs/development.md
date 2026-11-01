@@ -66,3 +66,11 @@ Live runners read the ignored `test-creds.tct` file. It accepts JSON with `serve
 `pnpm test:deep-links` installs a debug-signed release build and force-stops the app. Its home-screen assertion still expects `Cloud Hoist`; update it to `Backups` before using it as a release check. The combined `pnpm check` runner includes this legacy assertion.
 
 No completed seven-day device soak or Nextcloud server-version compatibility matrix is recorded in the repository. Short UI checks do not establish either.
+
+## GlitchTip configuration
+
+Set this app's public submission DSN in [monitoring.json](../monitoring.json), or override it with `SENTRY_DSN` when building. An empty DSN disables reporting. The native SDK uses the version in `app.json` as its release and `CLOUD_HOIST_CHANNEL` as its environment, defaulting to `beta`. No GlitchTip administrator credentials or source-map upload tokens are needed. Debug builds do not initialize reporting.
+
+The SDK is `io.sentry:sentry-android-core:8.62.0`. Automatic SDK initialization, screenshots, view hierarchies, breadcrumbs, ANR reporting, native-crash reporting, session tracking, and tracing are disabled. Native worker exceptions and uncaught Java/Kotlin errors are covered; JavaScript errors and native crashes are not. Unit tests check that the event filter removes private data while retaining failure locations.
+
+For end-to-end verification, send a labeled SDK error from a test app build, record the event ID, and confirm that event in the correct GlitchTip project and environment. An ingestion HTTP success alone does not prove processing. Do not leave a test-error control in the shipped UI.

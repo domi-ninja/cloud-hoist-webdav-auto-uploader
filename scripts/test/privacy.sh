@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 
-# Checks dependencies and a release APK for prohibited telemetry, advertising, and permissions.
+# Checks dependencies and a release APK for prohibited analytics, advertising, and permissions.
+# The configured Sentry Android core SDK sends allowlisted diagnostics to our GlitchTip instance.
 # Use `pnpm test:privacy [APK]` after building; it never rebuilds or uses a device.
 # The allowlist preserves the network, notification, and foreground-service permissions the app needs.
 
@@ -14,7 +15,7 @@ PROJECT_ROOT=$(dirname "$(dirname "$SCRIPT_DIR")")
 cd "$PROJECT_ROOT"
 
 DEPENDENCY_FILES="package.json pnpm-lock.yaml android/build.gradle android/app/build.gradle modules/webdav-upload-engine/android/build.gradle"
-FORBIDDEN_DEPENDENCIES='firebase-analytics|firebase-crashlytics|sentry-android|@sentry/react-native|appsflyer|adjust-android|play-services-ads|play-services-analytics|facebook-android-sdk'
+FORBIDDEN_DEPENDENCIES='firebase-analytics|firebase-crashlytics|sentry-android(:|-ndk|-replay)|@sentry/react-native|appsflyer|adjust-android|play-services-ads|play-services-analytics|facebook-android-sdk'
 if grep -Eiq "$FORBIDDEN_DEPENDENCIES" $DEPENDENCY_FILES; then
   printf '%s\n' "A prohibited telemetry or advertising dependency is present." >&2
   grep -Ein "$FORBIDDEN_DEPENDENCIES" $DEPENDENCY_FILES >&2

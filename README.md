@@ -36,12 +36,14 @@ This screen shows configured backups. You can turn them off temporarily, change 
 
 ## Settings 
 
-Uploads can wait for Wi-Fi, charging, or enough battery. 
+Uploads can wait for Wi-Fi, charging, or enough battery. If Android restricts background work, **Allow unrestricted background uploads** opens the app's system settings. Choose unrestricted battery usage there.
 
 Beta testers of the app will be notified of updates and can download the APK manually.  
 
 ---
 
+
+Release builds with GlitchTip configured send native error reports and background scheduler diagnostics to our GlitchTip instance. Reports exclude account details, credentials, filenames, and paths. See [background diagnostics](docs/architecture.md#background-diagnostics) for the fields and limits.
 
 ## License
 

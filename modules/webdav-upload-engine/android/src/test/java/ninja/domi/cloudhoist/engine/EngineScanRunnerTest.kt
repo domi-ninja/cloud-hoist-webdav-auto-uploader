@@ -73,6 +73,33 @@ class EngineScanRunnerTest {
     assertEquals(1, drains)
   }
 
+  @Test
+  fun reconciliationRestartsExistingQueueEvenWithoutNewFiles() {
+    var drains = 0
+    val runner = EngineScanRunner(
+      sources = { listOf(source("folder")) },
+      scanSource = { id -> result(id, jobsAdded = 0) },
+      requestQueueDrain = { drains++ },
+      hasPendingWork = { true },
+    )
+    runner.reconcile()
+    assertEquals(1, drains)
+  }
+
+  @Test
+  fun scanFailureDoesNotStrandPreviouslyQueuedUploads() {
+    var drains = 0
+    val failure = IllegalStateException("scan failed")
+    val runner = EngineScanRunner(
+      sources = { listOf(source("folder")) },
+      scanSource = { throw failure },
+      requestQueueDrain = { drains++ },
+      hasPendingWork = { true },
+    )
+    assertEquals(failure, runCatching { runner.reconcile() }.exceptionOrNull())
+    assertEquals(1, drains)
+  }
+
   private fun result(sourceId: String, jobsAdded: Int) = SourceScanResult(
     sourceId = sourceId,
     preview = SourcePreview(0, 0, null),

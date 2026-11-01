@@ -14,6 +14,7 @@ class EngineScanRunner(
   private val sources: (String?) -> List<SourceEntity>,
   private val scanSource: (String) -> SourceScanResult,
   private val requestQueueDrain: () -> Unit,
+  private val hasPendingWork: () -> Boolean = { false },
   private val elapsedRealtimeNanos: () -> Long = System::nanoTime,
   private val runBudgetNanos: Long = TimeUnit.MINUTES.toNanos(8),
 ) {
@@ -25,22 +26,24 @@ class EngineScanRunner(
     val startedAt = elapsedRealtimeNanos()
     var sourcesScanned = 0
     var jobsAdded = 0
-    val pending = sources(kind)
-    for (source in pending) {
-      if (elapsedRealtimeNanos() - startedAt >= runBudgetNanos) {
-        if (jobsAdded > 0) requestQueueDrain()
-        return ScanBatchResult(sourcesScanned, jobsAdded, incomplete = true)
+    try {
+      for (source in sources(kind)) {
+        if (elapsedRealtimeNanos() - startedAt >= runBudgetNanos) {
+          return ScanBatchResult(sourcesScanned, jobsAdded, incomplete = true)
+        }
+        val result = try {
+          scanSource(source.id)
+        } catch (_: EngineSourceNotFoundException) {
+          continue
+        }
+        sourcesScanned += 1
+        jobsAdded += result.jobsAdded
       }
-      val result = try {
-        scanSource(source.id)
-      } catch (_: EngineSourceNotFoundException) {
-        continue
-      }
-      sourcesScanned += 1
-      jobsAdded += result.jobsAdded
+      return ScanBatchResult(sourcesScanned, jobsAdded, incomplete = false)
+    } finally {
+      // A scan must also recover queued uploads whose worker ended or disappeared.
+      if (jobsAdded > 0 || hasPendingWork()) requestQueueDrain()
     }
-    if (jobsAdded > 0) requestQueueDrain()
-    return ScanBatchResult(sourcesScanned, jobsAdded, incomplete = false)
   }
 
   companion object {
@@ -60,6 +63,7 @@ class EngineScanRunner(
         sources = dao::enabledSources,
         scanSource = manager::scan,
         requestQueueDrain = scheduler::requestQueueDrain,
+        hasPendingWork = { dao.pendingWorkCount() > 0 },
       )
     }
   }

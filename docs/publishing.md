@@ -6,11 +6,11 @@ Beta users install signed APKs from GitHub Releases. F-Droid is the production t
 
 ## Current beta
 
-[2026-12 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/beta-2026-12) fixes breadcrumb spacing in the remote folder browser. The path is inset from the screen edge, and every slash and folder label has the same compact gap. APK SHA-256 is `a8de8040951e76e4c12f10195bb0569e914eb44307aa94ec2cb8c8a004b26f18`.
+[2026-13 beta](https://github.com/domi-ninja/cloud-hoist-webdav-auto-uploader/releases/tag/beta-2026-13) adds the conditional Android battery-settings action, recovery for queued uploads without a worker, and native GlitchTip diagnostics. No diagnostic UI was added. APK SHA-256 is `c50e92605cd9c3a833d4ac2de1b333537d9558c29d730975e96e6256850d680f`.
 
-Validation uses a signed in-place update on the Pixel 9-sized Android 16 emulator, as requested for this fix. Checks cover nested paths, short folder names, wrapped names, ancestor navigation, the parent button, and the server root. No physical-phone validation was performed for this release. Evidence is under ignored `test-results/breadcrumbs-2026-12/`.
+Validation used a signed in-place update on an Android 16 emulator. The battery action opens Android settings, disappears when unrestricted, and returns when optimization is restored. A background upload completed after process termination without opening Cloud Hoist; Android deferred the periodic scan until the home screen woke. Downloaded hashes matched both a small fixture and a 23.6 MB fixture. Evidence is under ignored `test-results/background-2026-13/`.
 
-Type checking, lint, 122 JavaScript tests, release checks, and APK privacy/attribution checks pass. This release changes breadcrumb layout only; it does not claim new upload-engine or F-Droid reproducibility validation.
+Type checking, lint, 131 JavaScript tests, 123 native unit tests, 116 Android runtime tests, release checks, and APK privacy/attribution checks pass. Ten separate live-test cases were skipped. No physical-phone test or multi-day soak was performed. The cause of the reported multi-day stall remains unconfirmed.
 
 ## Default delivery flow
 
@@ -25,7 +25,7 @@ The channel is embedded at build time. Beta never falls back to F-Droid; product
 
 ## Version and source identity
 
-Keep `app.json` as the release identity. Choose a version newer than the current beta. For example, the next version after `2026-12` is `2026-13`: set `expo.version` to `2026-13`, Android versionCode to `20260013`, and package.json version to `2026.13.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
+Keep `app.json` as the release identity. Choose a version newer than the current beta. For example, the next version after `2026-13` is `2026-14`: set `expo.version` to `2026-14`, Android versionCode to `20260014`, and package.json version to `2026.14.0`. Retain package `ninja.domi.cloudhoist`. Increment the minor number for changed app bundles; start at 1 in a new year. Do not bump versions for documentation changes or upload retries.
 
 ## Build without signing credentials
 
