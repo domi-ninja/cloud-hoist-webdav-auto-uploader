@@ -25,7 +25,7 @@ Folders containing photos or videos appear as suggestions, like `Pictures/Travel
 
 If you want to back up this suggested folder, click `Start backup`. This will lead you to a screen where you can choose where on your nextcloud you want to have these backups. By default, everything uploaded by this app will live in `/Phone Uploads` on your nextcloud. You can change this folder in the `Settings`.
 
-Start with your camera photos, then add other folders you want to keep. Tap `Hide suggestion` to dismiss a folder and make room for another suggestion. You can restore dismissed suggestions from `Hidden folders` at the bottom of the screen.
+Start with your camera photos, then add other folders you want to keep. Tap `Hide suggestion` to dismiss a folder and make room for another suggestion. To hide a whole directory, open `Hidden folders` → `Hide folder`, choose the directory, review the matching media folders, and tap `Save`. This also hides future suggestions from its subfolders. Open `Hidden folders` to edit a directory or restore a suggestion.
 
 For folders that are not automatically found, use the `Choose other directory to back up` button and find the folder on your phone. For example, if you use Signal messenger, you can configure on-device backups and have it put your message history backups into a folder. You can then select this folder and sync it to your nextcloud.
 

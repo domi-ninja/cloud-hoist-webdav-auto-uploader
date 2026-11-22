@@ -99,7 +99,7 @@ declare class NativeWebDavUploadEngine extends NativeModule<WebDavUploadEngineMo
   signOutAsync(): Promise<void>;
   listRemoteFoldersAsync(pathSegments: string[]): Promise<unknown>;
   createRemoteFolderAsync(parentPathSegments: string[], name: string): Promise<unknown>;
-  pickDocumentTreeAsync(initialUri: string | null): Promise<unknown>;
+  pickDocumentTreeAsync(initialUri: string | null, persistReadPermission: boolean): Promise<unknown>;
   getMediaFoldersAsync(): Promise<unknown>;
   getLocalVideoThumbnailAsync(uri: string): Promise<unknown>;
   openLocalVideoAsync(uri: string): Promise<void>;
@@ -323,9 +323,9 @@ export const webDavUploadEngine = {
       (value): RemoteFolder => remoteFolderSchema.parse(value),
     );
   },
-  pickDocumentTree: (initialUri: string | null = null) =>
+  pickDocumentTree: (initialUri: string | null = null, persistReadPermission = true) =>
     runValueCommand(
-      () => nativeModule.pickDocumentTreeAsync(initialUri),
+      () => nativeModule.pickDocumentTreeAsync(initialUri, persistReadPermission),
       (value): SelectedDocumentTree | null =>
         selectedDocumentTreeSchema.nullable().parse(value),
     ),

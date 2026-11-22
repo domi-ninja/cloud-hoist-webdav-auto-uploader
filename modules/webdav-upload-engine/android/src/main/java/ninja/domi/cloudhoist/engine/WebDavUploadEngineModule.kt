@@ -383,11 +383,11 @@ class WebDavUploadEngineModule : Module() {
       }
     }
 
-    AsyncFunction("pickDocumentTreeAsync") Coroutine { initialUri: String? ->
+    AsyncFunction("pickDocumentTreeAsync") Coroutine { initialUri: String?, persistReadPermission: Boolean ->
       when (val result = documentTreePicker.launch(DocumentTreePickerInput(initialUri))) {
         DocumentTreePickerResult.Cancelled -> null
         is DocumentTreePickerResult.Selected -> {
-          documentTreeGateway.persistReadPermission(result.treeUri, result.resultFlags)
+          if (persistReadPermission) documentTreeGateway.persistReadPermission(result.treeUri, result.resultFlags)
           mapOf("treeUri" to result.treeUri)
         }
       }

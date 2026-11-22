@@ -161,7 +161,13 @@ export default function HomeScreen() {
           <View className="mt-2 gap-2">
             <ActionButton icon="folder-outline" label="Choose other directory to back up" disabled={selectingFolder}
               loading={selectingFolder} onPress={() => void chooseFolder()} />
-            <HiddenMediaFolders folders={hiddenMediaFolders}
+            <HiddenMediaFolders folders={hiddenMediaFolders} sources={visibleSources} mediaFolders={media.data?.folders ?? []}
+              previewStatus={media.error ? "Media folders could not be loaded." : media.isLoading ? "Finding media folders…" :
+                media.data?.permission.access === "denied" ? "Allow media access to preview folders." :
+                media.data?.permission.access === "partial" ? "Preview includes only media you have allowed." : undefined}
+              onSave={(previous, uri) => setHiddenMediaFolders([...new Set([
+                ...hiddenMediaFolders.filter((id) => id !== previous), uri,
+              ])])}
               onRestore={(id) => {
                 void setHiddenMediaFolders(hiddenMediaFolders.filter((hidden) => hidden !== id))
                   .catch(() => setErrorMessage("Could not restore this suggestion."));

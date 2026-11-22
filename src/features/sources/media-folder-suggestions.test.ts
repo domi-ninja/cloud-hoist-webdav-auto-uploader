@@ -36,3 +36,17 @@ it("labels saved hidden folders even when they are no longer discovered", () => 
   expect(hiddenMediaFolderLabel(mediaFolderId(folder("Pictures/Holidays", 1, "1234-5678")))).toBe("Pictures/Holidays (1234-5678)");
   expect(hiddenMediaFolderLabel("mediastore://folder/broken/%ZZ")).toBe("mediastore://folder/broken/%ZZ");
 });
+
+it("hides a picked directory and its descendants only on its own volume", () => {
+  const exact = folder("Books/A #1", 60);
+  const child = folder("Books/A #1/Chapters/Disc 1", 50);
+  const sibling = folder("Books/A #10", 40);
+  const otherVolume = folder("Books/A #1", 30, "abcd-1234");
+  const candidates = [exact, child, sibling, otherVolume];
+  const tree = "content://com.android.externalstorage.documents/tree/primary%3ABooks%2FA%20%231";
+  expect(hiddenMediaFolderLabel(tree)).toBe("Books/A #1");
+  expect(mediaFolderSuggestions(candidates, [], [tree])).toEqual([sibling, otherVolume]);
+  expect(mediaFolderSuggestions(candidates, [], [mediaFolderId(exact)])).toEqual([child, sibling]);
+  const card = "content://com.android.externalstorage.documents/tree/ABCD-1234%3ABooks";
+  expect(mediaFolderSuggestions(candidates, [], [tree, card])).toEqual([sibling]);
+});
